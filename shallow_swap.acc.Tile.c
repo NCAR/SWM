@@ -33,14 +33,14 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 64
+#define M 256
+#define N 256
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define SIZE ((M_LEN)*(N_LEN))
 #define ITMAX 4000
 #define L_OUT TRUE
-
+#define TILE 32
 extern double wtime(); 
 extern void dswap(double **a, double **b);
 
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
 #pragma acc enter data copyin(dt,tdt,dx,dy,a,alpha,el,pi,tpi,di,dj,pcf,tdts8,tdtsdx,tdtsdy,fsdx,fsdy,p[:SIZE],u[:SIZE], \
   v[:SIZE],pnew[:SIZE],unew[:SIZE],vnew[:SIZE])
   // Initial values of the stream function and p
-#pragma acc parallel loop tile(16,16) independent present(p[:SIZE]) deviceptr(psi)//private(a,di,dj,pcf)
+#pragma acc parallel loop tile(TILE,TILE) independent present(p[:SIZE]) deviceptr(psi)//private(a,di,dj,pcf)
   for (i=0;i<M_LEN;i++) {
     for (j=0;j<N_LEN;j++) {
       int idx = (i*N_LEN) + j;
@@ -178,7 +178,7 @@ int main(int argc, char **argv) {
   }
 #pragma acc update host(p[:SIZE]) async(1)   
   // Initialize velocities
-#pragma acc parallel loop tile(16,16) independent present(u[:SIZE],v[:SIZE]) deviceptr(psi)
+#pragma acc parallel loop tile(TILE,TILE) independent present(u[:SIZE],v[:SIZE]) deviceptr(psi)
   for (i=0;i<M;i++) {
     for (j=0;j<N;j++) {
       int idx01 = (i*N_LEN) + j+1;
@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
   v[M*N_LEN] = v[N];
 }
 #pragma acc update host(u[:SIZE],v[:SIZE]) async(2)
-#pragma acc parallel loop tile(16,16) async(2) independent present(u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold) 
+#pragma acc parallel loop tile(TILE,TILE) async(2) independent present(u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold) 
   for (i=0;i<M_LEN;i++) {
     for (j=0;j<N_LEN;j++) {
       int idx = i*N_LEN+j;
@@ -236,15 +236,15 @@ int main(int argc, char **argv) {
     mnmin = MIN(M,N);
     printf(" initial diagonal elements of p\n");
     for (i=0; i<mnmin; i++) {
-      printf("%f ,\n",p[i*N_LEN+i]);
+      printf("%f ",p[i*N_LEN+i]);
     }
     printf("\n initial diagonal elements of u\n");
     for (i=0; i<mnmin; i++) {
-      printf("%f ,\n",u[i*N_LEN+i]);
+      printf("%f ",u[i*N_LEN+i]);
     }
     printf("\n initial diagonal elements of v\n");
     for (i=0; i<mnmin; i++) {
-      printf("%f ,\n",v[i*N_LEN+i]);
+      printf("%f ",v[i*N_LEN+i]);
     }
     printf("\n");
   }
@@ -262,7 +262,7 @@ int main(int argc, char **argv) {
     
     // Compute capital u, capital v, z and h
     c1 = wtime();  
-#pragma acc parallel loop tile(16,16) independent present(p[:SIZE],u[:SIZE],v[:SIZE]) deviceptr(cu,cv,z,h)
+#pragma acc parallel loop tile(TILE,TILE) independent present(p[:SIZE],u[:SIZE],v[:SIZE]) deviceptr(cu,cv,z,h)
     for (i=0;i<M;i++) {
       for (j=0;j<N;j++) {
         int idx00 = (i*N_LEN) + j;
@@ -308,7 +308,7 @@ int main(int argc, char **argv) {
 }
     c1 = wtime(); 
 
-#pragma acc parallel loop tile(16,16) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE]) deviceptr(cu,cv,z,h,uold,vold,pold)
+#pragma acc parallel loop tile(TILE,TILE) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE]) deviceptr(cu,cv,z,h,uold,vold,pold)
     for (i=0;i<M;i++) {
       for (j=0;j<N;j++) {
         int idx00 = (i*N_LEN) + j;
@@ -354,7 +354,7 @@ int main(int argc, char **argv) {
     if ( ncycle > 1 ) {
 
       c1 = wtime(); 
-#pragma acc parallel loop tile(16,16) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold)
+#pragma acc parallel loop collapse(2) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold)
       for (i=0;i<M_LEN;i++) {
         for (j=0;j<N_LEN;j++) {
           int idx = i*N_LEN+j;
@@ -367,7 +367,7 @@ int main(int argc, char **argv) {
       // Dependency
 
 #ifdef _COPY_
-#pragma acc parallel loop tile(16,16)independent  present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE])
+#pragma acc parallel loop collapse(2) independent  present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE])
       for (i=0;i<M_LEN;i++) {
         for (j=0;j<N_LEN;j++) {
           int idx = i*N_LEN+j;
@@ -471,15 +471,15 @@ int main(int argc, char **argv) {
     printf(" cycle number %d model time in hours %f\n", ITMAX, ptime);
     printf(" diagonal elements of p\n");
     for (i=0; i<mnmin; i++) {
-      printf("%f ,\n",pnew[i*N_LEN+i]);
+      printf("%f ",pnew[i*N_LEN+i]);
     }
     printf("\n diagonal elements of u\n");
     for (i=0; i<mnmin; i++) {
-      printf("%f ,\n ",unew[i*N_LEN+i]);
+      printf("%f ",unew[i*N_LEN+i]);
     }
     printf("\n diagonal elements of v\n");
     for (i=0; i<mnmin; i++) {
-      printf("%f ,\n",vnew[i*N_LEN+i]);
+      printf("%f ",vnew[i*N_LEN+i]);
     }
     printf("\n");
 
