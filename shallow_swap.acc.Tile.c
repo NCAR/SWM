@@ -86,15 +86,6 @@ extern void dswap(double **a, double **b);
 
 int main(int argc, char **argv) {
   
-    
-  // solution arrays
- /*
-  double u[M_LEN][N_LEN],v[M_LEN][N_LEN],p[M_LEN][N_LEN];
-  double unew[M_LEN][N_LEN],vnew[M_LEN][N_LEN],pnew[M_LEN][N_LEN];
-  double uold[M_LEN][N_LEN],vold[M_LEN][N_LEN],pold[M_LEN][N_LEN];
-  double utmp[M_LEN][N_LEN],vtmp[M_LEN][N_LEN],ptmp[M_LEN][N_LEN];
-  double cu[M_LEN][N_LEN],cv[M_LEN][N_LEN],z[M_LEN][N_LEN],h[M_LEN][N_LEN],psi[M_LEN][N_LEN];
-*/
   double *u,*v,*p,*unew,*vnew,*pnew,*uold,*vold,*pold,*cu,*cv,*z,*h,*psi;
 
   u = (double *)malloc(sizeof(double)*M_LEN*N_LEN);
@@ -213,7 +204,7 @@ int main(int argc, char **argv) {
   v[M*N_LEN] = v[N];
 }
 #pragma acc update host(u[:SIZE],v[:SIZE]) async(2)
-#pragma acc parallel loop tile(TILE,TILE) async(2) independent present(u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold) 
+#pragma acc parallel loop tile(TILE,TILE) async(3) independent present(u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold) 
   for (i=0;i<M_LEN;i++) {
     for (j=0;j<N_LEN;j++) {
       int idx = i*N_LEN+j;
@@ -223,7 +214,6 @@ int main(int argc, char **argv) {
     }
   }
 #pragma acc wait
-//#pragma acc exit data copyout(psi,p,a,pcf,di,dj,dx,dy,u,v,uold,pold,vold)
   // Print initial values
   if ( L_OUT ) {
     printf(" number of points in the x direction %d\n", N); 
@@ -377,7 +367,6 @@ int main(int argc, char **argv) {
         }
       }
 #else
-//#pragma acc update host(u,v,p,unew,vnew,pnew)
 #ifdef _OPENACC
 
 #pragma acc serial present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(utmp,vtmp,ptmp)
@@ -395,25 +384,6 @@ int main(int argc, char **argv) {
   *p    = *ptmp;
 
 }
-/*
-#pragma acc parallel loop tile(16,16) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(utmp,vtmp,ptmp)
-    for (i=0;i<M_LEN;i++) {
-        for (j=0;j<N_LEN;j++) {
-          int idx = i*N_LEN+j;
-          utmp[idx] = unew[idx];
-          vtmp[idx] = vnew[idx];
-          ptmp[idx] = pnew[idx];
-
-          unew[idx] = u[idx];
-          vnew[idx] = v[idx];
-          pnew[idx] = p[idx];
-
-          u[idx] = utmp[idx];
-          v[idx] = vtmp[idx];
-          p[idx] = ptmp[idx];
-        }
-      } 
-*/
 #else
       dswap( (double **)&u, (double **)&unew);
       dswap( (double **)&v, (double **)&vnew);
@@ -437,25 +407,10 @@ int main(int argc, char **argv) {
    
 }
 
-/*
-#pragma acc parallel loop tile(16,16) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold)
-      for (i=0;i<M_LEN;i++) {
-        for (j=0;j<N_LEN;j++) {
-          int idx = i*N_LEN+j;
-          uold[idx] = u[idx];
-          vold[idx] = v[idx];
-          pold[idx] = p[idx];
-          u[idx] = unew[idx];
-          v[idx] = vnew[idx];
-          p[idx] = pnew[idx];
-        }
-      }
-*/
     }
   }
 
 #ifdef _OPENACC
-//#pragma acc exit data copyout(u[:SIZE],v[:SIZE],p[:SIZE],unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
 #pragma acc exit data copyout(unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
   // have to swap values back for printing
 #else
