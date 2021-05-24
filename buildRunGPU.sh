@@ -1,26 +1,22 @@
 #!/bin/bash -l
-## to prepare a test case labeled by the name of this folder: define module path, load module, set library path, set environment variables
-## the following template is translated from /glade/scratch/ssuresh/muram/pgi1910 bash script
 
-#SBATCH -J SWM
-#SBATCH -n 1
-#SBATCH --ntasks-per-node=18
-#SBATCH -t 00:10:00
-#SBATCH -A NTDD0002
-#SBATCH -p dav
-##SBATCH --reservation=NTDD0002
-##SBATCH --reservation=$caspResv
-#SBATCH --reservation=TDD_4xV100
-#SBATCH -e SWM.err
-#SBATCH -o SWM.out
-
-#source ./loadEnv.sh
+#PBS -N SWM_CPU_MP
+#PBS -A NTDD0002
+#PBS -l walltime=00:05:00
+#PBS -q casper
+### Merge output and error files
+#PBS -o SWM_GPU.out
+#PBS -e SWM_GPU.err
+#PBS -l select=1:ncpus=1:ngpus=1
+#PBS -l gpu_type=v100
 
 module purge
-module load pgi/20.4
+module load nvhpc/21.3
 module load cuda
 module list
 nvidia-smi
 
-pgcc -O2 -acc -ta=tesla:cc70 -Minfo -Mnofma shallow_swap.acc.Tile.c wtime.c -o SWM_gpu
-./SWM_gpu > results.gpu.Tile.$(date +%m%d%H%M%S).txt
+rm SWM_gpu
+
+nvc -O2 -acc -ta=tesla:cc70 -Minfo -Mnofma shallow_unroll.acc.omp.c wtime.c -o SWM_gpu
+./SWM_gpu > results.gpu.$(date +%m%d%H%M%S).txt
