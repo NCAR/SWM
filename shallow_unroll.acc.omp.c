@@ -255,8 +255,8 @@ int main(int argc, char **argv) {
 #pragma acc update host(u[new:1][:m+2][:n+2],v[new:1][:m+2][:n+2],p[new:1][:m+2][:n+2])
 #pragma acc parallel loop collapse(2)\
  present(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2])
-  for (int i=0;i<m+2;i++) {
-    for (int j=0;j<n+2;j++) {
+  for (i=0;i<m+2;i++) {
+    for (j=0;j<n+2;j++) {
       u[old][i][j] = u[mid][i][j];
       v[old][i][j] = v[mid][i][j];
       p[old][i][j] = p[mid][i][j];
@@ -422,11 +422,11 @@ void dswap(real **pA, real **pB)
 //
 
 void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real v[m+2][n+2], real p[m+2][n+2]){
-
+    int i,j;
     // N/S edge wrapping
 #pragma acc enter data copyin(m,n,u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2])
 #pragma acc  parallel loop  present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2]) async
-    for (int j=1; j<n+1; j++) {
+    for (j=1; j<n+1; j++) {
       u[0  ][j] = u[m][j];
       u[m+1][j] = u[1][j];
       v[0  ][j] = v[m][j];
@@ -435,7 +435,7 @@ void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real 
       p[m+1][j] = p[1][j];
    }
 #pragma acc  parallel loop  present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2]) async
-    for (int i=1; i<m+1; i++) {
+    for (i=1; i<m+1; i++) {
 #pragma acc cache(u[:][n],u[:][0])
       u[i][0  ] = u[i][n];
       u[i][n+1] = u[i][1];
@@ -604,6 +604,7 @@ void update(const int m, const int n,
                         uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2],\
                         unew[:m+2][:n+2],vnew[:m+2][:n+2],pnew[:m+2][:n+2])
 {
+  int i,j;
   real fsdx = 4./dx;
   real fsdy = 4./dy;
 
@@ -619,8 +620,8 @@ void update(const int m, const int n,
 #pragma acc parallel loop collapse(2) present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2],\
                              unew[:m+2][:n+2],vnew[:m+2][:n+2],pnew[:m+2][:n+2],\
                              uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2])
-  for (int i=1;i<m+1;i++) {
-    for (int j=1;j<n+1;j++) {
+  for (i=1;i<m+1;i++) {
+    for (j=1;j<n+1;j++) {
         int im1 = i-1;
         int jm1 = j-1;
         int ip1 = i+1;
@@ -766,6 +767,7 @@ void advance(const int m, const int n,
   real tdts8 = tdt / 8.;
   real tdtsdx = tdt / dx;
   real tdtsdy = tdt / dy;
+  int i,j;  
 
 #pragma acc enter data copyin(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2],\
                         uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2],\
@@ -776,8 +778,8 @@ void advance(const int m, const int n,
 #pragma acc parallel loop collapse(2) present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2],\
                              unew[:m+2][:n+2],vnew[:m+2][:n+2],pnew[:m+2][:n+2],\
                              uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2])
-  for (int i=1;i<m+1;i++) {
-    for (int j=1;j<n+1;j++) {
+  for (i=1;i<m+1;i++) {
+    for (j=1;j<n+1;j++) {
         int im1 = i-1;
         int jm1 = j-1;
         int ip1 = i+1;
@@ -821,7 +823,3 @@ void advance(const int m, const int n,
   }
  } //end omp parallel
 }
-
-
-
-
