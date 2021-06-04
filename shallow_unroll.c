@@ -236,15 +236,15 @@ int main(int argc, char **argv) {
   periodic_cont_state_fused(m, n, u[new], v[new], p[new]);
 
   time = time + tdt;
-
-  for (int i=0;i<m+2;i++) {
-    for (int j=0;j<n+2;j++) {
-      u[old][i][j] = u[mid][i][j];
-      v[old][i][j] = v[mid][i][j];
-      p[old][i][j] = p[mid][i][j];
-      u[mid][i][j] = u[new][i][j];
-      v[mid][i][j] = v[new][i][j];
-      p[mid][i][j] = p[new][i][j];
+  int k,l;
+  for (k=0;k<m+2;k++) {
+    for (l=0;l<n+2;l++) {
+      u[old][k][l] = u[mid][k][l];
+      v[old][k][l] = v[mid][k][l];
+      p[old][k][l] = p[mid][k][l];
+      u[mid][k][l] = u[new][k][l];
+      v[mid][k][l] = v[new][k][l];
+      p[mid][k][l] = p[new][k][l];
     }
   }
 
@@ -404,9 +404,11 @@ void dswap(real **pA, real **pB)
 
 void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real v[m+2][n+2], real p[m+2][n+2]){
 
-    // N/S edge wrapping
+    int i,j;
 
-    for (int j=1; j<n+1; j++) {
+    // N/S edge wrapping
+    
+    for (j=1; j<n+1; j++) {
       u[0  ][j] = u[m][j];
       u[m+1][j] = u[1][j];
       v[0  ][j] = v[m][j];
@@ -417,7 +419,7 @@ void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real 
 
     // E/W edge wrapping
 
-    for (int i=1; i<m+1; i++) {
+    for (i=1; i<m+1; i++) {
       u[i][0  ] = u[i][n];
       u[i][n+1] = u[i][1];
       v[i][0  ] = v[i][n];
@@ -547,9 +549,9 @@ void update(const int m, const int n,
   real tdtsdx = tdt / dx;
   real tdtsdy = tdt / dy;
 
-
-  for (int i=0;i<m+1;i++) {
-    for (int j=0;j<n+1;j++) {
+  int i,j;
+  for (i=0;i<m+1;i++) {
+    for (j=0;j<n+1;j++) {
 
       //orig:     cu[i + 1][j] = .5 * (p[i + 1][j] + p[i][j]) * u[i + 1][j];
       cu[i][j] = .5 * (p[i+1][j+1] + p[i][j+1]) * u[i][j+1];
@@ -567,8 +569,8 @@ void update(const int m, const int n,
     }
   }
 
-  for (int i=1;i<m+1;i++) {
-    for (int j=1;j<n+1;j++) {
+  for (i=1;i<m+1;i++) {
+    for (j=1;j<n+1;j++) {
 #else
       if (i>0 && j>0){
 #endif
@@ -688,9 +690,9 @@ void advance(const int m, const int n,
   real tdtsdx = tdt / dx;
   real tdtsdy = tdt / dy;
 
-
-  for (int i=0;i<m+1;i++) {
-    for (int j=0;j<n+1;j++) {
+  int i,j;
+  for (i=0;i<m+1;i++) {
+    for (j=0;j<n+1;j++) {
       //orig:     cu[i + 1][j] = .5 * (p[i + 1][j] + p[i][j]) * u[i + 1][j];
       cu[i][j] = .5 * (p[i+1][j+1] + p[i][j+1]) * u[i][j+1];
 
