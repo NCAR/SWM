@@ -154,9 +154,7 @@ int main(int argc, char **argv) {
 
 #pragma acc data present(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2],\
                               psi[:m+2][:n+2])
-#pragma omp parallel
-{
-#pragma omp for simd
+#pragma omp parallel for simd private(i,j)
  // Initial values of the stream function and p 
 #pragma acc parallel loop present(psi[:m+2][:n+2])
   for (i=0;i<m+1;i++) {
@@ -166,7 +164,7 @@ int main(int argc, char **argv) {
   }
     
   // Initialize velocities
-#pragma omp for simd
+#pragma omp parallel for simd private(i,j)
  #pragma acc parallel loop present(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2])
   for (i=0;i<m;i++) {
     for (j=0;j<n;j++) {
@@ -175,12 +173,13 @@ int main(int argc, char **argv) {
       p[mid][i + 1][j + 1] = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
     }
   }
-}     
   // Periodic Continuation
   // (in a distributed memory code this would be MPI halo exchanges)
   periodic_cont_state_fused(m, n, u[mid], v[mid], p[mid]);
+ 
+#pragma omp parallel for simd private(i,j)
 #pragma acc update host(u[mid:1][:m+2][:n+2],v[mid:1][:m+2][:n+2],p[mid:1][:m+2][:n+2])
-#pragma acc parallel loop present(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2])
+#pragma acc parallel loop present(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2]) private(i,j)
   for (i=0;i<m+2;i++) {
     for (j=0;j<n+2;j++) {
       u[old][i][j] = u[mid][i][j];
@@ -200,35 +199,15 @@ int main(int argc, char **argv) {
 
     mnmin = MIN(m,n);
     printf("\n\n");
-    printf(" gpu initial diagonal elements of p\n");
+    printf(" acc initial diagonal elements of p\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",p[mid][i+1][i+1]);
     }
-    // print a patch of u
-#if 0
-    printf("\n initial diagonal elements of u\n");
-    for (i=0; i<4; i++) {
-      for (j=0; j<4; j++) {
-	printf("%f ",u[mid][i][j+1]);
-      }
-      printf("\n");
-    }
-#endif
-    printf("\n gpu initial diagonal elements of u\n");
+    printf("\n acc initial diagonal elements of u\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",u[mid][i][i+1]);
     }
-#if 0
-    // print a patch of v
-    printf("\n initial diagonal elements of v\n");
-    for (i=0; i<4; i++) {
-      for (j=0; j<4; j++) {
-	printf("%f ",v[mid][i+1][j]);
-      }
-      printf("\n");
-    }
-#endif
-    printf("\n gpu initial diagonal elements of v\n");
+    printf("\n acc initial diagonal elements of v\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",v[mid][i+1][i]);
     }
@@ -252,9 +231,10 @@ int main(int argc, char **argv) {
   periodic_cont_state_fused(m, n, u[new], v[new], p[new]);
 
   time = time + tdt;
+#pragma omp parallel for simd private(i,j)
 #pragma acc update host(u[new:1][:m+2][:n+2],v[new:1][:m+2][:n+2],p[new:1][:m+2][:n+2])
 #pragma acc parallel loop collapse(2)\
- present(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2])
+ present(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2]) private(i,j)
   for (i=0;i<m+2;i++) {
     for (j=0;j<n+2;j++) {
       u[old][i][j] = u[mid][i][j];
@@ -269,15 +249,15 @@ int main(int argc, char **argv) {
   // Output p, u, v fields after first step.
   if (L_OUT) {
     printf("\n\n");
-    printf(" gpu diagonal elements of p (1st step)\n");
+    printf(" acc diagonal elements of p (1st step)\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",p[new][i+1][i+1]);
     }
-    printf("\n gpu diagonal elements of u (1st step)\n");
+    printf("\n acc diagonal elements of u (1st step)\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",u[new][i][i+1]);
     }
-    printf("\n gpu diagonal elements of v (1st step)\n");
+    printf("\n acc diagonal elements of v (1st step)\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",v[new][i+1][i]);
     }
@@ -316,6 +296,7 @@ int main(int argc, char **argv) {
 
 #define _SWAP_
 #ifndef _SWAP_
+#pragma omp parallel for simd private(i,j)
 #pragma acc parallel loop present(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2])
     for (int i=0;i<m+2;i++) {
       for (int j=0;j<n+2;j++) {
@@ -358,17 +339,17 @@ int main(int argc, char **argv) {
 #pragma acc update host(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2]) 
     ptime = time / 3600.;
     int nits = ITMAX-1;
-    printf(" gpu cycle number %d model time in hours %f\n", nits, ptime);
+    printf(" acc cycle number %d model time in hours %f\n", nits, ptime);
     printf("\n\n");
-    printf(" gpu diagonal elements of p (%d steps)\n",nits+1);
+    printf(" acc diagonal elements of p (%d steps)\n",nits);
     for (i=0; i<mnmin; i++) {
       printf("%f ",p[new][i+1][i+1]);
     }
-    printf("\n gpu diagonal elements of u (%d steps)\n",nits+1);
+    printf("\n acc diagonal elements of u (%d steps)\n",nits);
     for (i=0; i<mnmin; i++) {
       printf("%f ",u[new][i][i+1]);
     }
-    printf("\n gpu diagonal elements of v (%d step)\n",nits+1);
+    printf("\n acc diagonal elements of v (%d step)\n",nits);
     for (i=0; i<mnmin; i++) {
       printf("%f ",v[new][i+1][i]);
     }
@@ -381,9 +362,9 @@ int main(int argc, char **argv) {
 
     if ( tup > 0 )   { mflops_up   = nits * 65. * m * n / tup / 1000000; }
     if ( tcopy > 0 ) { mbps_copy   = nits * sizeof(real)*3*(m+2)*(n+2) / tcopy / 1000000; }
-    printf(" gpu cycle number %d total computer time %f time per cycle %f\n", nits, ctime, tcyc);
-    printf(" gpu time and megaflops for update %.6f %.6f\n", tup, mflops_up);
-    printf(" gpu time and megabytes/sec for copy %.6f %.6f\n", tcopy, mbps_copy);
+    printf(" acc cycle number %d total computer time %f time per cycle %f\n", nits, ctime, tcyc);
+    printf(" acc time and megaflops for update %.6f %.6f\n", tup, mflops_up);
+    printf(" acc time and megabytes/sec for copy %.6f %.6f\n", tcopy, mbps_copy);
   }
 
   return(0);
@@ -422,10 +403,11 @@ void dswap(real **pA, real **pB)
 //
 
 void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real v[m+2][n+2], real p[m+2][n+2]){
+
     int i,j;
     // N/S edge wrapping
 #pragma acc enter data copyin(m,n,u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2])
-#pragma acc  parallel loop  present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2]) async
+#pragma acc  parallel loop  present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2]) private(j) async 
     for (j=1; j<n+1; j++) {
       u[0  ][j] = u[m][j];
       u[m+1][j] = u[1][j];
@@ -434,7 +416,7 @@ void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real 
       p[0  ][j] = p[m][j];
       p[m+1][j] = p[1][j];
    }
-#pragma acc  parallel loop  present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2]) async
+#pragma acc  parallel loop  present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2]) private(i) async
     for (i=1; i<m+1; i++) {
 #pragma acc cache(u[:][n],u[:][0])
       u[i][0  ] = u[i][n];
@@ -460,54 +442,6 @@ void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real 
       p[0][n+1]   = p[m][1];
      }
    }
-/*
-    // E/W edge wrapping
-#pragma acc  parallel loop present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2])  
-    for (int i=1; i<m+1; i++) {
-      u[i][0  ] = u[i][n];
-      u[i][n+1] = u[i][1];
-      v[i][0  ] = v[i][n];
-      v[i][n+1] = v[i][1];
-      p[i][0  ] = p[i][n];
-      p[i][n+1] = p[i][1];
-      
-      u[0][0]     = u[m][n];
-      u[m+1][0]   = u[1][n];
-      u[m+1][n+1] = u[1][1];
-      u[0][n+1]   = u[m][1];
-
-      v[0][0]     = v[m][n];
-      v[m+1][0]   = v[1][n];
-      v[m+1][n+1] = v[1][1];
-      v[0][n+1]   = v[m][1];
-
-      p[0][0]     = p[m][n];
-      p[m+1][0]   = p[1][n];
-      p[m+1][n+1] = p[1][1];
-      p[0][n+1]   = p[m][1];
-    }
-*/
-/*
-#pragma acc serial present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2]) 
-{
-      u[0][0]     = u[m][n];
-      u[m+1][0]   = u[1][n];
-      u[m+1][n+1] = u[1][1];
-      u[0][n+1]   = u[m][1];
-
-      v[0][0]     = v[m][n];
-      v[m+1][0]   = v[1][n];
-      v[m+1][n+1] = v[1][1];
-      v[0][n+1]   = v[m][1];
-
-      p[0][0]     = p[m][n];
-      p[m+1][0]   = p[1][n];
-      p[m+1][n+1] = p[1][1];
-      p[0][n+1]   = p[m][1];
-
-
-}
-*/
 }
 
   // update():
@@ -600,11 +534,11 @@ void update(const int m, const int n,
             real unew[m+2][n+2], real vnew[m+2][n+2], real pnew[m+2][n+2], 
 	    real tdt, real dx, real dy, real alpha){
 
+  int i,j;
 #pragma acc data present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2],\
                         uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2],\
                         unew[:m+2][:n+2],vnew[:m+2][:n+2],pnew[:m+2][:n+2])
 {
-  int i,j;
   real fsdx = 4./dx;
   real fsdy = 4./dy;
 
@@ -616,12 +550,12 @@ void update(const int m, const int n,
 
 #pragma omp parallel
 {
-#pragma omp for simd
+#pragma omp for simd private(i,j)
 #pragma acc parallel loop collapse(2) present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2],\
                              unew[:m+2][:n+2],vnew[:m+2][:n+2],pnew[:m+2][:n+2],\
-                             uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2])
-  for (i=1;i<m+1;i++) {
-    for (j=1;j<n+1;j++) {
+                             uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2]) private(i,j)
+  for (int i=1;i<m+1;i++) {
+    for (int j=1;j<n+1;j++) {
         int im1 = i-1;
         int jm1 = j-1;
         int ip1 = i+1;
@@ -767,17 +701,16 @@ void advance(const int m, const int n,
   real tdts8 = tdt / 8.;
   real tdtsdx = tdt / dx;
   real tdtsdy = tdt / dy;
-  int i,j;  
-
+  int i,j;
 #pragma acc enter data copyin(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2],\
                         uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2],\
                         unew[:m+2][:n+2],vnew[:m+2][:n+2],pnew[:m+2][:n+2])
 #pragma omp parallel
 {
-#pragma omp for simd
+#pragma omp for simd private(i,j)
 #pragma acc parallel loop collapse(2) present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2],\
                              unew[:m+2][:n+2],vnew[:m+2][:n+2],pnew[:m+2][:n+2],\
-                             uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2])
+                             uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2]) private(i,j)
   for (i=1;i<m+1;i++) {
     for (j=1;j<n+1;j++) {
         int im1 = i-1;
@@ -823,3 +756,7 @@ void advance(const int m, const int n,
   }
  } //end omp parallel
 }
+
+
+
+
