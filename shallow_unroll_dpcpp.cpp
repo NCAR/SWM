@@ -429,7 +429,7 @@ void first_step(const int m, const int n,
          double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
          double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy){
-
+             
   for (int i=1;i<m+1;i++) {
     for (int j=1;j<n+1;j++) {
         int ij = i*(n+2)+j;
@@ -483,66 +483,93 @@ void first_step(const int m, const int n,
 }
 
 // update (assumes first step has been called).
-
 void update(const int m, const int n,
          double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE],
          double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
          double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha){
 
-  for (int i=1;i<m+1;i++) {
-    for (int j=1;j<n+1;j++) {
-        int ij = i*(n+2)+j;
-        int ijp1 = ij+1;
-        int ijm1 = ij-1;
-        
-        int ip1j = ij+(n+2);
-        int ip1jp1 = ip1j+1;
-        int ip1jm1 = ip1j-1;
-        
-        int im1j= ij-(n+2);
-        int im1jp1= im1j+1;
-        
-        double p00   = p[ij];      //10 mem access
-        double pp0p1 = p[ijp1];    //6
-        double pp1p0 = p[ip1j];    //6
-        double pp1p1 = p[ip1jp1];  //3
-        double u00   = u[ij];      //9
-        double up0p1  = u[ijp1];   //4
-        double um1p1 = u[im1jp1];  //4
-        double um1p0 = u[im1j];    //4
-        double v00   = v[ij];      //9
-        double vp1p0 = v[ip1j];    //4
-        double vp1m1 = v[ip1jm1];  //4
-        double vp0m1 = v[ijm1];    //4
-        
-        double cut00 = .5 * (pp1p1 + pp0p1)       * up0p1;
-        double cut10 = .5 * (pp0p1 + p[im1jp1]) * um1p1;
-        double cut01 = .5 * (pp1p0 + p00)         * u00;
-        double cut11 = .5 * (p00   + p[im1j])   * um1p0;
-        
-        double cvt00 = .5 * (pp1p1 + pp1p0)       * vp1p0;
-        double cvt10 = .5 * (pp0p1 + p00)         * v00;
-        double cvt01 = .5 * (pp1p0 + p[ip1jm1]) * vp1m1;
-        double cvt11 = .5 * (p00   + p[ijm1])   * vp0m1;
-        
-        double zt00 = (fsdx * (vp1p0 - v00)     - fsdy * (up0p1 - u00))    /(p00     + pp1p0       + pp1p1 + pp0p1);
-        double zt10 = (fsdx * (v00   - v[im1j]) - fsdy * (um1p1 - um1p0))  /(p[im1j] + p00         + pp0p1 + p[im1jp1]);
-        double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u[ijm1]))/(p[ijm1] + p[ip1jm1]   + pp1p0 + p00);
-        
-        double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v[ijp1] * v[ijp1]  + v00   * v00);
-        double ht01 = pp1p0 + .25 * (u[ip1j] * u[ip1j] + u00   * u00   + vp1p0     * vp1p0      + vp1m1 * vp1m1);
-        double ht11 = p00   + .25 * (u00       * u00       + um1p0 * um1p0 + v00       * v00        + vp0m1 * vp0m1);
-        
-        unew[ij] = uold[ij] + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
-        vnew[ij] = vold[ij] - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
-        pnew[ij] = pold[ij] - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
-        
-        uold[ij] = u00 + alpha * (unew[ij]  - 2. * u00 + uold[ij] );
-        vold[ij]  = v00 + alpha * (vnew[ij]  - 2. * v00 + vold[ij] );
-        pold[ij]  = p00 + alpha * (pnew[ij]  - 2. * p00 + pold[ij] );
-        
-    }
-  }
-}
+    default_selector d_selector;
+    queue q(d_selector);
+    int nd_dim = 1;  // nd_range dim
+    buffer<double, nd_dim> u_buf(u),
+                           v_buf(v),
+                           p_buf(p),
+                           uold_buf(uold),
+                           vold_buf(vold),
+                           pold_buf(pold),
+                           unew_buf(unew),
+                           vnew_buf(vnew),
+                           pnew_buf(pnew);
 
+    q.submit([&](handler &h) {
+        auto u = u_buf.get_access(h, read_only);
+        auto v = v_buf.get_access(h, read_only);
+        auto p = p_buf.get_access(h, read_only);
+
+        auto uold = uold_buf.get_access(h, read_write);
+        auto vold = vold_buf.get_access(h, read_write);
+        auto pold = pold_buf.get_access(h, read_write);
+
+        auto unew = unew_buf.get_access(h, read_write);
+        auto vnew = vnew_buf.get_access(h, read_write);
+        auto pnew = pnew_buf.get_access(h, read_write);
+
+        h.parallel_for(m, [=](auto m_) {
+            int i = m_ + 1;
+            h.parallel_for(n, [=](auto n_) {
+                int j = n_ + 1;
+
+                int ij = i*(n+2)+j;
+                int ijp1 = ij+1;
+                int ijm1 = ij-1;
+        
+                int ip1j = ij+(n+2);
+                int ip1jp1 = ip1j+1;
+                int ip1jm1 = ip1j-1;
+        
+                int im1j= ij-(n+2);
+                int im1jp1= im1j+1;
+        
+                double p00   = p[ij];      //10 mem access
+                double pp0p1 = p[ijp1];    //6
+                double pp1p0 = p[ip1j];    //6
+                double pp1p1 = p[ip1jp1];  //3
+                double u00   = u[ij];      //9
+                double up0p1  = u[ijp1];   //4
+                double um1p1 = u[im1jp1];  //4
+                double um1p0 = u[im1j];    //4
+                double v00   = v[ij];      //9
+                double vp1p0 = v[ip1j];    //4
+                double vp1m1 = v[ip1jm1];  //4
+                double vp0m1 = v[ijm1];    //4
+        
+                double cut00 = .5 * (pp1p1 + pp0p1)       * up0p1;
+                double cut10 = .5 * (pp0p1 + p[im1jp1]) * um1p1;
+                double cut01 = .5 * (pp1p0 + p00)         * u00;
+                double cut11 = .5 * (p00   + p[im1j])   * um1p0;
+        
+                double cvt00 = .5 * (pp1p1 + pp1p0)       * vp1p0;
+                double cvt10 = .5 * (pp0p1 + p00)         * v00;
+                double cvt01 = .5 * (pp1p0 + p[ip1jm1]) * vp1m1;
+                double cvt11 = .5 * (p00   + p[ijm1])   * vp0m1;
+        
+                double zt00 = (fsdx * (vp1p0 - v00)     - fsdy * (up0p1 - u00))    /(p00     + pp1p0       + pp1p1 + pp0p1);
+                double zt10 = (fsdx * (v00   - v[im1j]) - fsdy * (um1p1 - um1p0))  /(p[im1j] + p00         + pp0p1 + p[im1jp1]);
+                double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u[ijm1]))/(p[ijm1] + p[ip1jm1]   + pp1p0 + p00);
+        
+                double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v[ijp1] * v[ijp1]  + v00   * v00);
+                double ht01 = pp1p0 + .25 * (u[ip1j] * u[ip1j] + u00   * u00   + vp1p0     * vp1p0      + vp1m1 * vp1m1);
+                double ht11 = p00   + .25 * (u00       * u00       + um1p0 * um1p0 + v00       * v00        + vp0m1 * vp0m1);
+        
+                unew[ij] = uold[ij] + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
+                vnew[ij] = vold[ij] - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
+                pnew[ij] = pold[ij] - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
+        
+                uold[ij] = u00 + alpha * (unew[ij]  - 2. * u00 + uold[ij] );
+                vold[ij]  = v00 + alpha * (vnew[ij]  - 2. * v00 + vold[ij] );
+                pold[ij]  = p00 + alpha * (pnew[ij]  - 2. * p00 + pold[ij] );
+            });
+        });
+    });
+}
