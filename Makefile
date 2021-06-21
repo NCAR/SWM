@@ -2,7 +2,7 @@ CXX = dpcpp
 CXXFLAGS = -O2 -g -std=c++17
 
 SWM_EXE_NAME = swm_dpcpp
-SWM_SOURCES = shallow_unroll.cpp wtime.cpp
+SWM_SOURCES = shallow_unroll_dpcpp.cpp wtime.cpp
 
 
 all: build_swm
