@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/glade/work/zconnell/SWM/shallow_unroll.kokkos.cpp
+vector
+-
+chrono
+-
+fstream
+-
+iostream
+-
+cmath
+-
+
+/glade/work/zconnell/SWM/wtime.cpp
+sys/time.h
+-
+
