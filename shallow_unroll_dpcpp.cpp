@@ -25,9 +25,10 @@
 // SPDX-License-Identifier: MIT
 // =============================================================
 
-#include <vector>
 #include <chrono>
 #include <fstream>
+#include <iostream>
+#include <cmath>
 #include "dpc_common.hpp"
 #include <CL/sycl.hpp>
 #if FPGA || FPGA_EMULATOR
@@ -44,7 +45,8 @@
 #define ITMAX 4000
 #define L_OUT TRUE
 
-using namespace std;
+using namespace sycl;
+
 
 #if 0
 // This function reads in a bitmap and outputs an array of pixels
@@ -93,9 +95,6 @@ class Hough_Transform_kernel;
 //!
 //! Minimal serial version (26 May 2011)
 
-#include <iostream>
-using namespace std;
-#include <cmath>
 
 extern void periodic_cont(int m, int n, double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
 extern int output_csv_var( char *filename, int m, int n, double* var);
