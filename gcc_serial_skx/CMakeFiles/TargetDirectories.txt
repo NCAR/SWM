@@ -1,3 +1,0 @@
-/glade/work/zconnell/SWM/gcc_serial_skx/CMakeFiles/rebuild_cache.dir
-/glade/work/zconnell/SWM/gcc_serial_skx/CMakeFiles/edit_cache.dir
-/glade/work/zconnell/SWM/gcc_serial_skx/CMakeFiles/swm_kokkos.dir

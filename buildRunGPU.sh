@@ -13,7 +13,7 @@
 #module purge
 module load cmake
 module load cuda/10.1
-module load gnu/7.4.0
+module load gnu/8.3.0
 
 # Set install_name to name of particular Kokkos install directory you would
 # like to use to compile the source code

@@ -2,7 +2,7 @@
 
 module load cmake
 module load cuda/10.1
-module load gnu/7.4.0
+module load gnu/8.3.0
 module list
 
 SRC_DIR=/glade/work/$USER/kokkos
