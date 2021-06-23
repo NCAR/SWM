@@ -340,7 +340,7 @@ for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlnew][i]-50000.;
     }
 
-char endfile[32] = "swm_h100.csv";
+char endfile[32] = "swm_h100_cpp.csv";
 outerr = output_csv_var(endfile, m, n, dp);
 if (outerr == 0){
    std::cout << "end file output complete" << std::endl;

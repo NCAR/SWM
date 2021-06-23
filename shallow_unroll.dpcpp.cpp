@@ -37,8 +37,8 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 6
-#define N 12
+#define M 64
+#define N 128
 #define M_LEN (M + 2)
 #define N_LEN (N + 2)
 #define DOMAIN_SIZE M_LEN*N_LEN
@@ -319,7 +319,7 @@ for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlnew][i]-50000.;
     }
 
-char endfile[32] = "swm_h100.csv";
+char endfile[32] = "swm_h100_dpcpp.csv";
 outerr = output_csv_var(endfile, m, n, dp);
 if (outerr == 0){
    std::cout << "end file output complete" << std::endl;
@@ -493,7 +493,7 @@ void update(const int m, const int n,
     queue q(d_selector);
     auto R = range<1>{DOMAIN_SIZE};
     
-    std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
+    //std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
     buffer<double, 1> u_buf(u, R),
                       v_buf(v, R),
