@@ -33,7 +33,7 @@
 #include <CL/sycl/INTEL/fpga_extensions.hpp>
 #endif
 
-
+using namespace sycl;
 
 #include <stdio.h>
 
@@ -121,6 +121,11 @@ extern void adv_nsteps(int m, int n,
 extern double wtime();
 
 int main() {
+    
+    // Define device and queue
+    default_selector d_selector;
+    queue q(d_selector); 
+    std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
     //Declare state arrays (3 time levels, (M+2)x(N+2) points
     

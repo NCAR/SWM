@@ -103,7 +103,7 @@ extern void first_step(int m, int n,
                        double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
                        double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
                        double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy);
-void update(const int m, const int n,
+void update(queue q, const int m, const int n,
             double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE],
             double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
             double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
@@ -117,6 +117,12 @@ extern void adv_nsteps(int m, int n,
 extern double wtime();
 
 int main() {
+    // Define device and queue
+    //default_selector d_selector;
+    gpu_selector d_selector;
+    
+    queue q(d_selector); 
+    std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
     //Declare state arrays (3 time levels, (M+2)x(N+2) points
     
@@ -242,7 +248,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
         
     // Take a time step
     double c1 = wtime();
-    update(m, n,
+    update(q, m, n,
            u[tlmid], v[tlmid], p[tlmid],
            u[tlold], v[tlold], p[tlold],
            u[tlnew], v[tlnew], p[tlnew],
@@ -483,17 +489,13 @@ void first_step(const int m, const int n,
 }
 
 // update (assumes first step has been called).
-void update(const int m, const int n,
+void update(queue q, const int m, const int n,
          double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE],
          double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
          double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha){
 
-    default_selector d_selector;
-    queue q(d_selector);
     auto R = range<1>{DOMAIN_SIZE};
-    
-    //std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
     buffer<double, 1> u_buf(u, R),
                       v_buf(v, R),
