@@ -55,4 +55,4 @@ int main () {
 }
 
 // Compile
-// dpcpp -O2 -g -std=c++17 t006.cpp -o 006
+// dpcpp -O2 -g -std=c++17 t006.cpp -o test006

@@ -36,7 +36,12 @@
 swm_dpcpp
 swm_cpp
 swm_acc_omp
+test*
 
 # Output files
 *.csv
+
+# Job Submission
+*.sh.e*
+*.sh.o*
 

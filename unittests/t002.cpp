@@ -54,7 +54,7 @@ int main () {
 }
 
 // Compile
-// dpcpp -O2 -g -std=c++17 t002.cpp -o 002
+// dpcpp -O2 -g -std=c++17 t002.cpp -o test002
 
 // Here is the warning I get:
 /*
