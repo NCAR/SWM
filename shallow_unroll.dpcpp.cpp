@@ -42,7 +42,7 @@
 #define M_LEN (M + 2)
 #define N_LEN (N + 2)
 #define DOMAIN_SIZE M_LEN*N_LEN
-#define ITMAX 5
+#define ITMAX 4000
 #define L_OUT TRUE
 
 using namespace sycl;
