@@ -37,12 +37,12 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 128
+#define M 6
+#define N 12
 #define M_LEN (M + 2)
 #define N_LEN (N + 2)
 #define DOMAIN_SIZE M_LEN*N_LEN
-#define ITMAX 4000
+#define ITMAX 5
 #define L_OUT TRUE
 
 using namespace sycl;
@@ -492,6 +492,8 @@ void update(const int m, const int n,
     default_selector d_selector;
     queue q(d_selector);
     auto R = range<1>{DOMAIN_SIZE};
+    
+    std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
     buffer<double, 1> u_buf(u, R),
                       v_buf(v, R),

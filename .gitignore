@@ -20,6 +20,9 @@
 *.mod
 *.smod
 
+# Python checkpoints
+.ipynb_checkpoints
+
 # Compiled Static libraries
 *.lai
 *.la
@@ -31,6 +34,8 @@
 *.out
 *.app
 swm_dpcpp
+swm_cpp
+swm_acc_omp
 
 # Output files
 *.csv
