@@ -5,8 +5,6 @@ echo
 echo start: $(date "+%y%m%d.%H%M%S.%3N")
 echo
  
-make clean
-make swm_cpp
 export SYCL_DEVICE_FILTER=cpu
 ./swm_cpp
  
