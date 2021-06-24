@@ -98,12 +98,12 @@ typedef Kokkos::View<double[DOMAIN_SIZE][3]> AllLevelType;
 typedef Kokkos::View<double[DOMAIN_SIZE]> SingleLevelType;
 
 extern void periodic_cont(int m, int n, int tl,
-                          AllLevelType::HostMirror uAll, AllLevelType::HostMirror vAll, AllLevelType::HostMirror pAll);
+                          AllLevelType uAll, AllLevelType vAll, AllLevelType pAll);
 
 extern int output_csv_var( char *filename, int m, int n, double* var);
 
 extern void first_step(int m, int n, int tlmid, int tlold, int tlnew,
-                       AllLevelType::HostMirror uAll, AllLevelType::HostMirror vAll, AllLevelType::HostMirror pAll,
+                       AllLevelType uAll, AllLevelType vAll, AllLevelType pAll,
                        double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy);
 
 void update(const int m, const int n, int tlmid, int tlold, int tlnew,
@@ -111,7 +111,7 @@ void update(const int m, const int n, int tlmid, int tlold, int tlnew,
             double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha);
 
 extern void adv_nsteps(int m, int n, int tlmid, int tlold, int tlnew,
-                       AllLevelType::HostMirror uAll, AllLevelType::HostMirror vAll, AllLevelType::HostMirror pAll,
+                       AllLevelType uAll, AllLevelType vAll, AllLevelType pAll,
                        double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy,
                        double alpha, int ncycles, double tdt, double time);
 
@@ -123,15 +123,15 @@ int main() {
     //Declare state arrays as views ((M+2)x(N+2) points, 3 time levels)
     //Domain size is first dimension to optimize memory layouts
     //Allocate device memory
-    AllLevelType u_d("u");
-    AllLevelType v_d("v");
-    AllLevelType p_d("p");
-    SingleLevelType psi_d("psi");
+    AllLevelType u("u");
+    AllLevelType v("v");
+    AllLevelType p("p");
+    SingleLevelType psi("psi");
     // Allocate host memory
-    AllLevelType::HostMirror u = Kokkos::create_mirror_view(u_d);
-    AllLevelType::HostMirror v = Kokkos::create_mirror_view(v_d);
-    AllLevelType::HostMirror p = Kokkos::create_mirror_view(p_d);
-    SingleLevelType::HostMirror psi = Kokkos::create_mirror_view(psi_d);
+    AllLevelType::HostMirror u_h = Kokkos::create_mirror_view(u);
+    AllLevelType::HostMirror v_h = Kokkos::create_mirror_view(v);
+    AllLevelType::HostMirror p_h = Kokkos::create_mirror_view(p);
+    SingleLevelType::HostMirror psi_h = Kokkos::create_mirror_view(psi);
     
     // ** Initialisations **
 
@@ -168,17 +168,18 @@ int main() {
     double time; // Model time
     
     // Initial values of the stream function and p
-    int ii;
-    for (int i=0; i<m+1; i++) {
-      for (int j=0; j<n+1; j++) {
-        ii = i*(n+2)+j;
+    Kokkos::parallel_for("init_stream_func_vals",
+      Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0},{m+1,n+1}),
+      KOKKOS_LAMBDA(const int i, const int j){
+        int ii = i*(n+2)+j;
         psi(ii) = a * sin((i + .5) * di) * sin((j + .5) * dj);
       }
-    }
+    );
 
     // Initialize velocities
-    for (int i=0; i<m; i++) {
-      for (int j=0;j<n;j++) {
+    Kokkos::parallel_for("init_velocities",
+      Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0},{m,n}),
+      KOKKOS_LAMBDA(const int i, const int j){
         int ipjp = (i+1)*N_LEN + j+1;
         int ipj = (i+1)*N_LEN + j;
         int ijp = i*N_LEN + j+1;
@@ -186,21 +187,25 @@ int main() {
         v(ipjp,tlmid) = (psi(ipjp) - psi(ijp)) / dx;
         p(ipjp,tlmid) = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
       }
-    }
+    );
     
     // Periodic Continuation
     // (in a distributed memory code this would be MPI halo exchanges)
     periodic_cont(m, n, tlmid, u, v, p);
     
-    for (int ij=0; ij<DOMAIN_SIZE; ij++) {
-      u(ij,tlold) = u(ij,tlmid);
-      v(ij,tlold) = v(ij,tlmid);
-      p(ij,tlold) = p(ij,tlmid);
-    }
+    Kokkos::parallel_for("mid_to_old",
+      DOMAIN_SIZE,
+      KOKKOS_LAMBDA(const int ij){
+        u(ij,tlold) = u(ij,tlmid);
+        v(ij,tlold) = v(ij,tlmid);
+        p(ij,tlold) = p(ij,tlmid);
+      }
+    );
+    Kokkos::deep_copy(p_h,p);
     
     double* dp = new double [DOMAIN_SIZE];
     for (int i=0; i<DOMAIN_SIZE; i++){
-      dp[i]=p(i,tlmid)-50000.;
+      dp[i]=p_h(i,tlmid)-50000.;
     }
     char initfile[32] = "swm_init.csv";
     
@@ -220,14 +225,17 @@ int main() {
     periodic_cont(m, n, tlnew, u, v, p);
     
     time = time + tdt;
-    for (int ij=0; ij<DOMAIN_SIZE; ij++) {
-      u(ij,tlold) = u(ij,tlmid);
-      v(ij,tlold) = v(ij,tlmid);
-      p(ij,tlold) = p(ij,tlmid);
-      u(ij,tlmid) = u(ij,tlnew);
-      v(ij,tlmid) = v(ij,tlnew);
-      p(ij,tlmid) = p(ij,tlnew);
-    }
+    Kokkos::parallel_for("mid-to-old_new-to-mid",
+      DOMAIN_SIZE,
+      KOKKOS_LAMBDA(const int ij){
+        u(ij,tlold) = u(ij,tlmid);
+        v(ij,tlold) = v(ij,tlmid);
+        p(ij,tlold) = p(ij,tlmid);
+        u(ij,tlmid) = u(ij,tlnew);
+        v(ij,tlmid) = v(ij,tlnew);
+        p(ij,tlmid) = p(ij,tlnew);
+      }
+    );
 
     // From now on, take full timestep 2*dt step
     tdt = tdt + tdt;
@@ -243,32 +251,17 @@ int main() {
     for (int ncycle=2; ncycle<=ITMAX; ncycle++){
           
       // Take a time step
-      double update_total_start = wtime();
-      // Copy data from host to device
-      Kokkos::deep_copy(u_d,u);
-      Kokkos::deep_copy(v_d,v);
-      Kokkos::deep_copy(p_d,p);
-      double update_comp_start = wtime();
-      // Perform update
+      double c1 = wtime();
       update(m, n, tlmid, tlold, tlnew,
-             u_d, v_d, p_d,
+             u, v, p,
              fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
-      double update_comp_stop = wtime();
-      // Copy data from device to host
-      Kokkos::deep_copy(u,u_d);
-      Kokkos::deep_copy(v,v_d);
-      Kokkos::deep_copy(p,p_d);
-      double update_total_stop = wtime();
-      std::cout << "Host to device: " << (update_comp_start - update_total_start) << std::endl;
-      std::cout << "Computations: " << (update_comp_stop - update_comp_start) << std::endl;
-      std::cout << "Device to host: " << (update_total_stop - update_comp_stop) << std::endl;
-      std::cout << "Total: " << (update_total_stop - update_total_start) << std::endl;
-      tup = tup + (update_total_stop - update_total_start);
+      double c2 = wtime();
+      tup = tup + (c2 - c1);
       
       // Perform periodic continuation
-      double c1 = wtime();
+      c1 = wtime();
       periodic_cont(m, n, tlnew, u, v, p);
-      double c2 = wtime();
+      c2 = wtime();
       tpc = tpc + (c2-c1);
       
       // update the time level pointers 
@@ -279,6 +272,7 @@ int main() {
       // update the simulation time
       time = time + dt; 
     }
+    Kokkos::fence();
     double tend = wtime();
     double total_time = tend - tstart;
     double tcyc = total_time / (ITMAX-1); //time per cycle
@@ -293,6 +287,9 @@ int main() {
         
     if (L_OUT) {
     // if on the GPU, synch data with host
+      Kokkos::deep_copy(p_h,p);
+      Kokkos::deep_copy(u_h,u);
+      Kokkos::deep_copy(v_h,v);
       double ptime = time / 3600.;
       int nits = ITMAX-1;
       int mnmin = std::min(m,n);
@@ -300,15 +297,15 @@ int main() {
       printf("\n\n");
       printf(" gpu diagonal elements of p (%d steps)\n",nits+1);
       for (int i=0; i<mnmin; i++) {
-        printf("%f ",p((i+1)*(n+2)+(i+1),tlnew));
+        printf("%f ",p_h((i+1)*(n+2)+(i+1),tlnew));
       }
       printf("\n gpu diagonal elements of u (%d steps)\n",nits+1);
       for (int i=0; i<mnmin; i++) {
-        printf("%f ",u(i*(n+2)+(i+1),tlnew));
+        printf("%f ",u_h(i*(n+2)+(i+1),tlnew));
       }
       printf("\n gpu diagonal elements of v (%d step)\n",nits+1);
       for (int i=0; i<mnmin; i++) {
-        printf("%f ",v((i+1)*(n+2)+i,tlnew));
+        printf("%f ",v_h((i+1)*(n+2)+i,tlnew));
       }
       printf("\n\n");
 
@@ -327,7 +324,7 @@ int main() {
     // output to .csv file
       
     for (int i=0; i<DOMAIN_SIZE; i++){
-      dp[i]=p(i,tlnew)-50000.;
+      dp[i]=p_h(i,tlnew)-50000.;
     }
 
     char endfile[32] = "swm_h100.csv";
@@ -341,7 +338,7 @@ int main() {
 }
 
 void periodic_cont(const int m, const int n, const int tl,
-                   AllLevelType::HostMirror uAll, AllLevelType::HostMirror vAll, AllLevelType::HostMirror pAll){
+                   AllLevelType uAll, AllLevelType vAll, AllLevelType pAll){
 
   // North-South periodic continuation
   // Labeling conventions:
@@ -353,21 +350,24 @@ void periodic_cont(const int m, const int n, const int tl,
   auto v = Kokkos::subview(vAll, Kokkos::ALL, tl);
   auto p = Kokkos::subview(pAll, Kokkos::ALL, tl);
 
-  for (int j=1; j<n+1; j++) {
-    int hnorth = (m+1)*(n+2) + j;
-    int hsouth = j;
-    int inorth = m*(n+2) + j;
-    int isouth = (n+2) + j;
-    
-    u(hsouth) = u(inorth);
-    u(hnorth) = u(isouth);
-    
-    v(hsouth) = v(inorth);
-    v(hnorth) = v(isouth);
-    
-    p(hsouth) = p(inorth);
-    p(hnorth) = p(isouth);
-  }
+  Kokkos::parallel_for("north-south_periodic_cont",
+    Kokkos::RangePolicy<>(1,n+1),
+    KOKKOS_LAMBDA(const int j){
+      int hnorth = (m+1)*(n+2) + j;
+      int hsouth = j;
+      int inorth = m*(n+2) + j;
+      int isouth = (n+2) + j;
+      
+      u(hsouth) = u(inorth);
+      u(hnorth) = u(isouth);
+      
+      v(hsouth) = v(inorth);
+      v(hnorth) = v(isouth);
+      
+      p(hsouth) = p(inorth);
+      p(hnorth) = p(isouth);
+    }
+  );
   
   // East-West periodic continuation
   // h = halo; i = interior;
@@ -385,38 +385,41 @@ void periodic_cont(const int m, const int n, const int tl,
   int isw = 1*(n+2)+1;
   int inw = m*(n+2)+1;
   
-  for (int i=1; i<m+1; i++) {
-    int hwest = i*(n+2);
-    int heast = i*(n+2) + n+1;
-    int iwest = i*(n+2) + 1;
-    int ieast = i*(n+2) + n;
-    
-    u(hwest) = u(ieast);
-    u(heast) = u(iwest);
-    
-    v(hwest) = v(ieast);
-    v(heast) = v(iwest);
-    
-    p(hwest) = p(ieast);
-    p(heast) = p(iwest);
-    
-    if (i==m){
-      u(hsw)   = u(ine);
-      u(hnw)   = u(ise);
-      u(hne)   = u(isw);
-      u(hse)   = u(inw);
+  Kokkos::parallel_for("east-west_periodic_cont",
+    Kokkos::RangePolicy<>(1,m+1),
+    KOKKOS_LAMBDA(const int i){
+      int hwest = i*(n+2);
+      int heast = i*(n+2) + n+1;
+      int iwest = i*(n+2) + 1;
+      int ieast = i*(n+2) + n;
+      
+      u(hwest) = u(ieast);
+      u(heast) = u(iwest);
+      
+      v(hwest) = v(ieast);
+      v(heast) = v(iwest);
+      
+      p(hwest) = p(ieast);
+      p(heast) = p(iwest);
+      
+      if (i==m){
+        u(hsw)   = u(ine);
+        u(hnw)   = u(ise);
+        u(hne)   = u(isw);
+        u(hse)   = u(inw);
 
-      v(hsw)   = v(ine);
-      v(hnw)   = v(ise);
-      v(hne)   = v(isw);
-      v(hse)   = v(inw);
-        
-      p(hsw)   = p(ine);
-      p(hnw)   = p(ise);
-      p(hne)   = p(isw);
-      p(hse)   = p(inw);
+        v(hsw)   = v(ine);
+        v(hnw)   = v(ise);
+        v(hne)   = v(isw);
+        v(hse)   = v(inw);
+          
+        p(hsw)   = p(ine);
+        p(hnw)   = p(ise);
+        p(hne)   = p(isw);
+        p(hse)   = p(inw);
+      }
     }
-  }
+  );
 }
 
 int output_csv_var( char *filename, int m, int n, double* var  )
@@ -439,81 +442,112 @@ int output_csv_var( char *filename, int m, int n, double* var  )
 }
 
 // numerically the first step is special
+struct first_step_functor{
+  int m, n, tlmid, tlold, tlnew;
+  AllLevelType uAll, vAll, pAll;
+  double fsdx, fsdy, tdts8, tdtsdx, tdtsdy;
+
+  first_step_functor(int _m, int _n, int _tlmid, int _tlold, int _tlnew,
+                    AllLevelType _uAll, AllLevelType _vAll, AllLevelType _pAll,
+                    double _fsdx, double _fsdy, double _tdts8, double _tdtsdx, double _tdtsdy){
+    m      = _m;
+    n      = _n;
+    tlmid  = _tlmid;
+    tlold  = _tlold;
+    tlnew  = _tlnew;
+    uAll   = _uAll;
+    vAll   = _vAll;
+    pAll   = _pAll;
+    fsdx   = _fsdx;
+    fsdy   = _fsdy;
+    tdts8  = _tdts8;
+    tdtsdx = _tdtsdx;
+    tdtsdy = _tdtsdy;
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j) const{
+    auto u    = Kokkos::subview(uAll, Kokkos::ALL, tlmid);
+    auto v    = Kokkos::subview(vAll, Kokkos::ALL, tlmid);
+    auto p    = Kokkos::subview(pAll, Kokkos::ALL, tlmid);
+    auto uold = Kokkos::subview(uAll, Kokkos::ALL, tlold);
+    auto vold = Kokkos::subview(vAll, Kokkos::ALL, tlold);
+    auto pold = Kokkos::subview(pAll, Kokkos::ALL, tlold);
+    auto unew = Kokkos::subview(uAll, Kokkos::ALL, tlnew);
+    auto vnew = Kokkos::subview(vAll, Kokkos::ALL, tlnew);
+    auto pnew = Kokkos::subview(pAll, Kokkos::ALL, tlnew);
+
+    int ij = i*(n+2)+j;
+    int ijp1 = ij+1;
+    int ijm1 = ij-1;
+    
+    int ip1j = ij+(n+2);
+    int ip1jp1 = ip1j+1;
+    int ip1jm1 = ip1j-1;
+    
+    int im1j= ij-(n+2);
+    int im1jp1= im1j+1;
+    
+    double p00   = p(ij);      //10 mem access
+    double pp0p1 = p(ijp1);    //6
+    double pp1p0 = p(ip1j);    //6
+    double pp1p1 = p(ip1jp1);  //3
+    double u00   = u(ij);      //9
+    double up0p1  = u(ijp1);   //4
+    double um1p1 = u(im1jp1);  //4
+    double um1p0 = u(im1j);    //4
+    double v00   = v(ij);      //9
+    double vp1p0 = v(ip1j);    //4
+    double vp1m1 = v(ip1jm1);  //4
+    double vp0m1 = v(ijm1);    //4
+    
+    double cut00 = .5 * (pp1p1 + pp0p1)       * up0p1;
+    double cut10 = .5 * (pp0p1 + p(im1jp1)) * um1p1;
+    double cut01 = .5 * (pp1p0 + p00)         * u00;
+    double cut11 = .5 * (p00   + p(im1j))   * um1p0;
+    
+    double cvt00 = .5 * (pp1p1 + pp1p0)       * vp1p0;
+    double cvt10 = .5 * (pp0p1 + p00)         * v00;
+    double cvt01 = .5 * (pp1p0 + p(ip1jm1)) * vp1m1;
+    double cvt11 = .5 * (p00   + p(ijm1))   * vp0m1;
+    
+    double zt00 = (fsdx * (vp1p0 - v00)     - fsdy * (up0p1 - u00))    /(p00     + pp1p0       + pp1p1 + pp0p1);
+    double zt10 = (fsdx * (v00   - v(im1j)) - fsdy * (um1p1 - um1p0))  /(p(im1j) + p00         + pp0p1 + p(im1jp1));
+    double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u(ijm1)))/(p(ijm1) + p(ip1jm1)   + pp1p0 + p00);
+    
+    double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v(ijp1) * v(ijp1)  + v00   * v00);
+    double ht01 = pp1p0 + .25 * (u(ip1j) * u(ip1j) + u00   * u00   + vp1p0     * vp1p0      + vp1m1 * vp1m1);
+    double ht11 = p00   + .25 * (u00       * u00       + um1p0 * um1p0 + v00       * v00        + vp0m1 * vp0m1);
+    
+    unew(ij) = uold(ij) + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
+    vnew(ij) = vold(ij) - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
+    pnew(ij) = pold(ij) - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
+  }
+};
 void first_step(const int m, const int n, int tlmid, int tlold, int tlnew,
-                AllLevelType::HostMirror uAll, AllLevelType::HostMirror vAll, AllLevelType::HostMirror pAll,
+                AllLevelType uAll, AllLevelType vAll, AllLevelType pAll,
                 double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy){
 
-  // Get individual time levels
-  auto u = Kokkos::subview(uAll, Kokkos::ALL, tlmid);
-  auto v = Kokkos::subview(vAll, Kokkos::ALL, tlmid);
-  auto p = Kokkos::subview(pAll, Kokkos::ALL, tlmid);
-  auto uold = Kokkos::subview(uAll, Kokkos::ALL, tlold);
-  auto vold = Kokkos::subview(vAll, Kokkos::ALL, tlold);
-  auto pold = Kokkos::subview(pAll, Kokkos::ALL, tlold);
-  auto unew = Kokkos::subview(uAll, Kokkos::ALL, tlnew);
-  auto vnew = Kokkos::subview(vAll, Kokkos::ALL, tlnew);
-  auto pnew = Kokkos::subview(pAll, Kokkos::ALL, tlnew);
+  first_step_functor functor(m, n, tlmid, tlold, tlnew,
+                             uAll, vAll, pAll,
+                             fsdx, fsdy, tdts8, tdtsdx, tdtsdy);
 
-  for (int i=1;i<m+1;i++) {
-    for (int j=1;j<n+1;j++) {
-      int ij = i*(n+2)+j;
-      int ijp1 = ij+1;
-      int ijm1 = ij-1;
-      
-      int ip1j = ij+(n+2);
-      int ip1jp1 = ip1j+1;
-      int ip1jm1 = ip1j-1;
-      
-      int im1j= ij-(n+2);
-      int im1jp1= im1j+1;
-      
-      double p00   = p(ij);      //10 mem access
-      double pp0p1 = p(ijp1);    //6
-      double pp1p0 = p(ip1j);    //6
-      double pp1p1 = p(ip1jp1);  //3
-      double u00   = u(ij);      //9
-      double up0p1  = u(ijp1);   //4
-      double um1p1 = u(im1jp1);  //4
-      double um1p0 = u(im1j);    //4
-      double v00   = v(ij);      //9
-      double vp1p0 = v(ip1j);    //4
-      double vp1m1 = v(ip1jm1);  //4
-      double vp0m1 = v(ijm1);    //4
-      
-      double cut00 = .5 * (pp1p1 + pp0p1)       * up0p1;
-      double cut10 = .5 * (pp0p1 + p(im1jp1)) * um1p1;
-      double cut01 = .5 * (pp1p0 + p00)         * u00;
-      double cut11 = .5 * (p00   + p(im1j))   * um1p0;
-      
-      double cvt00 = .5 * (pp1p1 + pp1p0)       * vp1p0;
-      double cvt10 = .5 * (pp0p1 + p00)         * v00;
-      double cvt01 = .5 * (pp1p0 + p(ip1jm1)) * vp1m1;
-      double cvt11 = .5 * (p00   + p(ijm1))   * vp0m1;
-      
-      double zt00 = (fsdx * (vp1p0 - v00)     - fsdy * (up0p1 - u00))    /(p00     + pp1p0       + pp1p1 + pp0p1);
-      double zt10 = (fsdx * (v00   - v(im1j)) - fsdy * (um1p1 - um1p0))  /(p(im1j) + p00         + pp0p1 + p(im1jp1));
-      double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u(ijm1)))/(p(ijm1) + p(ip1jm1)   + pp1p0 + p00);
-      
-      double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v(ijp1) * v(ijp1)  + v00   * v00);
-      double ht01 = pp1p0 + .25 * (u(ip1j) * u(ip1j) + u00   * u00   + vp1p0     * vp1p0      + vp1m1 * vp1m1);
-      double ht11 = p00   + .25 * (u00       * u00       + um1p0 * um1p0 + v00       * v00        + vp0m1 * vp0m1);
-      
-      unew(ij) = uold(ij) + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
-      vnew(ij) = vold(ij) - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
-      pnew(ij) = pold(ij) - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
-    }
-  }
+  Kokkos::parallel_for("first_step",
+    Kokkos::MDRangePolicy<Kokkos::Rank<2>>({1,1},{m+1,n+1}),
+    functor
+  );
 }
 
 // update (assumes first step has been called).
 struct update_functor{
-  int n, tlmid, tlold, tlnew;
+  int m, n, tlmid, tlold, tlnew;
   AllLevelType uAll, vAll, pAll;
   double fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha;
 
-  update_functor(int _n, int _tlmid, int _tlold, int _tlnew,
+  update_functor(int _m, int _n, int _tlmid, int _tlold, int _tlnew,
                  AllLevelType _uAll, AllLevelType _vAll, AllLevelType _pAll,
                  double _fsdx, double _fsdy, double _tdts8, double _tdtsdx, double _tdtsdy, double _alpha){
+    m      = _m;
     n      = _n;
     tlmid  = _tlmid;
     tlold  = _tlold;
@@ -596,11 +630,11 @@ void update(const int m, const int n, int tlmid, int tlold, int tlnew,
             AllLevelType uAll, AllLevelType vAll, AllLevelType pAll,
             double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha){
 
-  update_functor functor(n, tlmid, tlold, tlnew,
+  update_functor functor(m, n, tlmid, tlold, tlnew,
                          uAll, vAll, pAll,
                          fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
   Kokkos::parallel_for("update",
-                       Kokkos::MDRangePolicy<Kokkos::Rank<2>>({1,1},{m+1,n+1}),
-                       functor);
-  Kokkos::fence();
+    Kokkos::MDRangePolicy<Kokkos::Rank<2>>({1,1},{m+1,n+1}),
+    functor
+  );
 }
