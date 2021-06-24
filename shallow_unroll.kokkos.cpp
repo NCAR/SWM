@@ -243,26 +243,32 @@ int main() {
     for (int ncycle=2; ncycle<=ITMAX; ncycle++){
           
       // Take a time step
-      double c1 = wtime();
+      double update_total_start = wtime();
       // Copy data from host to device
       Kokkos::deep_copy(u_d,u);
       Kokkos::deep_copy(v_d,v);
       Kokkos::deep_copy(p_d,p);
+      double update_comp_start = wtime();
       // Perform update
       update(m, n, tlmid, tlold, tlnew,
              u_d, v_d, p_d,
              fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
+      double update_comp_stop = wtime();
       // Copy data from device to host
       Kokkos::deep_copy(u,u_d);
       Kokkos::deep_copy(v,v_d);
       Kokkos::deep_copy(p,p_d);
-      double c2 = wtime();
-      tup = tup + (c2 - c1);
+      double update_total_stop = wtime();
+      std::cout << "Host to device: " << (update_comp_start - update_total_start) << std::endl;
+      std::cout << "Computations: " << (update_comp_stop - update_comp_start) << std::endl;
+      std::cout << "Device to host: " << (update_total_stop - update_comp_stop) << std::endl;
+      std::cout << "Total: " << (update_total_stop - update_total_start) << std::endl;
+      tup = tup + (update_total_stop - update_total_start);
       
       // Perform periodic continuation
-      c1 = wtime();
+      double c1 = wtime();
       periodic_cont(m, n, tlnew, u, v, p);
-      c2 = wtime();
+      double c2 = wtime();
       tpc = tpc + (c2-c1);
       
       // update the time level pointers 
