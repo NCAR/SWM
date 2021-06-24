@@ -25,9 +25,9 @@
 // SPDX-License-Identifier: MIT
 // =============================================================
 
-#include <chrono>
-#include <fstream>
-#include <iostream>
+#include <chrono>   // todo: timer --> try high resolution clock to get better results
+#include <fstream>  // file
+#include <iostream> // io
 #include <cmath>
 #include "dpc_common.hpp"
 #include <CL/sycl.hpp>
@@ -214,13 +214,20 @@ double tdts8 = tdt / 8.;
 double tdtsdx = tdt / dx;
 double tdtsdy = tdt / dy;
 
+double b4first_step = wtime();
+    
 first_step(m, n,
            u[tlmid], v[tlmid], p[tlmid],
            u[tlold], v[tlold], p[tlold],
            u[tlnew], v[tlnew], p[tlnew],
            fsdx, fsdy, tdts8, tdtsdx, tdtsdy);
+ double after_first_step = wtime(); 
+std::cout << "first step time: " << after_first_step-b4first_step << std::endl;
     
 periodic_cont(m, n, u[tlnew], v[tlnew], p[tlnew]);
+  
+double after_halo = wtime();  
+std::cout << "halo update time: " << after_halo-after_first_step << std::endl;
     
 time = time + tdt;
 for (int ij=0; ij<DOMAIN_SIZE; ij++) {
@@ -254,6 +261,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
            u[tlnew], v[tlnew], p[tlnew],
            fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
     double c2 = wtime();
+    std::cout << "update time: " << c2-c1 << std::endl;
     tup = tup + (c2 - c1);
     
     // Perform periodic continuation
