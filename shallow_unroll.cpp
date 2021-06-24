@@ -134,8 +134,6 @@ int main() {
     double p[3][DOMAIN_SIZE];
     double psi[DOMAIN_SIZE];
     
-#pragma acc enter data copyin(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE],\
-                              psi[:DOMAIN_SIZE])
     
     // ** Initialisations **
 
@@ -173,12 +171,7 @@ int main() {
     
     // Initial values of the stream function and p
     // This computation would be on the HOST
-#pragma acc data present(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE],psi[:DOMAIN_SIZE])
-#pragma omp parallel
-{
-#pragma omp for simd
  // Initial values of the stream function and p
-#pragma acc parallel loop present(psi)
   int ii;
   for (int i=0; i<m+1; i++) {
     for (int j=0; j<n+1; j++) {
@@ -188,8 +181,6 @@ int main() {
   }
 
  // Initialize velocities
-#pragma omp for simd
-   #pragma acc parallel loop present(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE])
     for (int i=0; i<m; i++) {
       for (int j=0;j<n;j++) {
           int ipjp = (i+1)*N_LEN + j+1;
@@ -200,15 +191,12 @@ int main() {
           p[tlmid][ipjp] = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
           }
       }
-   }
 
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
 
 periodic_cont(m, n, u[tlmid], v[tlmid], p[tlmid]);
 
-#pragma acc update host(u[tlmid:1][:DOMAIN_SIZE],v[tlmid:1][:DOMAIN_SIZE][:n+2],p[tlmid:1][DOMAIN_SIZE][:n+2])
-#pragma acc parallel loop present(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE])
 for (int ij=0; ij<DOMAIN_SIZE; ij++) {
     u[tlold][ij] = u[tlmid][ij];
     v[tlold][ij] = v[tlmid][ij];
@@ -240,8 +228,7 @@ first_step(m, n,
 periodic_cont(m, n, u[tlnew], v[tlnew], p[tlnew]);
     
 time = time + tdt;
-#pragma acc update host(u[tlnew:1][:DOMAIN_SIZE], v[tlnew:1][:DOMAIN_SIZE], p[tlnew:1][:DOMAIN_SIZE])
-#pragma acc parallel loop present(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE])
+
 for (int ij=0; ij<DOMAIN_SIZE; ij++) {
     u[tlold][ij] = u[tlmid][ij];
     v[tlold][ij] = v[tlmid][ij];
@@ -306,8 +293,6 @@ tlmid = tlnew;
 tlnew = tmp;
     
 if (L_OUT) {
-// if on the GPU, synch data with host
-#pragma acc update host(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE,p[:3][:DOMAIN_SIZE)
     double ptime = time / 3600.;
     int nits = ITMAX-1;
     int mnmin = std::min(m,n);
@@ -361,8 +346,6 @@ void periodic_cont(const int m, const int n, double u[DOMAIN_SIZE], double v[DOM
     // h = halo; i = interior;
     // north = m; south = 1;
     
-#pragma acc enter data copyin(m,n,u[:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE])
-#pragma acc  parallel loop  present(u[:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE]) async
     for (int j=1; j<n+1; j++) {
         int hnorth = (m+1)*(n+2) + j;
         int hsouth = j;
@@ -395,9 +378,7 @@ void periodic_cont(const int m, const int n, double u[DOMAIN_SIZE], double v[DOM
     int isw = 1*(n+2)+1;
     int inw = m*(n+2)+1;
     
-#pragma acc  parallel loop  present(u(:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE]) async
     for (int i=1; i<m+1; i++) {
-#pragma acc cache(u[:][n],u[:][0]) // HOW SHOULD THIS BE CHANGED for 1-D arrays???
         int hwest = i*(n+2);
         int heast = i*(n+2) + n+1;
         int iwest = i*(n+2) + 1;
@@ -461,15 +442,6 @@ void first_step(const int m, const int n,
          double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy){
 
-#pragma acc enter data copyin(u[:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE],\
-                        uold[:DOMAIN_SIZE],vold[:DOMAIN_SIZE],pold[:DOMAIN_SIZE],\
-                        unew[:DOMAIN_SIZE],vnew[:DOMAIN_SIZE],pnew[:DOMAIN_SIZE])
-#pragma omp parallel
-{
-#pragma omp for simd
-#pragma acc parallel loop collapse(2) present(u[:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE],\
-                             unew[:DOMAIN_SIZE],vnew[:DOMAIN_SIZE],pnew[:DOMAIN_SIZE],\
-                             uold[:DOMAIN_SIZE],vold[:DOMAIN_SIZE],pold[:DOMAIN_SIZE])
   for (int i=1;i<m+1;i++) {
     for (int j=1;j<n+1;j++) {
         int ij = i*(n+2)+j;
@@ -520,7 +492,6 @@ void first_step(const int m, const int n,
         
     }
   }
- } //end omp parallel
 }
 
 // update (assumes first step has been called).
@@ -531,16 +502,6 @@ void update(const int m, const int n,
          double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha){
 
-#pragma acc data present(u[:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE],\
-                        uold[:DOMAIN_SIZE],vold[:DOMAIN_SIZE],pold[:DOMAIN_SIZE],\
-                        unew[:DOMAIN_SIZE],vnew[:DOMAIN_SIZE],pnew[:DOMAIN_SIZE])
-{
-#pragma omp parallel
-{
-#pragma omp for simd
-#pragma acc parallel loop collapse(2) present(u[:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE],\
-                             unew[:DOMAIN_SIZE],vnew[:DOMAIN_SIZE],pnew[:DOMAIN_SIZE],\
-                             uold[:DOMAIN_SIZE],vold[:DOMAIN_SIZE],pold[:DOMAIN_SIZE])
   for (int i=1;i<m+1;i++) {
     for (int j=1;j<n+1;j++) {
         int ij = i*(n+2)+j;
@@ -595,7 +556,4 @@ void update(const int m, const int n,
         
     }
   }
- } //end omp parallel
-} // end acc data
 }
-
