@@ -107,7 +107,7 @@ extern void first_step(int m, int n, int tlmid, int tlold, int tlnew,
                        double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy);
 
 void update(const int m, const int n, int tlmid, int tlold, int tlnew,
-            AllLevelType::HostMirror uAll, AllLevelType::HostMirror vAll, AllLevelType::HostMirror pAll,
+            AllLevelType uAll, AllLevelType vAll, AllLevelType pAll,
             double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha);
 
 extern void adv_nsteps(int m, int n, int tlmid, int tlold, int tlnew,
@@ -244,8 +244,18 @@ int main() {
           
       // Take a time step
       double c1 = wtime();
-      update(m, n, tlmid, tlold, tlnew, u, v, p,
+      // Copy data from host to device
+      Kokkos::deep_copy(u_d,u);
+      Kokkos::deep_copy(v_d,v);
+      Kokkos::deep_copy(p_d,p);
+      // Perform update
+      update(m, n, tlmid, tlold, tlnew,
+             u_d, v_d, p_d,
              fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
+      // Copy data from device to host
+      Kokkos::deep_copy(u,u_d);
+      Kokkos::deep_copy(v,v_d);
+      Kokkos::deep_copy(p,p_d);
       double c2 = wtime();
       tup = tup + (c2 - c1);
       
@@ -490,73 +500,101 @@ void first_step(const int m, const int n, int tlmid, int tlold, int tlnew,
 }
 
 // update (assumes first step has been called).
-void update(const int m, const int n, int tlmid, int tlold, int tlnew,
-         AllLevelType::HostMirror uAll, AllLevelType::HostMirror vAll, AllLevelType::HostMirror pAll,
-         double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha){
+struct update_functor{
+  int n, tlmid, tlold, tlnew;
+  AllLevelType uAll, vAll, pAll;
+  double fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha;
 
-  // Get individual time levels
-  auto u = Kokkos::subview(uAll, Kokkos::ALL, tlmid);
-  auto v = Kokkos::subview(vAll, Kokkos::ALL, tlmid);
-  auto p = Kokkos::subview(pAll, Kokkos::ALL, tlmid);
-  auto uold = Kokkos::subview(uAll, Kokkos::ALL, tlold);
-  auto vold = Kokkos::subview(vAll, Kokkos::ALL, tlold);
-  auto pold = Kokkos::subview(pAll, Kokkos::ALL, tlold);
-  auto unew = Kokkos::subview(uAll, Kokkos::ALL, tlnew);
-  auto vnew = Kokkos::subview(vAll, Kokkos::ALL, tlnew);
-  auto pnew = Kokkos::subview(pAll, Kokkos::ALL, tlnew);
-
-  for (int i=1;i<m+1;i++) {
-    for (int j=1;j<n+1;j++) {
-        int ij = i*(n+2)+j;
-        int ijp1 = ij+1;
-        int ijm1 = ij-1;
-        
-        int ip1j = ij+(n+2);
-        int ip1jp1 = ip1j+1;
-        int ip1jm1 = ip1j-1;
-        
-        int im1j= ij-(n+2);
-        int im1jp1= im1j+1;
-        
-        double p00   = p(ij);      //10 mem access
-        double pp0p1 = p(ijp1);    //6
-        double pp1p0 = p(ip1j);    //6
-        double pp1p1 = p(ip1jp1);  //3
-        double u00   = u(ij);      //9
-        double up0p1  = u(ijp1);   //4
-        double um1p1 = u(im1jp1);  //4
-        double um1p0 = u(im1j);    //4
-        double v00   = v(ij);      //9
-        double vp1p0 = v(ip1j);    //4
-        double vp1m1 = v(ip1jm1);  //4
-        double vp0m1 = v(ijm1);    //4
-        
-        double cut00 = .5 * (pp1p1 + pp0p1)       * up0p1;
-        double cut10 = .5 * (pp0p1 + p(im1jp1)) * um1p1;
-        double cut01 = .5 * (pp1p0 + p00)         * u00;
-        double cut11 = .5 * (p00   + p(im1j))   * um1p0;
-        
-        double cvt00 = .5 * (pp1p1 + pp1p0)       * vp1p0;
-        double cvt10 = .5 * (pp0p1 + p00)         * v00;
-        double cvt01 = .5 * (pp1p0 + p(ip1jm1)) * vp1m1;
-        double cvt11 = .5 * (p00   + p(ijm1))   * vp0m1;
-        
-        double zt00 = (fsdx * (vp1p0 - v00)     - fsdy * (up0p1 - u00))    /(p00     + pp1p0       + pp1p1 + pp0p1);
-        double zt10 = (fsdx * (v00   - v(im1j)) - fsdy * (um1p1 - um1p0))  /(p(im1j) + p00         + pp0p1 + p(im1jp1));
-        double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u(ijm1)))/(p(ijm1) + p(ip1jm1)   + pp1p0 + p00);
-        
-        double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v(ijp1) * v(ijp1)  + v00   * v00);
-        double ht01 = pp1p0 + .25 * (u(ip1j) * u(ip1j) + u00   * u00   + vp1p0     * vp1p0      + vp1m1 * vp1m1);
-        double ht11 = p00   + .25 * (u00       * u00       + um1p0 * um1p0 + v00       * v00        + vp0m1 * vp0m1);
-        
-        unew(ij) = uold(ij) + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
-        vnew(ij) = vold(ij) - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
-        pnew(ij) = pold(ij) - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
-        
-        uold(ij) = u00 + alpha * (unew(ij)  - 2. * u00 + uold(ij) );
-        vold(ij)  = v00 + alpha * (vnew(ij)  - 2. * v00 + vold(ij) );
-        pold(ij)  = p00 + alpha * (pnew(ij)  - 2. * p00 + pold(ij) );
-        
-    }
+  update_functor(int _n, int _tlmid, int _tlold, int _tlnew,
+                 AllLevelType _uAll, AllLevelType _vAll, AllLevelType _pAll,
+                 double _fsdx, double _fsdy, double _tdts8, double _tdtsdx, double _tdtsdy, double _alpha){
+    n      = _n;
+    tlmid  = _tlmid;
+    tlold  = _tlold;
+    tlnew  = _tlnew;
+    uAll   = _uAll;
+    vAll   = _vAll;
+    pAll   = _pAll;
+    fsdx   = _fsdx;
+    fsdy   = _fsdy;
+    tdts8  = _tdts8;
+    tdtsdx = _tdtsdx;
+    tdtsdy = _tdtsdy;
+    alpha  = _alpha;
   }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j) const{
+    auto u    = Kokkos::subview(uAll, Kokkos::ALL, tlmid);
+    auto v    = Kokkos::subview(vAll, Kokkos::ALL, tlmid);
+    auto p    = Kokkos::subview(pAll, Kokkos::ALL, tlmid);
+    auto uold = Kokkos::subview(uAll, Kokkos::ALL, tlold);
+    auto vold = Kokkos::subview(vAll, Kokkos::ALL, tlold);
+    auto pold = Kokkos::subview(pAll, Kokkos::ALL, tlold);
+    auto unew = Kokkos::subview(uAll, Kokkos::ALL, tlnew);
+    auto vnew = Kokkos::subview(vAll, Kokkos::ALL, tlnew);
+    auto pnew = Kokkos::subview(pAll, Kokkos::ALL, tlnew);
+
+    int ij   = i*(n+2)+j;
+    int ijp1 = ij+1;
+    int ijm1 = ij-1;
+    
+    int ip1j   = ij+(n+2);
+    int ip1jp1 = ip1j+1;
+    int ip1jm1 = ip1j-1;
+    
+    int im1j   = ij-(n+2);
+    int im1jp1 = im1j+1;
+    
+    double p00   = p(ij);      //10 mem access
+    double pp0p1 = p(ijp1);    //6
+    double pp1p0 = p(ip1j);    //6
+    double pp1p1 = p(ip1jp1);  //3
+    double u00   = u(ij);      //9
+    double up0p1 = u(ijp1);    //4
+    double um1p1 = u(im1jp1);  //4
+    double um1p0 = u(im1j);    //4
+    double v00   = v(ij);      //9
+    double vp1p0 = v(ip1j);    //4
+    double vp1m1 = v(ip1jm1);  //4
+    double vp0m1 = v(ijm1);    //4
+    
+    double cut00 = .5 * (pp1p1 + pp0p1)     * up0p1;
+    double cut10 = .5 * (pp0p1 + p(im1jp1)) * um1p1;
+    double cut01 = .5 * (pp1p0 + p00)       * u00;
+    double cut11 = .5 * (p00   + p(im1j))   * um1p0;
+    
+    double cvt00 = .5 * (pp1p1 + pp1p0)     * vp1p0;
+    double cvt10 = .5 * (pp0p1 + p00)       * v00;
+    double cvt01 = .5 * (pp1p0 + p(ip1jm1)) * vp1m1;
+    double cvt11 = .5 * (p00   + p(ijm1))   * vp0m1;
+    
+    double zt00 = (fsdx * (vp1p0 - v00)     - fsdy * (up0p1 - u00))    /(p00     + pp1p0       + pp1p1 + pp0p1);
+    double zt10 = (fsdx * (v00   - v(im1j)) - fsdy * (um1p1 - um1p0))  /(p(im1j) + p00         + pp0p1 + p(im1jp1));
+    double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u(ijm1)))/(p(ijm1) + p(ip1jm1)   + pp1p0 + p00);
+    
+    double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v(ijp1) * v(ijp1)  + v00   * v00);
+    double ht01 = pp1p0 + .25 * (u(ip1j) * u(ip1j) + u00   * u00   + vp1p0     * vp1p0      + vp1m1 * vp1m1);
+    double ht11 = p00   + .25 * (u00       * u00       + um1p0 * um1p0 + v00       * v00        + vp0m1 * vp0m1);
+    
+    unew(ij) = uold(ij) + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
+    vnew(ij) = vold(ij) - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
+    pnew(ij) = pold(ij) - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
+    
+    uold(ij) = u00 + alpha * (unew(ij)  - 2. * u00 + uold(ij) );
+    vold(ij) = v00 + alpha * (vnew(ij)  - 2. * v00 + vold(ij) );
+    pold(ij) = p00 + alpha * (pnew(ij)  - 2. * p00 + pold(ij) );
+  }
+};
+void update(const int m, const int n, int tlmid, int tlold, int tlnew,
+            AllLevelType uAll, AllLevelType vAll, AllLevelType pAll,
+            double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha){
+
+  update_functor functor(n, tlmid, tlold, tlnew,
+                         uAll, vAll, pAll,
+                         fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
+  Kokkos::parallel_for("update",
+                       Kokkos::MDRangePolicy<Kokkos::Rank<2>>({1,1},{m+1,n+1}),
+                       functor);
+  Kokkos::fence();
 }
