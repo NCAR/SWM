@@ -125,8 +125,8 @@ extern double wtime();
 
 int main() {
     // Define device and queue
-    //default_selector d_selector;
-    gpu_selector d_selector;
+    default_selector d_selector;
+    //gpu_selector d_selector;
     
     queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
@@ -631,7 +631,7 @@ void update_time(queue q,
                       p_in_buf(p_in, R),
                       u_out_buf(u_out, R),
                       v_out_buf(v_out, R),
-                      p_out_buf(p_out, R),;
+                      p_out_buf(p_out, R);
 
     q.submit([&](handler &h) { 
         auto u_in = u_in_buf.get_access(h, read_only);
@@ -654,7 +654,8 @@ void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
     
     double a = 1000000.;
     double alpha = .001;
-
+    double dx = 100000.;
+    double dy = 100000.;
     double el = n * dx;
     double pi = 4. * atanf(1.);
     double tpi = pi + pi;
