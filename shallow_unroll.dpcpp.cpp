@@ -114,6 +114,10 @@ extern void adv_nsteps(int m, int n,
                        double u[3][DOMAIN_SIZE], double v[3][DOMAIN_SIZE], double p[3][DOMAIN_SIZE],
                        double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy,
                        double alpha, int ncycles, double tdt, double time);
+
+void update_time(queue q,
+                 double u_in[DOMAIN_SIZE], double v_in[DOMAIN_SIZE], double p_in[DOMAIN_SIZE],
+                 double u_out[DOMAIN_SIZE], double v_out[DOMAIN_SIZE], double p_out[DOMAIN_SIZE]);
 extern double wtime();
 
 int main() {
@@ -192,11 +196,7 @@ int main() {
 
 periodic_cont(q, m, n, u[tlmid], v[tlmid], p[tlmid]);
 
-for (int ij=0; ij<DOMAIN_SIZE; ij++) {
-    u[tlold][ij] = u[tlmid][ij];
-    v[tlold][ij] = v[tlmid][ij];
-    p[tlold][ij] = p[tlmid][ij];
-   }
+update_time(q, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
 
 double* dp = new double [DOMAIN_SIZE];
 for (int i=0; i<DOMAIN_SIZE; i++){
@@ -230,15 +230,8 @@ double after_halo = wtime();
 std::cout << "halo update time: " << after_halo-after_first_step << std::endl;
     
 time = time + tdt;
-for (int ij=0; ij<DOMAIN_SIZE; ij++) {
-    u[tlold][ij] = u[tlmid][ij];
-    v[tlold][ij] = v[tlmid][ij];
-    p[tlold][ij] = p[tlmid][ij];
-    u[tlmid][ij] = u[tlnew][ij];
-    v[tlmid][ij] = v[tlnew][ij];
-    p[tlmid][ij] = p[tlnew][ij];
-    }
-
+update_time(q, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
+update_time(q, u[tlnew], v[tlnew], p[tlnew], u[tlmid], v[tlmid], p[tlmid]);
 // From now on, take full timestep 2*dt step
 tdt = tdt + tdt;
     
@@ -628,6 +621,35 @@ void update(queue q, const int m, const int n,
                 vold[ij] = v00 + alpha * (vnew[ij]  - 2. * v00 + vold[ij]);
                 pold[ij] = p00 + alpha * (pnew[ij]  - 2. * p00 + pold[ij]);
             }
+        });
+    });
+}
+
+void update_time(queue q, 
+                 double u_in[DOMAIN_SIZE], double v_in[DOMAIN_SIZE], double p_in[DOMAIN_SIZE],
+                 double u_out[DOMAIN_SIZE], double v_out[DOMAIN_SIZE], double p_out[DOMAIN_SIZE]) {
+    auto R = range<1>{DOMAIN_SIZE};
+
+    buffer<double, 1> u_in_buf(u_in, R),
+                      v_in_buf(v_in, R),
+                      p_in_buf(p_in, R),
+                      u_out_buf(u_out, R),
+                      v_out_buf(v_out, R),
+                      p_out_buf(p_out, R),;
+
+    q.submit([&](handler &h) { 
+        auto u_in = u_in_buf.get_access(h, read_only);
+        auto v_in = v_in_buf.get_access(h, read_only);
+        auto p_in = p_in_buf.get_access(h, read_only);
+
+        auto u_out = u_out_buf.get_access(h, write_only);
+        auto v_out = v_out_buf.get_access(h, write_only);
+        auto p_out = p_out_buf.get_access(h, write_only);
+
+        h.parallel_for(R, [=](auto ij) {
+            u_out[ij] = u_in[ij];
+            v_out[ij] = v_in[ij];
+            p_out[ij] = p_in[ij];   
         });
     });
 }
