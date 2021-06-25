@@ -121,6 +121,9 @@ void update_time(queue q,
 
 void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]);
 
+void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
+                   double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
+
 extern double wtime();
 
 int main() {
@@ -176,20 +179,10 @@ int main() {
  init_stream(q, m, n, psi);
 
  // Initialize velocities
-    for (int i=0; i<m; i++) {
-      for (int j=0;j<n;j++) {
-          int ipjp = (i+1)*N_LEN + j+1;
-          int ipj = (i+1)*N_LEN + j;
-          int ijp = i*N_LEN + j+1;
-          u[tlmid][ipjp] = -(psi[ipjp] - psi[ipj]) / dy;
-          v[tlmid][ipjp] = (psi[ipjp] - psi[ijp]) / dx;
-          p[tlmid][ipjp] = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
-          }
-      }
+ init_velocity(q, m, n, u[tlmid], v[tlmid], p[tlmid], psi);
 
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
-
 periodic_cont(q, m, n, u[tlmid], v[tlmid], p[tlmid]);
 
 update_time(q, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
@@ -250,7 +243,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
            u[tlnew], v[tlnew], p[tlnew],
            fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
     double c2 = wtime();
-    std::cout << "update time: " << c2-c1 << std::endl;
+    //std::cout << "update time: " << c2-c1 << std::endl;
     tup = tup + (c2 - c1);
     
     // Perform periodic continuation
@@ -677,6 +670,50 @@ void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
             if (i == m+1 || j== n+1) {}
             else {
                 psi[ij] = a * sin((i + .5) * di) * sin((j + .5) * dj);
+            }
+        });
+    });
+}
+
+void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
+                   double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
+    double dx = 100000.;
+    double dy = 100000.;
+    double a = 1000000.;
+    double alpha = .001;
+    double el = n * dx;
+    double pi = 4. * atanf(1.);
+    double tpi = pi + pi;
+    double di = tpi / m;
+    double dj = tpi / n;
+    double pcf = pi * pi * a * a / (el * el);
+    
+    auto R = range<1>{DOMAIN_SIZE};
+    buffer<double, 1> u_buf(u, R),
+                      v_buf(v, R),
+                      p_buf(p, R),
+                      psi_buf(psi, R);
+
+    q.submit([&](handler &h) {
+
+        auto psi = psi_buf.get_access(h, read_only);
+
+        auto u = u_buf.get_access(h, write_only, noinit);
+        auto v = v_buf.get_access(h, write_only, noinit);
+        auto p = p_buf.get_access(h, write_only, noinit);
+
+        h.parallel_for(R, [=](auto ij) {
+            int j = ij%(n+2);
+            int i = (int) (ij - j)/(n+2);
+
+            int ijm1 = ij-1;
+            int im1j= ij-(n+2);
+
+            if (i==0 || j==0 || i == m+1 || j== n+1) {} 
+            else {
+                u[ij] = -(psi[ij] - psi[ijm1]) / dy;
+                v[ij] = (psi[ij] - psi[im1j]) / dx;
+                p[ij] = pcf * (cos(2. * (i-1) * di) + cos(2. * (j-1) * dj)) + 50000.;
             }
         });
     });
