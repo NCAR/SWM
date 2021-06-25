@@ -96,7 +96,7 @@ class Hough_Transform_kernel;
 //! Minimal serial version (26 May 2011)
 
 
-extern void periodic_cont(int m, int n, double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
+extern void periodic_cont(queue q, int m, int n, double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
 extern int output_csv_var( char *filename, int m, int n, double* var);
 extern void first_step(queue q, int m, int n,
                        double umid[DOMAIN_SIZE], double vmid[DOMAIN_SIZE], double pmid[DOMAIN_SIZE],
@@ -190,7 +190,7 @@ int main() {
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
 
-periodic_cont(m, n, u[tlmid], v[tlmid], p[tlmid]);
+periodic_cont(q, m, n, u[tlmid], v[tlmid], p[tlmid]);
 
 for (int ij=0; ij<DOMAIN_SIZE; ij++) {
     u[tlold][ij] = u[tlmid][ij];
@@ -224,7 +224,7 @@ first_step(q, m, n,
  double after_first_step = wtime(); 
 std::cout << "first step time: " << after_first_step-b4first_step << std::endl;
     
-periodic_cont(m, n, u[tlnew], v[tlnew], p[tlnew]);
+periodic_cont(q, m, n, u[tlnew], v[tlnew], p[tlnew]);
   
 double after_halo = wtime();  
 std::cout << "halo update time: " << after_halo-after_first_step << std::endl;
@@ -267,7 +267,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
     // Perform periodic continuation
     
     c1 = wtime();
-    periodic_cont(m, n, u[tlnew], v[tlnew], p[tlnew]);
+    periodic_cont(q, m, n, u[tlnew], v[tlnew], p[tlnew]);
     c2 = wtime();
     tpc = tpc + (c2-c1);
     
@@ -342,77 +342,93 @@ return(0);
     
 }
 
-void periodic_cont(const int m, const int n, double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]){
+void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE], 
+                   double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
 
-    // North-South periodic continuation
-    // Labeling conventions:
-    // h = halo; i = interior;
-    // north = m; south = 1;
+    auto R = range<1>{DOMAIN_SIZE};
 
-    for (int j=1; j<n+1; j++) {
-        int hnorth = (m+1)*(n+2) + j;
-        int hsouth = j;
-        int inorth = m*(n+2) + j;
-        int isouth = (n+2) + j;
-        
-        u[hsouth] = u[inorth];
-        u[hnorth] = u[isouth];
-        
-        v[hsouth] = v[inorth];
-        v[hnorth] = v[isouth];
-        
-        p[hsouth] = p[inorth];
-        p[hnorth] = p[isouth];
-    }
-    
-    // East-West periodic continuation
-    // h = halo; i = interior;
-    // east = n; west = 1;
-    
-    // Corner point exchange indices
-    
-    int hsw = 0;
-    int hne = (m+1)*(n+2)+n+1;
-    int hse = n+1;
-    int hnw = (m+1)*(n+2);
-    
-    int ine = m*(n+2)+n;
-    int ise = 1*(n+2)+n;
-    int isw = 1*(n+2)+1;
-    int inw = m*(n+2)+1;
-    
-    for (int i=1; i<m+1; i++) {
-        int hwest = i*(n+2);
-        int heast = i*(n+2) + n+1;
-        int iwest = i*(n+2) + 1;
-        int ieast = i*(n+2) + n;
-        
-        u[hwest] = u[ieast];
-        u[heast] = u[iwest];
-        
-        v[hwest] = v[ieast];
-        v[heast] = v[iwest];
-        
-        p[hwest] = p[ieast];
-        p[heast] = p[iwest];
-        
-        if (i==m){
-          u[hsw]   = u[ine];
-          u[hnw]   = u[ise];
-          u[hne]   = u[isw];
-          u[hse]   = u[inw];
+    buffer<double, 1> u_buf(u, R),
+                      v_buf(v, R),
+                      p_buf(p, R);
 
-          v[hsw]   = v[ine];
-          v[hnw]   = v[ise];
-          v[hne]   = v[isw];
-          v[hse]   = v[inw];
+
+    q.submit([&](handler &h) {    
+        // Corner point exchange indices
+        int hsw = 0;
+        int hne = (m+1)*(n+2)+n+1;
+        int hse = n+1;
+        int hnw = (m+1)*(n+2);
+    
+        int ine = m*(n+2)+n;
+        int ise = 1*(n+2)+n;
+        int isw = 1*(n+2)+1;
+        int inw = m*(n+2)+1;
+
+        auto u = u_buf.get_access(h, read_write);
+        auto v = v_buf.get_access(h, read_write);
+        auto p = p_buf.get_access(h, read_write);
+
+    
+
+        h.parallel_for(R, [=](auto index) {
+            int j = index%(N+2);
+            int i = (int) (index - j)/(N+2);
+            if (i==0 || j==0 || i == M+1 || j== N+1) {}
+            else {
+                // North-South periodic continuation
+                // Labeling conventions:
+                // h = halo; i = interior;
+                // north = m; south = 1;
+                int hnorth = (m+1)*(n+2) + j;
+                int hsouth = j;
+                int inorth = m*(n+2) + j;
+                int isouth = (n+2) + j;
+        
+                u[hsouth] = u[inorth];
+                u[hnorth] = u[isouth];
+        
+                v[hsouth] = v[inorth];
+                v[hnorth] = v[isouth];
+        
+                p[hsouth] = p[inorth];
+                p[hnorth] = p[isouth];
+
+                // East-West periodic continuation
+                // h = halo; i = interior;
+                // east = n; west = 1;
+                int hwest = i*(n+2);
+                int heast = i*(n+2) + n+1;
+                int iwest = i*(n+2) + 1;
+                int ieast = i*(n+2) + n;
+        
+                u[hwest] = u[ieast];
+                u[heast] = u[iwest];
+        
+                v[hwest] = v[ieast];
+                v[heast] = v[iwest];
+        
+                p[hwest] = p[ieast];
+                p[heast] = p[iwest];
+        
+                if (i == m) {
+                    u[hsw]   = u[ine];
+                    u[hnw]   = u[ise];
+                    u[hne]   = u[isw];
+                    u[hse]   = u[inw];
+
+                    v[hsw]   = v[ine];
+                    v[hnw]   = v[ise];
+                    v[hne]   = v[isw];
+                    v[hse]   = v[inw];
             
-          p[hsw]   = p[ine];
-          p[hnw]   = p[ise];
-          p[hne]   = p[isw];
-          p[hse]   = p[inw];
-        }
-    }
+                    p[hsw]   = p[ine];
+                    p[hnw]   = p[ise];
+                    p[hne]   = p[isw];
+                    p[hse]   = p[inw];
+                }
+            }
+        });
+    });
 }
 
 
