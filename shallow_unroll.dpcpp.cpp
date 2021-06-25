@@ -118,6 +118,9 @@ extern void adv_nsteps(int m, int n,
 void update_time(queue q,
                  double u_in[DOMAIN_SIZE], double v_in[DOMAIN_SIZE], double p_in[DOMAIN_SIZE],
                  double u_out[DOMAIN_SIZE], double v_out[DOMAIN_SIZE], double p_out[DOMAIN_SIZE]);
+
+void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]);
+
 extern double wtime();
 
 int main() {
@@ -170,14 +173,7 @@ int main() {
     double time; // Model time
     
  // Initial values of the stream function and p
- // Initial values of the stream function and p
-  int ii;
-  for (int i=0; i<m+1; i++) {
-    for (int j=0; j<n+1; j++) {
-      ii = i*(n+2)+j;
-      psi[ii] = a * sin((i + .5) * di) * sin((j + .5) * dj);
-    }
-  }
+ init_stream(q, m, n, psi);
 
  // Initialize velocities
     for (int i=0; i<m; i++) {
@@ -650,6 +646,37 @@ void update_time(queue q,
             u_out[ij] = u_in[ij];
             v_out[ij] = v_in[ij];
             p_out[ij] = p_in[ij];   
+        });
+    });
+}
+
+void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
+    
+    double a = 1000000.;
+    double alpha = .001;
+
+    double el = n * dx;
+    double pi = 4. * atanf(1.);
+    double tpi = pi + pi;
+    double di = tpi / m;
+    double dj = tpi / n;
+    double pcf = pi * pi * a * a / (el * el);
+
+    auto R = range<1>{DOMAIN_SIZE};
+    buffer<double, 1> psi_buf(psi, R);
+
+    q.submit([&](handler &h) {
+        auto psi = psi_buf.get_access(h, write_only);
+
+        h.parallel_for(R, [=](auto ij) {
+            int j = ij%(n+2);
+            int i = (int) (ij - j)/(n+2);
+
+            // Skip updating the ghost nodes
+            if (i == m+1 || j== n+1) {}
+            else {
+                psi[ij] = a * sin((i + .5) * di) * sin((j + .5) * dj);
+            }
         });
     });
 }
