@@ -180,21 +180,21 @@ int main() {
     }
   }
 
- // Initialize velocities
-    for (int i=0; i<m; i++) {
-      for (int j=0;j<n;j++) {
-          int ipjp = (i+1)*N_LEN + j+1;
-          int ipj = (i+1)*N_LEN + j;
-          int ijp = i*N_LEN + j+1;
-          u[tlmid][ipjp] = -(psi[ipjp] - psi[ipj]) / dy;
-          v[tlmid][ipjp] = (psi[ipjp] - psi[ijp]) / dx;
-          p[tlmid][ipjp] = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
-          }
+  // Initialize velocities
+  for (int i=1; i<m+1; i++) {
+      for (int j=1;j<n+1;j++) {
+          int ij = i*(n+2)+j;
+          int ijm1 = ij-1;
+          int im1j= ij-(n+2);
+          
+          u[tlmid][ij] = -(psi[ij] - psi[ijm1]) / dy;
+          v[tlmid][ij] = (psi[ij] - psi[im1j]) / dx;
+          p[tlmid][ij] = pcf * (cos(2. * (i-1) * di) + cos(2. * (j-1) * dj)) + 50000.;
       }
+  }      
 
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
-
 periodic_cont(m, n, u[tlmid], v[tlmid], p[tlmid]);
 
 for (int ij=0; ij<DOMAIN_SIZE; ij++) {
@@ -268,7 +268,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
            u[tlnew], v[tlnew], p[tlnew],
            fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
     double c2 = wtime();
-    std::cout << "update time: " << c2-c1 << std::endl;
+    //std::cout << "update time: " << c2-c1 << std::endl;
     tup = tup + (c2 - c1);
     
     // Perform periodic continuation
