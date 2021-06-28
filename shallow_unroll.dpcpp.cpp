@@ -179,7 +179,7 @@ int main() {
  init_stream(q, m, n, psi);
 
  // Initialize velocities
- init_velocity(q, m, n, u[tlmid], v[tlmid], p[tlmid], psi);
+ init_velocity(q, m, n, psi, u[tlmid], v[tlmid], p[tlmid]);
 
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
@@ -698,9 +698,9 @@ void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
 
         auto psi = psi_buf.get_access(h, read_only);
 
-        auto u = u_buf.get_access(h, write_only, noinit);
-        auto v = v_buf.get_access(h, write_only, noinit);
-        auto p = p_buf.get_access(h, write_only, noinit);
+        auto u = u_buf.get_access(h, write_only);
+        auto v = v_buf.get_access(h, write_only);
+        auto p = p_buf.get_access(h, write_only);
 
         h.parallel_for(R, [=](auto ij) {
             int j = ij%(n+2);
