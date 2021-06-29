@@ -24,7 +24,6 @@ cd $BLD_DIR
 cmake $SRC_DIR \
   -DCMAKE_CXX_COMPILER=$SRC_DIR/bin/nvcc_wrapper \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
-  -DCMAKE_CXX_EXTENSIONS=On \
   -DKokkos_ARCH_VOLTA70=On \
   -DKokkos_ARCH_SKX=On \
   -DKokkos_ENABLE_CUDA=On \
