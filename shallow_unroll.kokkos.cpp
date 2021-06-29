@@ -121,7 +121,8 @@ int main() {
   Kokkos::initialize();
   {
     //Print default execution space
-    
+    printf("Kokkos execution space: %s\n",
+         typeid(Kokkos::DefaultExecutionSpace).name());
 
     //Declare state arrays as views ((M+2)x(N+2) points, 3 time levels)
     //Domain size is first dimension to optimize memory layouts
@@ -289,7 +290,7 @@ int main() {
     tlnew = tmp;
         
     if (L_OUT) {
-    // if on the GPU, synch data with host
+    // if on the GPU, sync data with host
       Kokkos::deep_copy(p_h,p);
       Kokkos::deep_copy(u_h,u);
       Kokkos::deep_copy(v_h,v);
@@ -566,7 +567,6 @@ struct update_functor{
     alpha  = _alpha;
   }
 
-  // TODO: Check how operator() is called and if other functions can be specified
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const{
     auto u    = Kokkos::subview(uAll, Kokkos::ALL, tlmid);
