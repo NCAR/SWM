@@ -133,8 +133,9 @@ extern double wtime();
 int main() {
     // Define device and queue
     default_selector d_selector;
-    //gpu_selector d_selector;
+    cpu_selector c_selector;
     
+    queue q_c(c_selector);
     queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
@@ -187,11 +188,11 @@ int main() {
     double time; // Model time
     
  // Initial values of the stream function and p
- init_stream(q, R, m, n, psi_buf, a, di, dj);
+ init_stream(q_c, R, m, n, psi_buf, a, di, dj);
  host_accessor psi_read(psi_buf, read_only);
 
  // Initialize velocities
- init_velocity(q, R, m, n, psi_buf, u_mid_buf, v_mid_buf, p_mid_buf, dx, dy, di, dj, pcf);
+ init_velocity(q_c, R, m, n, psi_buf, u_mid_buf, v_mid_buf, p_mid_buf, dx, dy, di, dj, pcf);
  host_accessor u_mid_read(u_mid_buf, read_only),
                v_mid_read(v_mid_buf, read_only),
                p_mid_read(p_mid_buf, read_only);
