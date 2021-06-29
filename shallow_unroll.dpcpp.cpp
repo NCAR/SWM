@@ -97,9 +97,7 @@ class Hough_Transform_kernel;
 //! Minimal serial version (26 May 2011)
 
 
-extern void periodic_cont(queue q, range<DIM> R, int m, int n, buffer<double, DIM> u_buf, 
-                   buffer<double, DIM> v_buf, buffer<double, DIM> p_buf);
-
+extern void periodic_cont(queue q, int m, int n, double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
 extern int output_csv_var( char *filename, int m, int n, double* var);
 extern void first_step(queue q, int m, int n,
                        double umid[DOMAIN_SIZE], double vmid[DOMAIN_SIZE], double pmid[DOMAIN_SIZE],
@@ -136,10 +134,8 @@ int main() {
     // Define device and queue
     default_selector d_selector;
     //gpu_selector d_selector;
-    host_selector h_selector;
     
-    queue q(d_selector);
-    queue q_h(h_selector);
+    queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
     //Declare state arrays (3 time levels, (M+2)x(N+2) points
@@ -202,8 +198,7 @@ int main() {
     
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
-periodic_cont(q_h, R, m, n, u_mid_buf, v_mid_buf, p_mid_buf);
-host_accessor u_mid_read1(u_mid_buf, read_write), v_mid_read1(v_mid_buf, read_write), p_mid_read1(p_mid_buf, read_write);
+periodic_cont(q, m, n, u[tlmid], v[tlmid], p[tlmid]);
 
 update_time(q, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
 
@@ -233,8 +228,7 @@ first_step(q, m, n,
  double after_first_step = wtime(); 
 std::cout << "first step time: " << after_first_step-b4first_step << std::endl;
     
-periodic_cont(q_h, R, m, n, u_new_buf, u_new_buf, u_new_buf);
-host_accessor u_new_read(u_new_buf, read_only), v_new_read(v_new_buf, read_only), p_new_read(p_new_buf, read_only);
+periodic_cont(q, m, n, u[tlnew], v[tlnew], p[tlnew]);
   
 double after_halo = wtime();  
 std::cout << "halo update time: " << after_halo-after_first_step << std::endl;
@@ -270,9 +264,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
     // Perform periodic continuation
     
     c1 = wtime();
-    periodic_cont(q_h, R, m, n, u_mid_buf, u_mid_buf, u_mid_buf);
-    host_accessor u_mid_read2(u_mid_buf, read_only), v_mid_read2(v_mid_buf, read_only), p_mid_read2(p_mid_buf, read_only);
-    
+    periodic_cont(q, m, n, u[tlnew], v[tlnew], p[tlnew]);
     c2 = wtime();
     tpc = tpc + (c2-c1);
     
@@ -347,8 +339,15 @@ return(0);
     
 }
 
-void periodic_cont(queue q, range<DIM> R, int m, int n, buffer<double, DIM> u_buf, 
-                   buffer<double, DIM> v_buf, buffer<double, DIM> p_buf) {
+void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE], 
+                   double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
+
+    auto R = range<1>{DOMAIN_SIZE};
+
+    buffer<double, 1> u_buf(u, R),
+                      v_buf(v, R),
+                      p_buf(p, R);
+
 
     q.submit([&](handler &h) {    
         // Corner point exchange indices
@@ -365,6 +364,8 @@ void periodic_cont(queue q, range<DIM> R, int m, int n, buffer<double, DIM> u_bu
         auto u = u_buf.get_access(h, read_write);
         auto v = v_buf.get_access(h, read_write);
         auto p = p_buf.get_access(h, read_write);
+
+    
 
         h.parallel_for(R, [=](auto index) {
             int j = index%(N+2);
