@@ -104,10 +104,13 @@ extern void first_step(queue q, int m, int n,
                        double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
                        double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
                        double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy);
-void update(queue q, const int m, const int n,
-            double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE],
-            double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
-            double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
+void update(queue q, range<DIM> R, int m, int n,
+            buffer<double, DIM> u_buf, buffer<double, DIM> v_buf,
+                   buffer<double, DIM> p_buf,
+            buffer<double, DIM> uold_buf, buffer<double, DIM> vold_buf,
+                   buffer<double, DIM> pold_buf,
+            buffer<double, DIM> unew_buf, buffer<double, DIM> vnew_buf,
+                   buffer<double, DIM> pnew_buf,
             double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha);
 
 extern void adv_nsteps(int m, int n,
@@ -253,11 +256,21 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
         
     // Take a time step
     double c1 = wtime();
-    update(q, m, n,
-           u[tlmid], v[tlmid], p[tlmid],
-           u[tlold], v[tlold], p[tlold],
-           u[tlnew], v[tlnew], p[tlnew],
+    update(q, R, m, n,
+           u_mid_buf, v_mid_buf, v_mid_buf,
+           u_old_buf, v_old_buf, v_old_buf,
+           u_new_buf, v_new_buf, v_new_buf,
            fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
+     host_accessor u_mid_read_(u_mid_buf, read_write),
+                   v_mid_read_(v_mid_buf, read_write),
+                   p_mid_read_(p_mid_buf, read_write),
+                   u_old_read_(u_old_buf, read_write),
+                   v_old_read_(v_old_buf, read_write),
+                   p_old_read_(p_old_buf, read_write),
+                   u_new_read_(u_new_buf, read_write),
+                   v_new_read_(v_new_buf, read_write),
+                   p_new_read_(p_new_buf, read_write);
+    
     double c2 = wtime();
     //std::cout << "update time: " << c2-c1 << std::endl;
     tup = tup + (c2 - c1);
@@ -539,23 +552,14 @@ void first_step(queue q, const int m, const int n,
 }
 
 // update (assumes first step has been called).
-void update(queue q, const int m, const int n,
-         double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE],
-         double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
-         double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
-         double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha) {
-
-    auto R = range<1>{DOMAIN_SIZE};
-
-    buffer<double, 1> u_buf(u, R),
-                      v_buf(v, R),
-                      p_buf(p, R),
-                      uold_buf(uold, R),
-                      vold_buf(vold, R),
-                      pold_buf(pold, R),
-                      unew_buf(unew, R),
-                      vnew_buf(vnew, R),
-                      pnew_buf(pnew, R);
+void update(queue q, range<DIM> R, int m, int n,
+            buffer<double, DIM> u_buf, buffer<double, DIM> v_buf,
+                   buffer<double, DIM> p_buf,
+            buffer<double, DIM> uold_buf, buffer<double, DIM> vold_buf,
+                   buffer<double, DIM> pold_buf,
+            buffer<double, DIM> unew_buf, buffer<double, DIM> vnew_buf,
+                   buffer<double, DIM> pnew_buf,
+            double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha) {
 
     q.submit([&](handler &h) {
         auto u = u_buf.get_access(h, read_only);
