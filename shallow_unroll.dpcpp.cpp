@@ -44,7 +44,6 @@
 #define DOMAIN_SIZE M_LEN*N_LEN
 #define ITMAX 4000
 #define L_OUT TRUE
-#define DIM 1
 
 using namespace sycl;
 
@@ -120,21 +119,17 @@ void update_time(queue q,
                  double u_in[DOMAIN_SIZE], double v_in[DOMAIN_SIZE], double p_in[DOMAIN_SIZE],
                  double u_out[DOMAIN_SIZE], double v_out[DOMAIN_SIZE], double p_out[DOMAIN_SIZE]);
 
-void init_stream(queue q, range<DIM> R, int m, int n, buffer<double, DIM> psi_buf,
-                 double a, double di, double dj);
+void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]);
 
-void init_velocity(queue q, range<DIM> R, int m, int n, buffer<double, DIM> psi_buf,
-                   buffer<double, DIM> u_buf, buffer<double, DIM> v_buf,
-                   buffer<double, DIM> p_buf, double dx, double dy, 
-                   double di, double dj, double pcf);
+void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
+                   double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
 
 extern double wtime();
 
 int main() {
     // Define device and queue
-    default_selector d_selector;
     cpu_selector c_selector;
-    
+    default_selector d_selector;
     queue q_c(c_selector);
     queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
@@ -156,14 +151,7 @@ int main() {
     int tlnew = 2;
     int tlmid = 1;
     int tlold = 0;
-
-    // Buffers
-    auto R = range<1>{DOMAIN_SIZE};
-    buffer<double, 1> u_old_buf(u[tlold], R), v_old_buf(v[tlold], R), p_old_buf(p[tlold], R),
-                      u_mid_buf(u[tlmid], R), v_mid_buf(v[tlmid], R), p_mid_buf(p[tlmid], R),
-                      u_new_buf(u[tlnew], R), v_new_buf(v[tlnew], R), p_new_buf(p[tlnew], R),
-                      psi_buf(psi, R);
-    
+ 
     // Note below that two delta t (tdt) is set to dt on the first
     // cycle after which it is reset to dt+dt.
     
@@ -188,15 +176,11 @@ int main() {
     double time; // Model time
     
  // Initial values of the stream function and p
- init_stream(q_c, R, m, n, psi_buf, a, di, dj);
- host_accessor psi_read(psi_buf, read_only);
+ init_stream(q_c, m, n, psi);
 
  // Initialize velocities
- init_velocity(q_c, R, m, n, psi_buf, u_mid_buf, v_mid_buf, p_mid_buf, dx, dy, di, dj, pcf);
- host_accessor u_mid_read(u_mid_buf, read_only),
-               v_mid_read(v_mid_buf, read_only),
-               p_mid_read(p_mid_buf, read_only);
-    
+ init_velocity(q_c, m, n, psi, u[tlmid], v[tlmid], p[tlmid]);
+
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
 periodic_cont(q, m, n, u[tlmid], v[tlmid], p[tlmid]);
@@ -659,8 +643,21 @@ void update_time(queue q,
     });
 }
 
-void init_stream(queue q, range<DIM> R, int m, int n, buffer<double, DIM> psi_buf,
-                 double a, double di, double dj) {
+void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
+    
+    double a = 1000000.;
+    double alpha = .001;
+    double dx = 100000.;
+    double dy = 100000.;
+    double el = n * dx;
+    double pi = 4. * atanf(1.);
+    double tpi = pi + pi;
+    double di = tpi / m;
+    double dj = tpi / n;
+    double pcf = pi * pi * a * a / (el * el);
+
+    auto R = range<1>{DOMAIN_SIZE};
+    buffer<double, 1> psi_buf(psi, R);
 
     q.submit([&](handler &h) {
         auto psi = psi_buf.get_access(h, write_only);
@@ -678,10 +675,24 @@ void init_stream(queue q, range<DIM> R, int m, int n, buffer<double, DIM> psi_bu
     });
 }
 
-void init_velocity(queue q, range<DIM> R, int m, int n, buffer<double, DIM> psi_buf,
-                   buffer<double, DIM> u_buf, buffer<double, DIM> v_buf,
-                   buffer<double, DIM> p_buf, double dx, double dy, 
-                   double di, double dj, double pcf) {
+void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
+                   double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
+    double dx = 100000.;
+    double dy = 100000.;
+    double a = 1000000.;
+    double alpha = .001;
+    double el = n * dx;
+    double pi = 4. * atanf(1.);
+    double tpi = pi + pi;
+    double di = tpi / m;
+    double dj = tpi / n;
+    double pcf = pi * pi * a * a / (el * el);
+    
+    auto R = range<1>{DOMAIN_SIZE};
+    buffer<double, 1> u_buf(u, R),
+                      v_buf(v, R),
+                      p_buf(p, R),
+                      psi_buf(psi, R);
 
     q.submit([&](handler &h) {
 
