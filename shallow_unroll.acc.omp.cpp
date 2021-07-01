@@ -39,8 +39,8 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 128
+#define M 3072
+#define N 3072
 #define M_LEN (M + 2)
 #define N_LEN (N + 2)
 #define DOMAIN_SIZE M_LEN*N_LEN

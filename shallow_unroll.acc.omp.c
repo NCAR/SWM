@@ -36,8 +36,8 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 128
+#define M 3072
+#define N 3072
 #define M_LEN M + 1
 #define N_LEN N + 1
 #define ITMAX 4000

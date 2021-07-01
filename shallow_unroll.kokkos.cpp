@@ -32,8 +32,8 @@
 
 #define TRUE 1
 #define FALSE 0
-const int M = 64;
-const int N = 128;
+const int M = 3072;
+const int N = 3072;
 #define M_LEN (M + 2)
 #define N_LEN (N + 2)
 #define DOMAIN_SIZE M_LEN*N_LEN
@@ -124,6 +124,7 @@ int main() {
     printf("Kokkos execution space: %s\n",
          typeid(Kokkos::DefaultExecutionSpace).name());
 
+    Kokkos::Profiling::pushRegion("allocation");
     //Declare state arrays as views ((M+2)x(N+2) points, 3 time levels)
     //Domain size is first dimension to optimize memory layouts
     //Allocate device memory
@@ -136,6 +137,7 @@ int main() {
     AllLevelType::HostMirror v_h = Kokkos::create_mirror_view(v);
     AllLevelType::HostMirror p_h = Kokkos::create_mirror_view(p);
     SingleLevelType::HostMirror psi_h = Kokkos::create_mirror_view(psi);
+    Kokkos::Profiling::popRegion();
     
     // ** Initialisations **
 
@@ -171,6 +173,7 @@ int main() {
     
     double time; // Model time
     
+    Kokkos::Profiling::pushRegion("initialization");
     // Initial values of the stream function and p
     Kokkos::parallel_for("init_stream_func_vals",
       Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0},{m+1,n+1}),
@@ -192,7 +195,9 @@ int main() {
         p(ipjp,tlmid) = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
       }
     );
+    Kokkos::Profiling::popRegion();
     
+    Kokkos::Profiling::pushRegion("setup");
     // Periodic Continuation
     // (in a distributed memory code this would be MPI halo exchanges)
     periodic_cont(m, n, tlmid, u, v, p);
@@ -252,19 +257,24 @@ int main() {
     double tup = 0.0;
     double tpc = 0.0;
     double tstart = wtime();
+    Kokkos::Profiling::popRegion();
     for (int ncycle=2; ncycle<=ITMAX; ncycle++){
-          
+      Kokkos::Profiling::pushRegion("iterations");
       // Take a time step
       double c1 = wtime();
+      Kokkos::Profiling::pushRegion("update-function");
       update(m, n, tlmid, tlold, tlnew,
              u, v, p,
              fsdx, fsdy, tdts8, tdtsdx, tdtsdy, alpha);
+      Kokkos::Profiling::popRegion();
       double c2 = wtime();
       tup = tup + (c2 - c1);
       
       // Perform periodic continuation
       c1 = wtime();
+      Kokkos::Profiling::pushRegion("periodic_cont-function");
       periodic_cont(m, n, tlnew, u, v, p);
+      Kokkos::Profiling::popRegion();
       c2 = wtime();
       tpc = tpc + (c2-c1);
       
@@ -275,7 +285,9 @@ int main() {
 
       // update the simulation time
       time = time + dt; 
+      Kokkos::Profiling::popRegion();
     }
+    Kokkos::Profiling::pushRegion("output");
     Kokkos::fence();
     double tend = wtime();
     double total_time = tend - tstart;
@@ -336,6 +348,7 @@ int main() {
     if (outerr == 0){
       std::cout << "end file output complete" << std::endl;
     }
+    Kokkos::Profiling::popRegion();
   }
   Kokkos::finalize();
   return(0);
