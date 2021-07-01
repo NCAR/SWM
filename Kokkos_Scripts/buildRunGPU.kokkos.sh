@@ -10,6 +10,9 @@
 #PBS -l select=1:ncpus=1:ngpus=1
 #PBS -l gpu_type=v100
 
+# Get original working directory
+orig_dir=$PWD
+
 #module purge
 module load cmake
 module load cuda/10.1
@@ -40,4 +43,11 @@ cd $project_dir/$install_name
 cmake ..
 make
 
+# Set environment variables to squash warning
+export OMP_PROC_BIND=spread
+export OMP_PLACES=threads
+
 ./swm_kokkos > $project_dir/results.gpu.$(date +%m%d%H%M%S).txt
+
+# Return to original working directory
+cd $orig_dir

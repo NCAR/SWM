@@ -1,16 +1,15 @@
 #!/bin/bash -l
-## to prepare a test case labeled by the name of this folder: define module path, load module, set library path, set environment variables
-## the following template is translated from /glade/scratch/ssuresh/muram/pgi1910 bash script
+
+# Get original working directory
+orig_dir=$PWD
 
 module purge
 module load cmake
 module load gnu/8.3.0
 
-export OMP_NUM_THREADS=18
-
 # Set install_name to name of particular Kokkos install directory you would
 # like to use to compile the source code
-install_name=gcc_omp_serial_skx
+install_name=gcc_serial_skx
 # Set project_dir to the directory containing the source code you would like
 # to compile
 project_dir=/glade/work/$USER/SWM
@@ -33,5 +32,7 @@ cd $project_dir/$install_name
 cmake ..
 make
 
-./swm_kokkos > $project_dir/results.cpu.omp.$(date +%m%d%H%M%S).txt
+./swm_kokkos > $project_dir/results.cpu.$(date +%m%d%H%M%S).txt
 
+# Return to original working directory
+cd $orig_dir
