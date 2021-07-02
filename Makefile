@@ -18,6 +18,9 @@ all: swm_dpcpp_usm
 swm_dpcpp_usm:
 	$(CXX) $(CXXFLAGS) -o $(SWM_EXE_NAME_DPCPP_USM) $(SWM_SOURCES_DPCPP_USM)
 
+swm_dpcpp_buf:
+	$(CXX) $(CXXFLAGS) -o $(SWM_EXE_NAME_DPCPP_BUF) $(SWM_SOURCES_DPCPP_BUF)
+    
 swm_cpp:
 	$(CXX) $(CXXFLAGS) -o $(SWM_EXE_NAME_CPP) $(SWM_SOURCES_CPP)
     
