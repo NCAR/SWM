@@ -660,12 +660,8 @@ void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
     double pcf = pi * pi * a * a / (el * el);
 
     auto R = range<1>{DOMAIN_SIZE};
-    buffer<double, 1> psi_buf(psi, R);
 
-    q.submit([&](handler &h) {
-        auto psi = psi_buf.get_access(h, write_only);
-
-        h.parallel_for(R, [=](auto ij) {
+        q.parallel_for(R, [=](auto ij) {
             int j = ij%(n+2);
             int i = (int) (ij - j)/(n+2);
 
@@ -675,7 +671,7 @@ void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
                 psi[ij] = a * sin((i + .5) * di) * sin((j + .5) * dj);
             }
         });
-    });
+
 }
 
 void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
