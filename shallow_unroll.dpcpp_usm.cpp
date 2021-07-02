@@ -324,6 +324,13 @@ outerr = output_csv_var(endfile, m, n, dp);
 if (outerr == 0){
    std::cout << "end file output complete" << std::endl;
    }
+    
+    // Cleanup
+    free(u, q);
+    free(v, q);
+    free(p, q);
+    free(psi, q);
+    
 return(0);
     
 }
