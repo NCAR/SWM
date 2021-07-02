@@ -180,10 +180,11 @@ int main() {
     
  // Initial values of the stream function and p
  init_stream(q_c, m, n, psi);
-
+    
  // Initialize velocities
  init_velocity(q_c, m, n, psi, u[tlmid], v[tlmid], p[tlmid]);
-
+q_c.wait();
+    
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
 periodic_cont(q, m, n, u[tlmid], v[tlmid], p[tlmid]);
@@ -688,32 +689,18 @@ void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
     double pcf = pi * pi * a * a / (el * el);
     
     auto R = range<1>{DOMAIN_SIZE};
-    buffer<double, 1> u_buf(u, R),
-                      v_buf(v, R),
-                      p_buf(p, R),
-                      psi_buf(psi, R);
-
-    q.submit([&](handler &h) {
-
-        auto psi = psi_buf.get_access(h, read_only);
-
-        auto u = u_buf.get_access(h, write_only);
-        auto v = v_buf.get_access(h, write_only);
-        auto p = p_buf.get_access(h, write_only);
-
-        h.parallel_for(R, [=](auto ij) {
-            int j = ij%(n+2);
-            int i = (int) (ij - j)/(n+2);
-
-            int ijm1 = ij-1;
-            int im1j= ij-(n+2);
-
-            if (i==0 || j==0 || i == m+1 || j== n+1) {} 
-            else {
-                u[ij] = -(psi[ij] - psi[ijm1]) / dy;
-                v[ij] = (psi[ij] - psi[im1j]) / dx;
-                p[ij] = pcf * (cos(2. * (i-1) * di) + cos(2. * (j-1) * dj)) + 50000.;
-            }
-        });
+    q.parallel_for(R, [=](auto ij) {
+        int j = ij%(n+2);
+        int i = (int) (ij - j)/(n+2);
+        
+        int ijm1 = ij-1;
+        int im1j= ij-(n+2);
+        
+        if (i==0 || j==0 || i == m+1 || j== n+1) {}
+        else {
+            u[ij] = -(psi[ij] - psi[ijm1]) / dy;
+            v[ij] = (psi[ij] - psi[im1j]) / dx;
+            p[ij] = pcf * (cos(2. * (i-1) * di) + cos(2. * (j-1) * dj)) + 50000.;
+        }
     });
 }
