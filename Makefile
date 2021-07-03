@@ -1,5 +1,8 @@
 CXX = dpcpp
-CXXFLAGS = -O2 -g --gcc-toolchain=/glade/u/apps/dav/opt/gnu/9.1.0 -std=c++17
+#Casper
+#CXXFLAGS = -O2 -g --gcc-toolchain=/glade/u/apps/dav/opt/gnu/9.1.0 -std=c++17
+#Intel DevCloud
+CXXFLAGS = -O2 -g -std=c++17
 
 SWM_EXE_NAME_DPCPP_USM = swm_dpcpp_usm
 SWM_SOURCES_DPCPP_USM = shallow_unroll.dpcpp_usm.cpp wtime.cpp

@@ -29,7 +29,6 @@
 #include <fstream>  // file
 #include <iostream> // io
 #include <cmath>
-#include "dpc_common.hpp"
 #include <CL/sycl.hpp>
 #if FPGA || FPGA_EMULATOR
 #include <CL/sycl/INTEL/fpga_extensions.hpp>
@@ -127,7 +126,8 @@ void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
 extern double wtime();
 
 int main() {
-    // Define device and queue
+    // Define range, device, and queue
+    auto R = range<1>{DOMAIN_SIZE};
     cpu_selector c_selector;
     default_selector d_selector;
     queue q_c(c_selector);
