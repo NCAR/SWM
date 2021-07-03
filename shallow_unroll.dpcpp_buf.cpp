@@ -29,7 +29,6 @@
 #include <fstream>  // file
 #include <iostream> // io
 #include <cmath>
-#include "dpc_common.hpp"
 #include <CL/sycl.hpp>
 #if FPGA || FPGA_EMULATOR
 #include <CL/sycl/INTEL/fpga_extensions.hpp>
@@ -129,7 +128,7 @@ extern double wtime();
 int main() {
     // Define device and queue
     cpu_selector c_selector;
-    default_selector d_selector;
+    gpu_selector d_selector;
     queue q_c(c_selector);
     queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
