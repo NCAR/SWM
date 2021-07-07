@@ -10,6 +10,44 @@
 #PBS -l select=1:ncpus=1:ngpus=1
 #PBS -l gpu_type=v100
 
+for arg in "$@"; do
+    case $arg in
+        -s|--save) 
+            SAVE="true";
+            shift;;
+        -f|--fileid)
+            NAME=$2;
+            shift;
+            shift;;
+        -m|--hsize)
+            M=$2;
+            shift;
+            shift;;
+        -n|--vsize)
+            N=$2;
+            shift;
+            shift;;
+        -a|--all)
+            ALL="true";
+            shift;;
+        -h|--help)
+            echo "-s|--save          : Save console output";
+            echo "-f|--fileid <name> : Set identifier to problem size with <name> in saved output filename";
+            echo "                     If -f option not included, identifier defaults to problem size with time stamp";
+            echo "-m|--hsize <int>   : Set the horizontal dimension of the problem size to <int>";
+            echo "                     If -n option not included, set both dimensions to <int>";
+            echo "                     If neither -m or -n options included, run on default problem size 64x128";
+            echo "-n|--vsize <int>   : Set the vertical dimension of the problem size to <int>";
+            echo "                     If -m option not included, set both dimensions to <int>";
+            echo "                     If neither -m or -n options included, run on default problem size 64x128";
+            echo "-a|--all           : Run all of the problem sizes in the following predefined set -"
+            echo "                     (48x48 64x64 96x96 128x128 192x192 256x256 384x384 512x512 768x768 1024x1024 1536x1536 2048x2048 3072x3072";
+            echo "-h|--help          : Display this help output"
+            shift;
+            exit 0;;
+    esac
+done
+
 # Get original working directory
 orig_dir=$PWD
 
@@ -47,7 +85,46 @@ make
 export OMP_PROC_BIND=spread
 export OMP_PLACES=threads
 
-./swm_kokkos > $project_dir/results.gpu.$(date +%m%d%H%M%S).txt
+# Create results directories if they don't already exist
+[ ! -d "${project_dir}/results" ] && mkdir ${project_dir}/results
+[ ! -d "${project_dir}/results/gpu_kokkos" ] && mkdir ${project_dir}/results/gpu_kokkos
 
-# Return to original working directory
+# Set problem size based on command line arguments or lack there of
+if [ "$ALL" == "true" ]; then
+    Ms=(48 64 96 128 192 256 384 512 768 1024 1536 2048 3072);
+    Ns=(48 64 96 128 192 256 384 512 768 1024 1536 2048 3072);
+elif [ ! -z $M ]; then
+    Ms=($M);
+    if [ -z $N ]; then
+        N=$M;
+    fi
+    Ns=($N);
+elif [ ! -z $N ]; then
+    M=$N;
+    Ms=($M);
+    Ns=($N);
+else
+    Ms=(64);
+    Ns=(128);
+fi
+
+# Execute and save results if selected
+NUM_PROBS=${#Ms[@]}
+for (( i=0; i<$NUM_PROBS; i++ )) do
+    M=${Ms[$i]};
+    N=${Ns[$i]};
+    if [ "$SAVE" == "true" ]; then
+        if [ ! -z $NAME ]; then
+            ./swm_kokkos $M $N > $project_dir/results/gpu_kokkos/results.gpu.kokkos.$M.$N.${NAME}.txt;
+        else
+            ./swm_kokkos $M $N > $project_dir/results/gpu_kokkos/results.gpu.kokkos.$M.$N.$(date +%m%d%H%M%S).txt;
+       fi
+    else
+        ./swm_kokkos $M $N;
+    fi
+done
+
+# Move csv file to kokkos gpu results directory in the working directory
+mv *.csv $orig_dir/results/gpu_kokkos
+
 cd $orig_dir

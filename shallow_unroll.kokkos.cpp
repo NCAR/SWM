@@ -32,11 +32,11 @@
 
 #define TRUE 1
 #define FALSE 0
-const int M = 3072;
-const int N = 3072;
-#define M_LEN (M + 2)
-#define N_LEN (N + 2)
-#define DOMAIN_SIZE M_LEN*N_LEN
+const int M = 64;
+const int N = 128;
+//#define M_LEN (M + 2)
+//#define N_LEN (N + 2)
+//#define DOMAIN_SIZE M_LEN*N_LEN
 #define ITMAX 4000
 #define L_OUT TRUE
 
@@ -94,8 +94,8 @@ using namespace std;
 #include <Kokkos_Core.hpp>
 
 //Create View types which use default execution space
-typedef Kokkos::View<double[DOMAIN_SIZE][3]> AllLevelType;
-typedef Kokkos::View<double[DOMAIN_SIZE]> SingleLevelType;
+typedef Kokkos::View<double*[3]> AllLevelType;
+typedef Kokkos::View<double*> SingleLevelType;
 
 extern void periodic_cont(int m, int n, int tl,
                           AllLevelType uAll, AllLevelType vAll, AllLevelType pAll);
@@ -117,21 +117,42 @@ extern void adv_nsteps(int m, int n, int tlmid, int tlold, int tlnew,
 
 extern double wtime();
 
-int main() {
-  Kokkos::initialize();
+int main(int argc, char* argv[]) {
+  Kokkos::initialize(argc, argv);
   {
     //Print default execution space
     printf("Kokkos execution space: %s\n",
          typeid(Kokkos::DefaultExecutionSpace).name());
 
+    int m;
+    int n;
+    if (argc == 2) {
+      m = atoi(argv[1]);
+      n = atoi(argv[1]);
+    }
+    else if (argc == 3) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+    }
+    else {
+      m = M;
+      n = N;
+    }
+    cout << "number of points in the x direction " << m << endl;
+    cout << "number of points in the y direction " << n << endl;
+
+    const int M_LEN = (m + 2);
+    const int N_LEN = (n + 2);
+    const int DOMAIN_SIZE = M_LEN * N_LEN;
+
     Kokkos::Profiling::pushRegion("allocation");
     //Declare state arrays as views ((M+2)x(N+2) points, 3 time levels)
     //Domain size is first dimension to optimize memory layouts
     //Allocate device memory
-    AllLevelType u("u");
-    AllLevelType v("v");
-    AllLevelType p("p");
-    SingleLevelType psi("psi");
+    AllLevelType u("u",DOMAIN_SIZE);
+    AllLevelType v("v",DOMAIN_SIZE);
+    AllLevelType p("p",DOMAIN_SIZE);
+    SingleLevelType psi("psi",DOMAIN_SIZE);
     // Allocate host memory
     AllLevelType::HostMirror u_h = Kokkos::create_mirror_view(u);
     AllLevelType::HostMirror v_h = Kokkos::create_mirror_view(v);
@@ -140,9 +161,6 @@ int main() {
     Kokkos::Profiling::popRegion();
     
     // ** Initialisations **
-
-    int m = M;
-    int n = N;
 
     // Time level indices
     
@@ -216,8 +234,22 @@ int main() {
     for (int i=0; i<DOMAIN_SIZE; i++){
       dp[i]=p_h(i,tlmid)-50000.;
     }
-    char initfile[32] = "swm_init.csv";
-    
+    char initfile[32] = "swm_init.kokkos.";
+    char size_char[9];
+    std::sprintf(size_char, "%d", m);
+    char csv[5] = ".csv";
+    int i;
+    for(i = 0; i < 4; i++){
+      if (size_char[i] == '\0'){
+        break;
+      }
+      else initfile[i+16] = size_char[i];
+    }
+    for (int j = 0; j < 4; j++){
+      initfile[i+16] = csv[j];
+      i++;
+    }
+
     int outerr = output_csv_var(initfile, m, n, dp);
       
     if (outerr == 0){
@@ -343,7 +375,17 @@ int main() {
       dp[i]=p_h(i,tlnew)-50000.;
     }
 
-    char endfile[32] = "swm_h100.csv";
+    char endfile[32] = "swm_end.kokkos.";
+    for(i = 0; i < 4; i++){
+      if (size_char[i] == '\0'){
+        break;
+      }
+      else endfile[i+15] = size_char[i];
+    }
+    for (int j = 0; j < 4; j++){
+      endfile[i+15] = csv[j];
+      i++;
+    }
     outerr = output_csv_var(endfile, m, n, dp);
     if (outerr == 0){
       std::cout << "end file output complete" << std::endl;
