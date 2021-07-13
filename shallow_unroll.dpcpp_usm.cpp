@@ -138,19 +138,14 @@ int main() {
     double *psi = malloc_shared<double>(DOMAIN_SIZE, q);
 
     double **u = malloc_shared<double *>(3*DOMAIN_SIZE, q);
-    u[0] = malloc_shared<double>(DOMAIN_SIZE, q);
-    u[1] = malloc_shared<double>(DOMAIN_SIZE, q);
-    u[2] = malloc_shared<double>(DOMAIN_SIZE, q);
-    
-    double **v = malloc_shared<double *>(3*DOMAIN_SIZE, q);
-    v[0] = malloc_shared<double>(DOMAIN_SIZE, q);
-    v[1] = malloc_shared<double>(DOMAIN_SIZE, q);
-    v[2] = malloc_shared<double>(DOMAIN_SIZE, q);
-    
+    double **v = malloc_shared<double *>(3*DOMAIN_SIZE, q);  
     double **p = malloc_shared<double *>(3*DOMAIN_SIZE, q);
-    p[0] = malloc_shared<double>(DOMAIN_SIZE, q);
-    p[1] = malloc_shared<double>(DOMAIN_SIZE, q);
-    p[2] = malloc_shared<double>(DOMAIN_SIZE, q);
+    
+    for (int i=0; i<3; i++) {
+        u[i] = malloc_shared<double>(DOMAIN_SIZE, q);
+        v[i] = malloc_shared<double>(DOMAIN_SIZE, q);
+        p[i] = malloc_shared<double>(DOMAIN_SIZE, q);
+    }
     
     // ** Initialisations **
 

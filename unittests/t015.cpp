@@ -36,17 +36,11 @@ int main() {
     int **v = malloc_shared<int *>(3*DOMAIN_SIZE, q);
     int **p = malloc_shared<int *>(3*DOMAIN_SIZE, q);
     
-    u[0] = malloc_shared<int>(DOMAIN_SIZE, q);
-    u[1] = malloc_shared<int>(DOMAIN_SIZE, q);
-    u[2] = malloc_shared<int>(DOMAIN_SIZE, q);
-    
-    v[0] = malloc_shared<int>(DOMAIN_SIZE, q);
-    v[1] = malloc_shared<int>(DOMAIN_SIZE, q);
-    v[2] = malloc_shared<int>(DOMAIN_SIZE, q);
-    
-    p[0] = malloc_shared<int>(DOMAIN_SIZE, q);
-    p[1] = malloc_shared<int>(DOMAIN_SIZE, q);
-    p[2] = malloc_shared<int>(DOMAIN_SIZE, q);
+    for (int i=0; i<3; i++) {
+        u[i] = malloc_shared<int>(DOMAIN_SIZE, q);
+        v[i] = malloc_shared<int>(DOMAIN_SIZE, q);
+        p[i] = malloc_shared<int>(DOMAIN_SIZE, q);
+    }
     
     auto e = q.parallel_for(R, [=](auto i) { 
         u[0][i] = i;
