@@ -136,13 +136,21 @@ int main() {
 
     //Declare state arrays (3 time levels, (M+2)x(N+2) points
     double *psi = malloc_shared<double>(DOMAIN_SIZE, q);
-    double **u = malloc_shared<double *>(3*DOMAIN_SIZE, q);
-    double **v = malloc_shared<double *>(3*DOMAIN_SIZE, q);
-    double **p = malloc_shared<double *>(3*DOMAIN_SIZE, q);
 
-    double u_[3][DOMAIN_SIZE]; double *_u_[3] = {u_[0], u_[1], u_[2]}; u = _u_;
-    double v_[3][DOMAIN_SIZE]; double *_v_[3] = {v_[0], v_[1], v_[2]}; v = _v_;
-    double p_[3][DOMAIN_SIZE]; double *_p_[3] = {p_[0], p_[1], p_[2]}; p = _p_;
+    double **u = malloc_shared<double *>(3*DOMAIN_SIZE, q);
+    u[0] = malloc_shared<double>(DOMAIN_SIZE, q);
+    u[1] = malloc_shared<double>(DOMAIN_SIZE, q);
+    u[2] = malloc_shared<double>(DOMAIN_SIZE, q);
+    
+    double **v = malloc_shared<double *>(3*DOMAIN_SIZE, q);
+    v[0] = malloc_shared<double>(DOMAIN_SIZE, q);
+    v[1] = malloc_shared<double>(DOMAIN_SIZE, q);
+    v[2] = malloc_shared<double>(DOMAIN_SIZE, q);
+    
+    double **p = malloc_shared<double *>(3*DOMAIN_SIZE, q);
+    p[0] = malloc_shared<double>(DOMAIN_SIZE, q);
+    p[1] = malloc_shared<double>(DOMAIN_SIZE, q);
+    p[2] = malloc_shared<double>(DOMAIN_SIZE, q);
     
     // ** Initialisations **
 
