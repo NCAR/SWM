@@ -34,6 +34,8 @@
 #include <CL/sycl/INTEL/fpga_extensions.hpp>
 #endif
 
+#include "dpc_common.hpp"
+
 #define TRUE 1
 #define FALSE 0
 #define M 64
@@ -128,7 +130,18 @@ extern double wtime();
 int main() {
     // Define device and queue
     cpu_selector c_selector;
-    gpu_selector d_selector;
+    
+    #if FPGA_EMULATOR
+    // DPC++ extension: FPGA emulator selector on systems without FPGA card.
+    INTEL::fpga_emulator_selector d_selector;
+    #elif FPGA
+    // DPC++ extension: FPGA selector on systems with FPGA card.
+    INTEL::fpga_selector d_selector;
+    #else
+    // The default device selector will select the most performant device.
+    default_selector d_selector;
+    #endif
+    
     queue q_c(c_selector);
     queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;

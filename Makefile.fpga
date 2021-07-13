@@ -1,0 +1,37 @@
+# make -f Makefile.fpga
+
+CXX := dpcpp
+CXXFLAGS = -O2 -g -std=c++17
+
+SRC := shallow_unroll.dpcpp_buf.cpp wtime.cpp
+
+.PHONY: fpga_emu run_emu clean 
+
+fpga_emu: swm_dpcpp_buf.fpga_emu
+hw: swm_dpcpp_buf.fpga
+
+report: swm_dpcpp_buf_report.a
+
+swm_dpcpp_buf.fpga_emu: $(SRC)
+	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -DFPGA_EMULATOR=1
+
+a.o: $(SRC)
+	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1
+
+swm_dpcpp_buf.fpga: a.o
+	$(CXX) $(CXXFLAGS) -fintelfpga $^ -o $@ -Xshardware
+
+run_emu: swm_dpcpp_buf.fpga_emu
+	./swm_dpcpp_buf.fpga_emu
+
+run_hw: swm_dpcpp_buf.fpga
+	./swm_dpcpp_buf.fpga
+    
+dev.o: $(SRC)
+	$(CXX) $(CXXFLAGS) -fintelfpga -c $^ -o $@ -DFPGA=1
+
+swm_dpcpp_buf_report.a: dev.o
+	$(CXX) $(CXXFLAGS) -fintelfpga -fsycl-link $^ -o $@ -Xshardware
+
+clean:
+	rm -rf *.o *.d *.out *.mon *.emu *.aocr *.aoco *.prj *.fpga_emu *.fpga_emu_buffers swm_dpcpp_buf.fpga  *.a
