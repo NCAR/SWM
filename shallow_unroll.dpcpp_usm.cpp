@@ -96,6 +96,7 @@ class Hough_Transform_kernel;
 
 
 extern void periodic_cont(queue q, int m, int n, double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
+
 extern int output_csv_var( char *filename, int m, int n, double* var);
 extern void first_step(queue q, int m, int n,
                        double umid[DOMAIN_SIZE], double vmid[DOMAIN_SIZE], double pmid[DOMAIN_SIZE],
@@ -123,6 +124,8 @@ void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]);
 void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
                    double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
 
+extern void CopyVector(queue &q, double src[DOMAIN_SIZE], double dest[DOMAIN_SIZE]);
+
 extern double wtime();
 
 int main() {
@@ -135,16 +138,16 @@ int main() {
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
     //Declare state arrays (3 time levels, (M+2)x(N+2) points
-    double *psi = malloc_shared<double>(DOMAIN_SIZE, q);
+    // -- Allocate memory on the host
+    double *psi = malloc_host<double>(DOMAIN_SIZE, q_c);
 
-    double **u = malloc_shared<double *>(3*DOMAIN_SIZE, q);
-    double **v = malloc_shared<double *>(3*DOMAIN_SIZE, q);  
-    double **p = malloc_shared<double *>(3*DOMAIN_SIZE, q);
-    
+    double **u = malloc_host<double *>(3*DOMAIN_SIZE, q_c);
+    double **v = malloc_host<double *>(3*DOMAIN_SIZE, q_c);  
+    double **p = malloc_host<double *>(3*DOMAIN_SIZE, q_c);
     for (int i=0; i<3; i++) {
-        u[i] = malloc_shared<double>(DOMAIN_SIZE, q);
-        v[i] = malloc_shared<double>(DOMAIN_SIZE, q);
-        p[i] = malloc_shared<double>(DOMAIN_SIZE, q);
+        u[i] = malloc_host<double>(DOMAIN_SIZE, q_c);
+        v[i] = malloc_host<double>(DOMAIN_SIZE, q_c);
+        p[i] = malloc_host<double>(DOMAIN_SIZE, q_c);
     }
     
     // ** Initialisations **
@@ -180,19 +183,23 @@ int main() {
     double pcf = pi * pi * a * a / (el * el);
     
     double time; // Model time
+
+    std::cout << "stop 0" << std::endl;
     
  // Initial values of the stream function and p
  init_stream(q_c, m, n, psi);
     
  // Initialize velocities
  init_velocity(q_c, m, n, psi, u[tlmid], v[tlmid], p[tlmid]);
-    
+     
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
 periodic_cont(q, m, n, u[tlmid], v[tlmid], p[tlmid]);
-
+std::cout << "stop 1" << std::endl; 
+    
 update_time(q, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
-
+std::cout << "stop 2" << std::endl;
+    
 double* dp = new double [DOMAIN_SIZE];
 for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlmid][i]-50000.;
@@ -210,12 +217,13 @@ double tdtsdx = tdt / dx;
 double tdtsdy = tdt / dy;
 
 double b4first_step = wtime();
-    
+  std::cout << "stop 3" << std::endl;  
 first_step(q, m, n,
            u[tlmid], v[tlmid], p[tlmid],
            u[tlold], v[tlold], p[tlold],
            u[tlnew], v[tlnew], p[tlnew],
            fsdx, fsdy, tdts8, tdtsdx, tdtsdy);
+    std::cout << "stop 4" << std::endl;
  double after_first_step = wtime(); 
 std::cout << "first step time: " << after_first_step-b4first_step << std::endl;
     
@@ -239,6 +247,9 @@ tdtsdy = tdt / dy;
 double tup = 0.0;
 double tpc = 0.0;
 double tstart = wtime();
+    
+    std::cout << "stop 5" << std::endl;
+    
 for (int ncycle=2; ncycle<=ITMAX; ncycle++){
         
     // Take a time step
@@ -270,6 +281,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
     time = time + dt;
         
     }
+    std::cout << "stop 6" << std::endl;
 double tend = wtime();
 double total_time = tend - tstart;
 double tcyc = total_time / (ITMAX-1); //time per cycle
@@ -328,92 +340,14 @@ if (outerr == 0){
    }
     
     // Cleanup
-    free(u, q);
-    free(v, q);
-    free(p, q);
-    free(psi, q);
+    free(u, q_c);
+    free(v, q_c);
+    free(p, q_c);
+    free(psi, q_c);
     
 return(0);
     
 }
-
-void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE], 
-                   double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
-
-    auto R = range<1>{DOMAIN_SIZE};
-  
-        // Corner point exchange indices
-        int hsw = 0;
-        int hne = (m+1)*(n+2)+n+1;
-        int hse = n+1;
-        int hnw = (m+1)*(n+2);
-    
-        int ine = m*(n+2)+n;
-        int ise = 1*(n+2)+n;
-        int isw = 1*(n+2)+1;
-        int inw = m*(n+2)+1;
-
-        auto e = q.parallel_for(R, [=](auto index) {
-            int j = index%(N+2);
-            int i = (int) (index - j)/(N+2);
-            if (i==0 || j==0 || i == M+1 || j== N+1) {}
-            else {
-                // North-South periodic continuation
-                // Labeling conventions:
-                // h = halo; i = interior;
-                // north = m; south = 1;
-                int hnorth = (m+1)*(n+2) + j;
-                int hsouth = j;
-                int inorth = m*(n+2) + j;
-                int isouth = (n+2) + j;
-        
-                u[hsouth] = u[inorth];
-                u[hnorth] = u[isouth];
-        
-                v[hsouth] = v[inorth];
-                v[hnorth] = v[isouth];
-        
-                p[hsouth] = p[inorth];
-                p[hnorth] = p[isouth];
-
-                // East-West periodic continuation
-                // h = halo; i = interior;
-                // east = n; west = 1;
-                int hwest = i*(n+2);
-                int heast = i*(n+2) + n+1;
-                int iwest = i*(n+2) + 1;
-                int ieast = i*(n+2) + n;
-        
-                u[hwest] = u[ieast];
-                u[heast] = u[iwest];
-        
-                v[hwest] = v[ieast];
-                v[heast] = v[iwest];
-        
-                p[hwest] = p[ieast];
-                p[heast] = p[iwest];
-        
-                if (i == m) {
-                    u[hsw]   = u[ine];
-                    u[hnw]   = u[ise];
-                    u[hne]   = u[isw];
-                    u[hse]   = u[inw];
-
-                    v[hsw]   = v[ine];
-                    v[hnw]   = v[ise];
-                    v[hne]   = v[isw];
-                    v[hse]   = v[inw];
-            
-                    p[hsw]   = p[ine];
-                    p[hnw]   = p[ise];
-                    p[hne]   = p[isw];
-                    p[hse]   = p[inw];
-                }
-            }
-        });
-    e.wait();
-}
-
 
 int output_csv_var( char *filename, int m, int n, double* var  )
 {
@@ -434,6 +368,107 @@ int output_csv_var( char *filename, int m, int n, double* var  )
     return 0;
 }
 
+void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE], 
+                   double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
+
+    auto R = range<1>{DOMAIN_SIZE};
+    
+    // -- Allocate memory on the device
+    double *u_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *v_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *p_d = malloc_device<double>(DOMAIN_SIZE, q);
+    
+    // Copy host to device
+    CopyVector(q, u, u_d);
+    CopyVector(q, v, v_d);
+    CopyVector(q, p, p_d);
+    
+    q.wait(); // Sync
+  
+        // Corner point exchange indices
+        int hsw = 0;
+        int hne = (m+1)*(n+2)+n+1;
+        int hse = n+1;
+        int hnw = (m+1)*(n+2);
+    
+        int ine = m*(n+2)+n;
+        int ise = 1*(n+2)+n;
+        int isw = 1*(n+2)+1;
+        int inw = m*(n+2)+1;
+
+        q.parallel_for(R, [=](auto index) {
+            int j = index%(N+2);
+            int i = (int) (index - j)/(N+2);
+            if (i==0 || j==0 || i == M+1 || j== N+1) {}
+            else {
+                // North-South periodic continuation
+                // Labeling conventions:
+                // h = halo; i = interior;
+                // north = m; south = 1;
+                int hnorth = (m+1)*(n+2) + j;
+                int hsouth = j;
+                int inorth = m*(n+2) + j;
+                int isouth = (n+2) + j;
+        
+                u_d[hsouth] = u_d[inorth];
+                u_d[hnorth] = u_d[isouth];
+        
+                v_d[hsouth] = v_d[inorth];
+                v_d[hnorth] = v_d[isouth];
+        
+                p_d[hsouth] = p_d[inorth];
+                p_d[hnorth] = p_d[isouth];
+
+                // East-West periodic continuation
+                // h = halo; i = interior;
+                // east = n; west = 1;
+                int hwest = i*(n+2);
+                int heast = i*(n+2) + n+1;
+                int iwest = i*(n+2) + 1;
+                int ieast = i*(n+2) + n;
+        
+                u_d[hwest] = u_d[ieast];
+                u_d[heast] = u_d[iwest];
+        
+                v_d[hwest] = v_d[ieast];
+                v_d[heast] = v_d[iwest];
+        
+                p_d[hwest] = p_d[ieast];
+                p_d[heast] = p_d[iwest];
+        
+                if (i == m) {
+                    u_d[hsw]   = u_d[ine];
+                    u_d[hnw]   = u_d[ise];
+                    u_d[hne]   = u_d[isw];
+                    u_d[hse]   = u_d[inw];
+
+                    v_d[hsw]   = v_d[ine];
+                    v_d[hnw]   = v_d[ise];
+                    v_d[hne]   = v_d[isw];
+                    v_d[hse]   = v_d[inw];
+            
+                    p_d[hsw]   = p_d[ine];
+                    p_d[hnw]   = p_d[ise];
+                    p_d[hne]   = p_d[isw];
+                    p_d[hse]   = p_d[inw];
+                }
+            }
+        });
+    q.wait(); // Synch
+
+    // Copy device to host
+    CopyVector(q, u_d, u);
+    CopyVector(q, v_d, v);
+    CopyVector(q, p_d, p);
+    
+    q.wait(); // Synch
+    
+    // Cleanup
+    free(u_d, q);
+    free(v_d, q);
+    free(p_d, q);
+}
+
 
 // numerically the first step is special
 void first_step(queue q, const int m, const int n,
@@ -441,9 +476,38 @@ void first_step(queue q, const int m, const int n,
          double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
          double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy) {
-             
+
+    // -- Allocate memory on the device
+    double *u_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *v_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *p_d = malloc_device<double>(DOMAIN_SIZE, q);
+    
+    double *uold_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *vold_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *pold_d = malloc_device<double>(DOMAIN_SIZE, q);
+    
+    double *unew_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *vnew_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *pnew_d = malloc_device<double>(DOMAIN_SIZE, q);
+    
+    // Copy host to device
+    CopyVector(q, u, u_d);
+    CopyVector(q, v, v_d);
+    CopyVector(q, p, p_d);
+    
+    CopyVector(q, uold, uold_d);
+    CopyVector(q, vold, vold_d);
+    CopyVector(q, pold, pold_d);
+    
+    CopyVector(q, unew, unew_d);
+    CopyVector(q, vnew, vnew_d);
+    CopyVector(q, pnew, pnew_d);
+    
+    q.wait(); // Sync
+    
+    
     auto R = range<1>{DOMAIN_SIZE};
-    auto e = q.parallel_for(R, [=](auto ij) {
+    q.parallel_for(R, [=](auto ij) {
             int j = ij%(n+2);
             int i = (int) (ij - j)/(n+2);
 
@@ -459,44 +523,72 @@ void first_step(queue q, const int m, const int n,
                 int im1j= ij-(n+2);
                 int im1jp1= im1j+1;
                 
-                double p00   = p[ij];      //10 mem access
-                double pp0p1 = p[ijp1];    //6
-                double pp1p0 = p[ip1j];    //6
-                double pp1p1 = p[ip1jp1];  //3
-                double u00   = u[ij];      //9
-                double up0p1  = u[ijp1];   //4
-                double um1p1 = u[im1jp1];  //4
-                double um1p0 = u[im1j];    //4
-                double v00   = v[ij];      //9
-                double vp1p0 = v[ip1j];    //4
-                double vp1m1 = v[ip1jm1];  //4
-                double vp0m1 = v[ijm1];    //4
+                double p00   = p_d[ij];      //10 mem access
+                double pp0p1 = p_d[ijp1];    //6
+                double pp1p0 = p_d[ip1j];    //6
+                double pp1p1 = p_d[ip1jp1];  //3
+                double u00   = u_d[ij];      //9
+                double up0p1 = u_d[ijp1];   //4
+                double um1p1 = u_d[im1jp1];  //4
+                double um1p0 = u_d[im1j];    //4
+                double v00   = v_d[ij];      //9
+                double vp1p0 = v_d[ip1j];    //4
+                double vp1m1 = v_d[ip1jm1];  //4
+                double vp0m1 = v_d[ijm1];    //4
         
                 double cut00 = .5 * (pp1p1 + pp0p1)       * up0p1;
-                double cut10 = .5 * (pp0p1 + p[im1jp1]) * um1p1;
+                double cut10 = .5 * (pp0p1 + p_d[im1jp1]) * um1p1;
                 double cut01 = .5 * (pp1p0 + p00)         * u00;
-                double cut11 = .5 * (p00   + p[im1j])   * um1p0;
+                double cut11 = .5 * (p00   + p_d[im1j])   * um1p0;
         
                 double cvt00 = .5 * (pp1p1 + pp1p0)       * vp1p0;
                 double cvt10 = .5 * (pp0p1 + p00)         * v00;
-                double cvt01 = .5 * (pp1p0 + p[ip1jm1]) * vp1m1;
-                double cvt11 = .5 * (p00   + p[ijm1])   * vp0m1;
+                double cvt01 = .5 * (pp1p0 + p_d[ip1jm1]) * vp1m1;
+                double cvt11 = .5 * (p00   + p_d[ijm1])   * vp0m1;
         
                 double zt00 = (fsdx * (vp1p0 - v00)     - fsdy * (up0p1 - u00))    /(p00     + pp1p0       + pp1p1 + pp0p1);
-                double zt10 = (fsdx * (v00   - v[im1j]) - fsdy * (um1p1 - um1p0))  /(p[im1j] + p00         + pp0p1 + p[im1jp1]);
-                double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u[ijm1]))/(p[ijm1] + p[ip1jm1]   + pp1p0 + p00);
+                double zt10 = (fsdx * (v00   - v_d[im1j]) - fsdy * (um1p1 - um1p0))  /(p_d[im1j] + p00         + pp0p1 + p_d[im1jp1]);
+                double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u_d[ijm1]))/(p_d[ijm1] + p_d[ip1jm1]   + pp1p0 + p00);
         
-                double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v[ijp1] * v[ijp1]  + v00   * v00);
-                double ht01 = pp1p0 + .25 * (u[ip1j] * u[ip1j] + u00   * u00   + vp1p0     * vp1p0      + vp1m1 * vp1m1);
+                double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v_d[ijp1] * v_d[ijp1]  + v00   * v00);
+                double ht01 = pp1p0 + .25 * (u_d[ip1j] * u_d[ip1j] + u00   * u00   + vp1p0     * vp1p0      + vp1m1 * vp1m1);
                 double ht11 = p00   + .25 * (u00       * u00       + um1p0 * um1p0 + v00       * v00        + vp0m1 * vp0m1);
         
-                unew[ij] = uold[ij] + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
-                vnew[ij] = vold[ij] - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
-                pnew[ij] = pold[ij] - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
+                unew_d[ij] = uold_d[ij] + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
+                vnew_d[ij] = vold_d[ij] - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
+                pnew_d[ij] = pold_d[ij] - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
         
             }
         });
-    e.wait();
+    q.wait();
+    
+    // Copy device to host
+    CopyVector(q, u_d, u);
+    CopyVector(q, v_d, v);
+    CopyVector(q, p_d, p);
+    
+    CopyVector(q, uold_d, uold);
+    CopyVector(q, vold_d, vold);
+    CopyVector(q, pold_d, pold);
+    
+    CopyVector(q, unew_d, unew);
+    CopyVector(q, vnew_d, vnew);
+    CopyVector(q, pnew_d, pnew);
+    
+    q.wait(); // Sync
+    
+    // Cleanup
+    free(u_d, q);
+    free(v_d, q);
+    free(p_d, q);
+    
+    free(uold_d, q);
+    free(vold_d, q);
+    free(pold_d, q);
+    
+    free(unew_d, q);
+    free(vnew_d, q);
+    free(pnew_d, q);
 }
 
 // update (assumes first step has been called).
@@ -505,9 +597,37 @@ void update(queue q, const int m, const int n,
          double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
          double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha) {
-
+    
+    // -- Allocate memory on the device
+    double *u_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *v_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *p_d = malloc_device<double>(DOMAIN_SIZE, q);
+    
+    double *uold_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *vold_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *pold_d = malloc_device<double>(DOMAIN_SIZE, q);
+    
+    double *unew_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *vnew_d = malloc_device<double>(DOMAIN_SIZE, q);
+    double *pnew_d = malloc_device<double>(DOMAIN_SIZE, q);
+    
+    // Copy host to device
+    CopyVector(q, u, u_d);
+    CopyVector(q, v, v_d);
+    CopyVector(q, p, p_d);
+    
+    CopyVector(q, uold, uold_d);
+    CopyVector(q, vold, vold_d);
+    CopyVector(q, pold, pold_d);
+    
+    CopyVector(q, unew, unew_d);
+    CopyVector(q, vnew, vnew_d);
+    CopyVector(q, pnew, pnew_d);
+    
+    q.wait(); // Sync
+    
     auto R = range<1>{DOMAIN_SIZE};
-    auto e = q.parallel_for(R, [=](auto ij) {
+    q.parallel_for(R, [=](auto ij) {
             int j = ij%(n+2);
             int i = (int) (ij - j)/(n+2);
 
@@ -524,59 +644,128 @@ void update(queue q, const int m, const int n,
                 int im1j   = ij-(n+2);
                 int im1jp1 = im1j+1;
         
-                double p00   = p[ij];      //10 mem access
-                double pp0p1 = p[ijp1];    //6
-                double pp1p0 = p[ip1j];    //6
-                double pp1p1 = p[ip1jp1];  //3
-                double u00   = u[ij];      //9
-                double up0p1 = u[ijp1];    //4
-                double um1p1 = u[im1jp1];  //4
-                double um1p0 = u[im1j];    //4
-                double v00   = v[ij];      //9
-                double vp1p0 = v[ip1j];    //4
-                double vp1m1 = v[ip1jm1];  //4
-                double vp0m1 = v[ijm1];    //4
+                double p00   = p_d[ij];      //10 mem access
+                double pp0p1 = p_d[ijp1];    //6
+                double pp1p0 = p_d[ip1j];    //6
+                double pp1p1 = p_d[ip1jp1];  //3
+                double u00   = u_d[ij];      //9
+                double up0p1 = u_d[ijp1];    //4
+                double um1p1 = u_d[im1jp1];  //4
+                double um1p0 = u_d[im1j];    //4
+                double v00   = v_d[ij];      //9
+                double vp1p0 = v_d[ip1j];    //4
+                double vp1m1 = v_d[ip1jm1];  //4
+                double vp0m1 = v_d[ijm1];    //4
         
                 double cut00 = .5 * (pp1p1 + pp0p1)     * up0p1;
-                double cut10 = .5 * (pp0p1 + p[im1jp1]) * um1p1;
+                double cut10 = .5 * (pp0p1 + p_d[im1jp1]) * um1p1;
                 double cut01 = .5 * (pp1p0 + p00)       * u00;
-                double cut11 = .5 * (p00   + p[im1j])   * um1p0;
+                double cut11 = .5 * (p00   + p_d[im1j])   * um1p0;
         
                 double cvt00 = .5 * (pp1p1 + pp1p0)     * vp1p0;
                 double cvt10 = .5 * (pp0p1 + p00)       * v00;
-                double cvt01 = .5 * (pp1p0 + p[ip1jm1]) * vp1m1;
-                double cvt11 = .5 * (p00   + p[ijm1])   * vp0m1;
+                double cvt01 = .5 * (pp1p0 + p_d[ip1jm1]) * vp1m1;
+                double cvt11 = .5 * (p00   + p_d[ijm1])   * vp0m1;
         
                 double zt00 = (fsdx * (vp1p0 - v00)     - fsdy * (up0p1 - u00))     /(p00     + pp1p0     + pp1p1 + pp0p1);
-                double zt10 = (fsdx * (v00   - v[im1j]) - fsdy * (um1p1 - um1p0))   /(p[im1j] + p00       + pp0p1 + p[im1jp1]);
-                double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u[ijm1])) /(p[ijm1] + p[ip1jm1] + pp1p0 + p00);
+                double zt10 = (fsdx * (v00   - v_d[im1j]) - fsdy * (um1p1 - um1p0))   /(p_d[im1j] + p00       + pp0p1 + p_d[im1jp1]);
+                double zt01 = (fsdx * (vp1m1 - vp0m1)   - fsdy * (u00   - u_d[ijm1])) /(p_d[ijm1] + p_d[ip1jm1] + pp1p0 + p00);
         
-                double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v[ijp1] * v[ijp1]  + v00   * v00);
-                double ht01 = pp1p0 + .25 * (u[ip1j]   * u[ip1j]   + u00   * u00   + vp1p0   * vp1p0    + vp1m1 * vp1m1);
+                double ht10 = pp0p1 + .25 * (up0p1     * up0p1     + um1p1 * um1p1 + v_d[ijp1] * v_d[ijp1]  + v00   * v00);
+                double ht01 = pp1p0 + .25 * (u_d[ip1j]   * u_d[ip1j]   + u00   * u00   + vp1p0   * vp1p0    + vp1m1 * vp1m1);
                 double ht11 = p00   + .25 * (u00       * u00       + um1p0 * um1p0 + v00     * v00      + vp0m1 * vp0m1);
         
-                unew[ij] = uold[ij] + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
-                vnew[ij] = vold[ij] - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
-                pnew[ij] = pold[ij] - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
+                unew_d[ij] = uold_d[ij] + tdts8  * (zt00  + zt01) * (cvt00 + cvt10 + cvt11 + cvt01) - tdtsdx * (ht01 - ht11);
+                vnew_d[ij] = vold_d[ij] - tdts8  * (zt00  + zt10) * (cut00 + cut10 + cut11 + cut01) - tdtsdy * (ht10 - ht11);
+                pnew_d[ij] = pold_d[ij] - tdtsdx * (cut01 - cut11) - tdtsdy * (cvt10 - cvt11);
         
-                uold[ij] = u00 + alpha * (unew[ij]  - 2. * u00 + uold[ij]);
-                vold[ij] = v00 + alpha * (vnew[ij]  - 2. * v00 + vold[ij]);
-                pold[ij] = p00 + alpha * (pnew[ij]  - 2. * p00 + pold[ij]);
+                uold_d[ij] = u00 + alpha * (unew_d[ij]  - 2. * u00 + uold_d[ij]);
+                vold_d[ij] = v00 + alpha * (vnew_d[ij]  - 2. * v00 + vold_d[ij]);
+                pold_d[ij] = p00 + alpha * (pnew_d[ij]  - 2. * p00 + pold_d[ij]);
             }
         });
-    e.wait();
+    q.wait();
+    
+    // Copy device to host
+    CopyVector(q, u_d, u);
+    CopyVector(q, v_d, v);
+    CopyVector(q, p_d, p);
+    
+    CopyVector(q, uold_d, uold);
+    CopyVector(q, vold_d, vold);
+    CopyVector(q, pold_d, pold);
+    
+    CopyVector(q, unew_d, unew);
+    CopyVector(q, vnew_d, vnew);
+    CopyVector(q, pnew_d, pnew);
+    
+    q.wait(); // Sync
+    
+    // Cleanup
+    free(u_d, q);
+    free(v_d, q);
+    free(p_d, q);
+    
+    free(uold_d, q);
+    free(vold_d, q);
+    free(pold_d, q);
+    
+    free(unew_d, q);
+    free(vnew_d, q);
+    free(pnew_d, q);
 }
 
 void update_time(queue q, 
                  double u_in[DOMAIN_SIZE], double v_in[DOMAIN_SIZE], double p_in[DOMAIN_SIZE],
                  double u_out[DOMAIN_SIZE], double v_out[DOMAIN_SIZE], double p_out[DOMAIN_SIZE]) {
+    
+    double *u_d_in = malloc_device<double>(DOMAIN_SIZE, q);
+    double *v_d_in = malloc_device<double>(DOMAIN_SIZE, q);
+    double *p_d_in = malloc_device<double>(DOMAIN_SIZE, q);
+    
+    double *u_d_out = malloc_device<double>(DOMAIN_SIZE, q);
+    double *v_d_out = malloc_device<double>(DOMAIN_SIZE, q);
+    double *p_d_out = malloc_device<double>(DOMAIN_SIZE, q);
+
+    // Copy host to device
+    CopyVector(q, u_in, u_d_in);
+    CopyVector(q, v_in, v_d_in);
+    CopyVector(q, p_in, p_d_in);
+
+    CopyVector(q, u_out, u_d_out);
+    CopyVector(q, v_out, v_d_out);
+    CopyVector(q, p_out, p_d_out);
+    
+    q.wait(); // Sync
+        
     auto R = range<1>{DOMAIN_SIZE};
-    auto e = q.parallel_for(R, [=](auto ij) {
-            u_out[ij] = u_in[ij];
-            v_out[ij] = v_in[ij];
-            p_out[ij] = p_in[ij];   
+
+    q.parallel_for(R, [=](auto ij) {
+            u_d_out[ij] = u_d_in[ij];
+            v_d_out[ij] = v_d_in[ij];
+            p_d_out[ij] = p_d_in[ij];   
         });
-    e.wait();
+    q.wait(); // Synch
+
+    // Copy device to host
+    CopyVector(q, u_d_in, u_in);
+    CopyVector(q, v_d_in, v_in);
+    CopyVector(q, p_d_in, p_in);
+
+    CopyVector(q, u_d_out, u_out);
+    CopyVector(q, v_d_out, v_out);
+    CopyVector(q, p_d_out, p_out);
+    
+    q.wait(); // Synch
+    
+    // Cleanup
+    free(u_d_in, q);
+    free(v_d_in, q);
+    free(p_d_in, q);
+    
+    free(u_d_out, q);
+    free(v_d_out, q);
+    free(p_d_out, q);
 }
 
 void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
@@ -636,4 +825,11 @@ void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
         }
     });
     e.wait();
+}
+
+void CopyVector(queue &q, double src[DOMAIN_SIZE], double dest[DOMAIN_SIZE]) {
+    
+    q.submit([&](handler &h) {
+      h.memcpy(dest, &src[0], DOMAIN_SIZE * sizeof(double)); 
+    });
 }
