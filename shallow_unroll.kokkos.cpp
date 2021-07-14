@@ -486,11 +486,10 @@ int output_csv_var( char *filename, int m, int n, double* var  )
     for(int j=1; j<n+1; j++){
       int ij=i*(n+2)+j;
       if (j==n)
-          fprintf(fp, "%.15f;",var[ij]);
+          fprintf(fp, "%.15f\n",var[ij]);
       else
           fprintf(fp, "%.15f,",var[ij]);
     }
-    fprintf(fp,"\n");
   }
   fclose(fp);
   return 0;
