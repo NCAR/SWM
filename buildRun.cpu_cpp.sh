@@ -57,7 +57,7 @@ build_name=cpu_cpp
 # Kokkos install
 mkdir $project_dir/$build_name
 cd $project_dir/$build_name
-g++ -O0 -lm  $project_dir/shallow_unroll.acc.omp.cpp $project_dir/wtime.cpp -o SWM_$build_name
+g++ -O3 -lm  $project_dir/shallow_unroll.acc.omp.cpp $project_dir/wtime.cpp -o SWM_$build_name
 
 # Create results directories if they don't already exist
 [ ! -d "${project_dir}/results" ] && mkdir ${project_dir}/results
@@ -93,9 +93,9 @@ for (( i=0; i<$NUM_PROBS; i++ )) do
     fi
 
     if [ "$SAVE" == "true" ]; then
-        ./SWM_$build_name $M $N $ID > $project_dir/results/$build_name/results.$build_name.$M.$N.$ID.txt;
+        ./SWM_$build_name $M $N $build_name.$ID > $project_dir/results/$build_name/results.$M.$N.$build_name.$ID.txt;
     else
-        ./SWM_$build_name $M $N $ID;
+        ./SWM_$build_name $M $N $build_name.$ID;
     fi
 done
 
