@@ -40,7 +40,11 @@ make
 export OMP_PROC_BIND=spread
 export OMP_PLACES=threads
 
-./swm_kokkos > $project_dir/results.cpu.omp.$(date +%m%d%H%M%S).txt
+./swm_kokkos
+#[ ! -d "${project_dir}/results" ] && mkdir ${project_dir/results}
+#[ ! -d "${project_dir}/results/cpu_omp_kokkos" ] && mkdir ${project_dir}/results/cpu_omp_kokkos
+#./swm_kokkos > $project_dir/results/cpu_omp_kokkos/results.cpu_omp.kokkos.48.txt
+#./swm_kokkos > $project_dir/results/cpu_omp_kokkos/results.cpu_omp.kokkos.$(date +%m%d%H%M%S).txt
 
 # Return to original working directory
 cd $orig_dir

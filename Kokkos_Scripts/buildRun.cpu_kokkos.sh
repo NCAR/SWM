@@ -32,7 +32,11 @@ cd $project_dir/$install_name
 cmake ..
 make
 
-./swm_kokkos > $project_dir/results.cpu.$(date +%m%d%H%M%S).txt
+./swm_kokkos
+#[ ! -d "${project_dir}/results" ] && mkdir ${project_dir/results}
+#[ ! -d "${project_dir}/results/cpu_kokkos" ] && mkdir ${project_dir}/results/cpu_kokkos
+#./swm_kokkos > $project_dir/results/cpu_kokkos/results.cpu.kokkos.48.txt
+#./swm_kokkos > $project_dir/results/cpu_kokkos/results.cpu.kokkos.$(date +%m%d%H%M%S).txt
 
 # Return to original working directory
 cd $orig_dir

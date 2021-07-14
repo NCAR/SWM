@@ -126,6 +126,7 @@ int main(int argc, char* argv[]) {
 
     int m;
     int n;
+    char id[32] = "";
     if (argc == 2) {
       m = atoi(argv[1]);
       n = atoi(argv[1]);
@@ -134,10 +135,16 @@ int main(int argc, char* argv[]) {
       m = atoi(argv[1]);
       n = atoi(argv[2]);
     }
+    else if (argc == 4) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+      strcat(id,argv[3]);
+    }
     else {
       m = M;
       n = N;
     }
+
     cout << "number of points in the x direction " << m << endl;
     cout << "number of points in the y direction " << n << endl;
 
@@ -234,21 +241,18 @@ int main(int argc, char* argv[]) {
     for (int i=0; i<DOMAIN_SIZE; i++){
       dp[i]=p_h(i,tlmid)-50000.;
     }
-    char initfile[32] = "swm_init.kokkos.";
-    char size_char[9];
-    std::sprintf(size_char, "%d", m);
-    char csv[5] = ".csv";
-    int i;
-    for(i = 0; i < 4; i++){
-      if (size_char[i] == '\0'){
-        break;
-      }
-      else initfile[i+16] = size_char[i];
-    }
-    for (int j = 0; j < 4; j++){
-      initfile[i+16] = csv[j];
-      i++;
-    }
+    char initfile[128] = "swm_init.";
+    char size_char[128];
+    char tail[128] = "";
+    sprintf(size_char, "%d", m);
+    strcat(tail,size_char);
+    strcat(tail,".");
+    sprintf(size_char, "%d", n);
+    strcat(tail,size_char);
+    strcat(tail,".");
+    strcat(tail,id);
+    strcat(tail,".csv");
+    strcat(initfile,tail);
 
     int outerr = output_csv_var(initfile, m, n, dp);
       
@@ -370,22 +374,14 @@ int main(int argc, char* argv[]) {
     }
 
     // output to .csv file
-      
+
     for (int i=0; i<DOMAIN_SIZE; i++){
       dp[i]=p_h(i,tlnew)-50000.;
     }
 
-    char endfile[32] = "swm_end.kokkos.";
-    for(i = 0; i < 4; i++){
-      if (size_char[i] == '\0'){
-        break;
-      }
-      else endfile[i+15] = size_char[i];
-    }
-    for (int j = 0; j < 4; j++){
-      endfile[i+15] = csv[j];
-      i++;
-    }
+    char endfile[32] = "swm_end.";
+    strcat(endfile,tail);
+
     outerr = output_csv_var(endfile, m, n, dp);
     if (outerr == 0){
       std::cout << "end file output complete" << std::endl;
