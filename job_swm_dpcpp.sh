@@ -6,7 +6,7 @@ echo start: $(date "+%y%m%d.%H%M%S.%3N")
 echo
 
 export SYCL_DEVICE_FILTER=gpu
-./swm_dpcpp
+./swm_dpcpp_usm >$PWD/results/results.dpcpp_usm.$(date +%m%d%H%M%S).txt
  
 echo
 echo stop:  $(date "+%y%m%d.%H%M%S.%3N")

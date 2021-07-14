@@ -342,13 +342,7 @@ void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE],
                    double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
 
     auto R = range<1>{DOMAIN_SIZE};
-
-    buffer<double, 1> u_buf(u, R),
-                      v_buf(v, R),
-                      p_buf(p, R);
-
-
-    q.submit([&](handler &h) {    
+  
         // Corner point exchange indices
         int hsw = 0;
         int hne = (m+1)*(n+2)+n+1;
@@ -360,13 +354,7 @@ void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE],
         int isw = 1*(n+2)+1;
         int inw = m*(n+2)+1;
 
-        auto u = u_buf.get_access(h, read_write);
-        auto v = v_buf.get_access(h, read_write);
-        auto p = p_buf.get_access(h, read_write);
-
-    
-
-        h.parallel_for(R, [=](auto index) {
+        auto e = q.parallel_for(R, [=](auto index) {
             int j = index%(N+2);
             int i = (int) (index - j)/(N+2);
             if (i==0 || j==0 || i == M+1 || j== N+1) {}
@@ -424,7 +412,7 @@ void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE],
                 }
             }
         });
-    });
+    e.wait();
 }
 
 
@@ -456,31 +444,7 @@ void first_step(queue q, const int m, const int n,
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy) {
              
     auto R = range<1>{DOMAIN_SIZE};
-
-    buffer<double, 1> u_buf(u, R),
-                      v_buf(v, R),
-                      p_buf(p, R),
-                      uold_buf(uold, R),
-                      vold_buf(vold, R),
-                      pold_buf(pold, R),
-                      unew_buf(unew, R),
-                      vnew_buf(vnew, R),
-                      pnew_buf(pnew, R);
-
-    q.submit([&](handler &h) {
-        auto u = u_buf.get_access(h, read_only);
-        auto v = v_buf.get_access(h, read_only);
-        auto p = p_buf.get_access(h, read_only);
-
-        auto uold = uold_buf.get_access(h, read_write);
-        auto vold = vold_buf.get_access(h, read_write);
-        auto pold = pold_buf.get_access(h, read_write);
-
-        auto unew = unew_buf.get_access(h, read_write);
-        auto vnew = vnew_buf.get_access(h, read_write);
-        auto pnew = pnew_buf.get_access(h, read_write);
-
-        h.parallel_for(R, [=](auto ij) {
+    auto e = q.parallel_for(R, [=](auto ij) {
             int j = ij%(n+2);
             int i = (int) (ij - j)/(n+2);
 
@@ -533,7 +497,7 @@ void first_step(queue q, const int m, const int n,
         
             }
         });
-    });
+    e.wait();
 }
 
 // update (assumes first step has been called).
@@ -544,31 +508,7 @@ void update(queue q, const int m, const int n,
          double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha) {
 
     auto R = range<1>{DOMAIN_SIZE};
-
-    buffer<double, 1> u_buf(u, R),
-                      v_buf(v, R),
-                      p_buf(p, R),
-                      uold_buf(uold, R),
-                      vold_buf(vold, R),
-                      pold_buf(pold, R),
-                      unew_buf(unew, R),
-                      vnew_buf(vnew, R),
-                      pnew_buf(pnew, R);
-
-    q.submit([&](handler &h) {
-        auto u = u_buf.get_access(h, read_only);
-        auto v = v_buf.get_access(h, read_only);
-        auto p = p_buf.get_access(h, read_only);
-
-        auto uold = uold_buf.get_access(h, read_write);
-        auto vold = vold_buf.get_access(h, read_write);
-        auto pold = pold_buf.get_access(h, read_write);
-
-        auto unew = unew_buf.get_access(h, read_write);
-        auto vnew = vnew_buf.get_access(h, read_write);
-        auto pnew = pnew_buf.get_access(h, read_write);
-
-        h.parallel_for(R, [=](auto ij) {
+    auto e = q.parallel_for(R, [=](auto ij) {
             int j = ij%(n+2);
             int i = (int) (ij - j)/(n+2);
 
@@ -625,36 +565,19 @@ void update(queue q, const int m, const int n,
                 pold[ij] = p00 + alpha * (pnew[ij]  - 2. * p00 + pold[ij]);
             }
         });
-    });
+    e.wait();
 }
 
 void update_time(queue q, 
                  double u_in[DOMAIN_SIZE], double v_in[DOMAIN_SIZE], double p_in[DOMAIN_SIZE],
                  double u_out[DOMAIN_SIZE], double v_out[DOMAIN_SIZE], double p_out[DOMAIN_SIZE]) {
     auto R = range<1>{DOMAIN_SIZE};
-
-    buffer<double, 1> u_in_buf(u_in, R),
-                      v_in_buf(v_in, R),
-                      p_in_buf(p_in, R),
-                      u_out_buf(u_out, R),
-                      v_out_buf(v_out, R),
-                      p_out_buf(p_out, R);
-
-    q.submit([&](handler &h) { 
-        auto u_in = u_in_buf.get_access(h, read_only);
-        auto v_in = v_in_buf.get_access(h, read_only);
-        auto p_in = p_in_buf.get_access(h, read_only);
-
-        auto u_out = u_out_buf.get_access(h, write_only);
-        auto v_out = v_out_buf.get_access(h, write_only);
-        auto p_out = p_out_buf.get_access(h, write_only);
-
-        h.parallel_for(R, [=](auto ij) {
+    auto e = q.parallel_for(R, [=](auto ij) {
             u_out[ij] = u_in[ij];
             v_out[ij] = v_in[ij];
             p_out[ij] = p_in[ij];   
         });
-    });
+    e.wait();
 }
 
 void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
@@ -672,17 +595,17 @@ void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
 
     auto R = range<1>{DOMAIN_SIZE};
 
-        q.parallel_for(R, [=](auto ij) {
-            int j = ij%(n+2);
-            int i = (int) (ij - j)/(n+2);
-
-            // Skip updating the ghost nodes
-            if (i == m+1 || j== n+1) {}
-            else {
-                psi[ij] = a * sin((i + .5) * di) * sin((j + .5) * dj);
-            }
-        });
-
+    auto e = q.parallel_for(R, [=](auto ij) {
+        int j = ij%(n+2);
+        int i = (int) (ij - j)/(n+2);
+        
+        // Skip updating the ghost nodes
+        if (i == m+1 || j== n+1) {}
+        else {
+            psi[ij] = a * sin((i + .5) * di) * sin((j + .5) * dj);
+        }
+    });
+    e.wait();
 }
 
 void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
@@ -699,7 +622,7 @@ void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
     double pcf = pi * pi * a * a / (el * el);
     
     auto R = range<1>{DOMAIN_SIZE};
-    q.parallel_for(R, [=](auto ij) {
+    auto e = q.parallel_for(R, [=](auto ij) {
         int j = ij%(n+2);
         int i = (int) (ij - j)/(n+2);
         
@@ -713,4 +636,5 @@ void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
             p[ij] = pcf * (cos(2. * (i-1) * di) + cos(2. * (j-1) * dj)) + 50000.;
         }
     });
+    e.wait();
 }
