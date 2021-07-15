@@ -21,4 +21,4 @@ if __name__ == "__main__":
     
     L_inf_norm = np.linalg.norm(diff, ord=np.inf)
 
-    print("L_inf norm: ", L_inf_norm)
+    print("L_inf norm: {:.15f}".format(L_inf_norm))

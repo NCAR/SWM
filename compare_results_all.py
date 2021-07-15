@@ -48,6 +48,6 @@ if __name__ == "__main__":
         L_inf_norm = np.linalg.norm(diff, ord=np.inf)
 
         # Write L infinity norm to file
-        out_file.write("{:e}\n".format(L_inf_norm))
-        print("{:d}x{:d}: {:e}".format(dim,dim,L_inf_norm))
+        out_file.write("{:.15f}\n".format(L_inf_norm))
+        print("{:d}x{:d}: {:.15f}".format(dim,dim,L_inf_norm))
     
