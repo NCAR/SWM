@@ -33,6 +33,10 @@
 swm_dpcpp
 SWM_*
 
+# Large Output Files
+swm_init.*.csv
+swm_end.*.csv
+
 # Build files
 gcc_omp_serial_skx/*
 gcc_serial_skx/*
