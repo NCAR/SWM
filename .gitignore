@@ -31,7 +31,12 @@
 *.out
 *.app
 swm_dpcpp
+SWM_*
 
-# Output files
-*.csv
+# Build files
+gcc_omp_serial_skx/*
+gcc_serial_skx/*
+nvcc_cuda_omp_serial_volta70_skx/*
 
+# VS Code meta files
+.vscode/*
