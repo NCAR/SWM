@@ -40,7 +40,7 @@
 #define N 128
 #define M_LEN (M + 2)
 #define N_LEN (N + 2)
-#define DOMAIN_SIZE M_LEN*N_LEN
+constexpr size_t  DOMAIN_SIZE = M_LEN*N_LEN;
 #define ITMAX 4000
 #define L_OUT TRUE
 
