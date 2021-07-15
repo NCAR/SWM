@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     # Perform L infinity norm on difference between results
     diff = np.subtract(ref_data,test_data)
-    print(diff)
+    
     L_inf_norm = np.linalg.norm(diff, ord=np.inf)
 
     print("L_inf norm: ", L_inf_norm)
