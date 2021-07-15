@@ -57,7 +57,7 @@ module purge
 module load gnu/9.1.0
 module list
 
-export OMP_NUM_THREADS=18
+export OMP_NUM_THREADS=36
 
 project_dir=/glade/work/$USER/SWM
 build_name=cpu_omp_cpp
@@ -106,9 +106,9 @@ for (( i=0; i<$NUM_PROBS; i++ )) do
     fi
 
     if [ "$SAVE" == "true" ]; then
-        ./SWM_$build_name $M $N $ID > $project_dir/results/$build_name/results.$build_name.$M.$N.$ID.txt;
+        ./SWM_$build_name $M $N $build_name.$ID > $project_dir/results/$build_name/results.$M.$N.$build_name.$ID.txt;
     else
-        ./SWM_$build_name $M $N $ID;
+        ./SWM_$build_name $M $N $build_name.$ID;
     fi
 done
 
