@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #ifdef _OPENACC
 #include <openacc.h>
 #endif 
@@ -49,7 +50,7 @@ typedef double real;
 extern double wtime(); 
 extern void dswap(real **a, real **b);
 extern void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real v[m+2][n+2], real p[m+2][n+2]);
-
+extern int output_csv_var( char *filename, int m, int n, double* var);
 void advance(const int m, const int n, real u[m+2][n+2], real v[m+2][n+2], real p[m+2][n+2],
 	     real uold[m+2][n+2], real vold[m+2][n+2], real pold[m+2][n+2],
              real unew[m+2][n+2], real vnew[m+2][n+2], real pnew[m+2][n+2], 
@@ -117,9 +118,26 @@ int main(int argc, char **argv) {
   int mnmin,ncycle;
   int i,j;
 
-  // Time level indices
-  int m = M;
-  int n = N;
+    int m;
+    int n;
+    char id[32] = "";
+    if (argc == 2) {
+      m = atoi(argv[1]);
+      n = atoi(argv[1]);
+    }
+    else if (argc == 3) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+    }
+    else if (argc == 4) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+      strcat(id,argv[3]);
+    }
+    else {
+      m = M;
+      n = N;
+    }
 
   int new = 2;
   int mid = 1;
@@ -188,31 +206,32 @@ int main(int argc, char **argv) {
     }
   }
      
-  // Print initial values
-  if ( L_OUT ) {
-    printf(" number of points in the x direction %d\n", n); 
-    printf(" number of points in the y direction %d\n", m); 
-    printf(" grid spacing in the x direction     %f\n", dx); 
-    printf(" grid spacing in the y direction     %f\n", dy); 
-    printf(" time step                           %f\n", dt); 
-    printf(" time filter parameter               %f\n", alpha); 
+    // Get difference of p values from 50000
+    real dp[(M+2)*(N+2)];
+    for (int i=0; i<m+2; i++){
+      for (int j=0; j<n+2; j++)
+        dp[i*j]=p[mid][i][j]-50000.;
+    }
 
-    mnmin = MIN(m,n);
-    printf("\n\n");
-    printf(" acc initial diagonal elements of p\n");
-    for (i=0; i<mnmin; i++) {
-      printf("%f ",p[mid][i+1][i+1]);
+    // Set name of output csv file based on problem size
+    char initfile[128] = "swm_init.";
+    char size_char[128];
+    char tail[128] = "";
+    sprintf(size_char, "%d", m);
+    strcat(tail,size_char);
+    strcat(tail,".");
+    sprintf(size_char, "%d", n);
+    strcat(tail,size_char);
+    strcat(tail,".");
+    strcat(tail,id);
+    strcat(tail,".csv");
+    strcat(initfile,tail);
+ 
+    int outerr = output_csv_var(initfile, m, n, dp);
+        
+    if (outerr == 0){
+    printf("init file output complete\n");
     }
-    printf("\n acc initial diagonal elements of u\n");
-    for (i=0; i<mnmin; i++) {
-      printf("%f ",u[mid][i][i+1]);
-    }
-    printf("\n acc initial diagonal elements of v\n");
-    for (i=0; i<mnmin; i++) {
-      printf("%f ",v[mid][i+1][i]);
-    }
-    printf("\n");
-  }
 
   // Start timer
 
@@ -367,7 +386,40 @@ int main(int argc, char **argv) {
     printf(" acc time and megabytes/sec for copy %.6f %.6f\n", tcopy, mbps_copy);
   }
 
+    // output to .csv file
+    
+    for (int i=0; i<m+2; i++){
+      for (int j=0; j<n+2; j++)
+        dp[i*j]=p[new][i][j]-50000.;
+    }
+
+    char endfile[32] = "swm_end.";
+    strcat(endfile,tail);
+
+    outerr = output_csv_var(endfile, m, n, dp);
+    if (outerr == 0){
+        printf("end file output complete\n");
+    }
+
   return(0);
+}
+
+int output_csv_var( char *filename, int m, int n, double* var  )
+{
+    FILE *fp;
+
+    fp = fopen(filename, "w+");
+    for(int i=1; i<m+1; i++){
+       for(int j=1; j<n+1; j++){
+           int ij=i*(n+2)+j;
+           if (j==n)
+               fprintf(fp, "%.15f\n",var[ij]);
+           else
+               fprintf(fp, "%.15f,",var[ij]);
+        }
+    }
+    fclose(fp);
+    return 0;
 }
 
 void dswap(real **pA, real **pB)
