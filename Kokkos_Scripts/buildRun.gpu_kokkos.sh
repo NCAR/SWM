@@ -124,11 +124,11 @@ for (( i=0; i<$NUM_PROBS; i++ )) do
     if [ "$SAVE" == "true" ]; then
         ./swm_kokkos $M $N $build_name.$ID > $project_dir/results/$build_name/results.$M.$N.$build_name.$ID.txt;
     else
-        ./swm_kokkos $M $N $ID;
+        ./swm_kokkos $M $N $build_name.$ID;
     fi
 done
 
 # Move csv file to kokkos gpu results directory in the working directory
-mv *.csv $orig_dir/results/$build_name
+mv *.csv $project_dir/results/$build_name
 
 cd $orig_dir
