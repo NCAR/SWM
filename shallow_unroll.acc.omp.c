@@ -255,7 +255,7 @@ int main(int argc, char **argv) {
     printf("\n");
   }
     // Get difference of p values from 50000
-    real dp[(M+2)*(N+2)];
+    real dp[(m+2)*(n+2)];
     int ij;
     for (i=0; i<m+2; i++){
       for (j=0; j<n+2; j++)

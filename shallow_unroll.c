@@ -236,8 +236,10 @@ int main(int argc, char **argv) {
     }
     printf("\n");
   }
+
+    printf("\n------ 1 -------\n");
     // Get difference of p values from 50000
-    real dp[(M+2)*(N+2)];
+    real dp[(m+2)*(n+2)];
     int ij;
     for (i=0; i<m+2; i++){
       for (j=0; j<n+2; j++)
@@ -258,7 +260,7 @@ int main(int argc, char **argv) {
     strcat(tail,id);
     strcat(tail,".csv");
     strcat(initfile,tail);
- 
+
     int outerr = output_csv_var(initfile, m, n, dp);
         
     if (outerr == 0){
