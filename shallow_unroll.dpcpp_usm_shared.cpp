@@ -38,9 +38,10 @@
 #define FALSE 0
 #define M 64
 #define N 128
-#define M_LEN (M + 2)
-#define N_LEN (N + 2)
-#define DOMAIN_SIZE M_LEN*N_LEN
+#define DIM 1
+//#define M_LEN (M + 2)
+//#define N_LEN (N + 2)
+//#define DOMAIN_SIZE M_LEN*N_LEN
 #define ITMAX 4000
 #define L_OUT TRUE
 
@@ -95,45 +96,67 @@ class Hough_Transform_kernel;
 //! Minimal serial version (26 May 2011)
 
 
-extern void periodic_cont(queue q, int m, int n, double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
+extern void periodic_cont(queue q, range<DIM> R, int m, int n, double *u, double *v, double *p);
 extern int output_csv_var( char *filename, int m, int n, double* var);
-extern void first_step(queue q, int m, int n,
-                       double umid[DOMAIN_SIZE], double vmid[DOMAIN_SIZE], double pmid[DOMAIN_SIZE],
-                       double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
-                       double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
-                       double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy);
-void update(queue q, const int m, const int n,
-            double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE],
-            double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
-            double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
+extern void first_step(queue q, range<DIM> R, int m, int n,
+                double *u, double *v, double *p,
+                double *uold, double *vold, double *pold,
+                double *unew, double *vnew, double *pnew,
+                double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy);
+void update(queue q, range<DIM> R, const int m, const int n,
+            double *u, double *v, double *p,
+            double *uold, double *vold, double *pold,
+            double *unew, double *vnew, double *pnew,
             double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha);
 
-extern void adv_nsteps(int m, int n,
-                       int tlold, int tlmid, int tlnew,
-                       double u[3][DOMAIN_SIZE], double v[3][DOMAIN_SIZE], double p[3][DOMAIN_SIZE],
-                       double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy,
-                       double alpha, int ncycles, double tdt, double time);
+void update_time(queue q, range<DIM> R,
+                 double *u_in, double *v_in, double *p_in,
+                 double *u_out, double *v_out, double *p_out);
 
-void update_time(queue q,
-                 double u_in[DOMAIN_SIZE], double v_in[DOMAIN_SIZE], double p_in[DOMAIN_SIZE],
-                 double u_out[DOMAIN_SIZE], double v_out[DOMAIN_SIZE], double p_out[DOMAIN_SIZE]);
+void init_stream(queue q, range<DIM> R, int m, int n, double *psi);
 
-void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]);
-
-void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
-                   double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]);
+void init_velocity(queue q, range<DIM> R, const int m, const int n, double *psi,
+                   double *u, double *v, double *p);
 
 extern double wtime();
 
-int main() {
-    // Define range, device, and queue
-    auto R = range<1>{DOMAIN_SIZE};
+int main(int argc, char* argv[]) {
+
     cpu_selector c_selector;
     default_selector d_selector;
     queue q_c(c_selector);
     queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
+    int m;
+    int n;
+    char id[128] = "";
+    if (argc == 2) {
+      m = atoi(argv[1]);
+      n = atoi(argv[1]);
+    }
+    else if (argc == 3) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+    }
+    else if (argc == 4) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+      strcat(id,argv[3]);
+    }
+    else {
+      m = M;
+      n = N;
+    }
+    
+    std::cout << "number of points in the x direction " << m << std::endl;
+    std::cout << "number of points in the y direction " << n << std::endl;
+   
+    constexpr size_t DOMAIN_SIZE = (M+2)*(N+2);
+    // Define range, device, and queue
+    auto R = range<DIM>{DOMAIN_SIZE};
+    
+    
     //Declare state arrays (3 time levels, (M+2)x(N+2) points
     double *psi = malloc_shared<double>(DOMAIN_SIZE, q);
 
@@ -148,9 +171,6 @@ int main() {
     }
     
     // ** Initialisations **
-
-    int m = M;
-    int n = N;
 
     // Time level indices
     
@@ -182,22 +202,34 @@ int main() {
     double time; // Model time
     
  // Initial values of the stream function and p
- init_stream(q_c, m, n, psi);
+ init_stream(q_c, R, m, n, psi);
     
  // Initialize velocities
- init_velocity(q_c, m, n, psi, u[tlmid], v[tlmid], p[tlmid]);
+ init_velocity(q_c, R, m, n, psi, u[tlmid], v[tlmid], p[tlmid]);
     
 // Periodic Continuation
 // (in a distributed memory code this would be MPI halo exchanges)
-periodic_cont(q, m, n, u[tlmid], v[tlmid], p[tlmid]);
+periodic_cont(q, R, m, n, u[tlmid], v[tlmid], p[tlmid]);
 
-update_time(q, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
+update_time(q, R, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
 
 double* dp = new double [DOMAIN_SIZE];
 for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlmid][i]-50000.;
     }
-char initfile[32] = "swm_init.csv";
+
+    char initfile[128] = "swm_init.";
+    char size_char[128];
+    char tail[128] = "";
+    sprintf(size_char, "%d", m);
+    strcat(tail,size_char);
+    strcat(tail,".");
+    sprintf(size_char, "%d", n);
+    strcat(tail,size_char);
+    strcat(tail,".");
+    strcat(tail,id);
+    strcat(tail,".csv");
+    strcat(initfile,tail);
  
 int outerr = output_csv_var(initfile, m, n, dp);
     
@@ -211,7 +243,7 @@ double tdtsdy = tdt / dy;
 
 double b4first_step = wtime();
     
-first_step(q, m, n,
+first_step(q, R, m, n,
            u[tlmid], v[tlmid], p[tlmid],
            u[tlold], v[tlold], p[tlold],
            u[tlnew], v[tlnew], p[tlnew],
@@ -219,14 +251,14 @@ first_step(q, m, n,
  double after_first_step = wtime(); 
 std::cout << "first step time: " << after_first_step-b4first_step << std::endl;
     
-periodic_cont(q, m, n, u[tlnew], v[tlnew], p[tlnew]);
+periodic_cont(q, R, m, n, u[tlnew], v[tlnew], p[tlnew]);
   
 double after_halo = wtime();  
 std::cout << "halo update time: " << after_halo-after_first_step << std::endl;
     
 time = time + tdt;
-update_time(q, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
-update_time(q, u[tlnew], v[tlnew], p[tlnew], u[tlmid], v[tlmid], p[tlmid]);
+update_time(q, R, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
+update_time(q, R, u[tlnew], v[tlnew], p[tlnew], u[tlmid], v[tlmid], p[tlmid]);
 // From now on, take full timestep 2*dt step
 tdt = tdt + tdt;
     
@@ -243,7 +275,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
         
     // Take a time step
     double c1 = wtime();
-    update(q, m, n,
+    update(q, R, m, n,
            u[tlmid], v[tlmid], p[tlmid],
            u[tlold], v[tlold], p[tlold],
            u[tlnew], v[tlnew], p[tlnew],
@@ -255,7 +287,7 @@ for (int ncycle=2; ncycle<=ITMAX; ncycle++){
     // Perform periodic continuation
     
     c1 = wtime();
-    periodic_cont(q, m, n, u[tlnew], v[tlnew], p[tlnew]);
+    periodic_cont(q, R, m, n, u[tlnew], v[tlnew], p[tlnew]);
     c2 = wtime();
     tpc = tpc + (c2-c1);
     
@@ -321,7 +353,9 @@ for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlnew][i]-50000.;
     }
 
-char endfile[32] = "swm_h100_dpcpp.csv";
+    char endfile[128] = "swm_end.";
+    strcat(endfile,tail);
+
 outerr = output_csv_var(endfile, m, n, dp);
 if (outerr == 0){
    std::cout << "end file output complete" << std::endl;
@@ -337,10 +371,7 @@ return(0);
     
 }
 
-void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE], 
-                   double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
-
-    auto R = range<1>{DOMAIN_SIZE};
+void periodic_cont(queue q, range<DIM> R, int m, int n, double *u, double *v, double *p) {
   
         // Corner point exchange indices
         int hsw = 0;
@@ -436,13 +467,12 @@ int output_csv_var( char *filename, int m, int n, double* var  )
 
 
 // numerically the first step is special
-void first_step(queue q, const int m, const int n,
-         double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE],
-         double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
-         double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
-         double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy) {
+void first_step(queue q, range<DIM> R, int m, int n,
+                double *u, double *v, double *p,
+                double *uold, double *vold, double *pold,
+                double *unew, double *vnew, double *pnew,
+                double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy) {
              
-    auto R = range<1>{DOMAIN_SIZE};
     auto e = q.parallel_for(R, [=](auto ij) {
             int j = ij%(n+2);
             int i = (int) (ij - j)/(n+2);
@@ -500,13 +530,12 @@ void first_step(queue q, const int m, const int n,
 }
 
 // update (assumes first step has been called).
-void update(queue q, const int m, const int n,
-         double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE],
-         double uold[DOMAIN_SIZE], double vold[DOMAIN_SIZE], double pold[DOMAIN_SIZE],
-         double unew[DOMAIN_SIZE], double vnew[DOMAIN_SIZE], double pnew[DOMAIN_SIZE],
-         double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha) {
+void update(queue q, range<DIM> R, const int m, const int n,
+            double *u, double *v, double *p,
+            double *uold, double *vold, double *pold,
+            double *unew, double *vnew, double *pnew,
+            double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha) {
 
-    auto R = range<1>{DOMAIN_SIZE};
     auto e = q.parallel_for(R, [=](auto ij) {
             int j = ij%(n+2);
             int i = (int) (ij - j)/(n+2);
@@ -567,10 +596,10 @@ void update(queue q, const int m, const int n,
     e.wait();
 }
 
-void update_time(queue q, 
-                 double u_in[DOMAIN_SIZE], double v_in[DOMAIN_SIZE], double p_in[DOMAIN_SIZE],
-                 double u_out[DOMAIN_SIZE], double v_out[DOMAIN_SIZE], double p_out[DOMAIN_SIZE]) {
-    auto R = range<1>{DOMAIN_SIZE};
+void update_time(queue q, range<DIM> R,
+                 double *u_in, double *v_in, double *p_in,
+                 double *u_out, double *v_out, double *p_out) {
+
     auto e = q.parallel_for(R, [=](auto ij) {
             u_out[ij] = u_in[ij];
             v_out[ij] = v_in[ij];
@@ -579,7 +608,7 @@ void update_time(queue q,
     e.wait();
 }
 
-void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
+void init_stream(queue q, range<DIM> R, int m, int n, double *psi) {
     
     double a = 1000000.;
     double alpha = .001;
@@ -591,8 +620,6 @@ void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
     double di = tpi / m;
     double dj = tpi / n;
     double pcf = pi * pi * a * a / (el * el);
-
-    auto R = range<1>{DOMAIN_SIZE};
 
     auto e = q.parallel_for(R, [=](auto ij) {
         int j = ij%(n+2);
@@ -607,8 +634,8 @@ void init_stream(queue q, int m, int n, double psi[DOMAIN_SIZE]) {
     e.wait();
 }
 
-void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
-                   double u[DOMAIN_SIZE], double v[DOMAIN_SIZE], double p[DOMAIN_SIZE]) {
+void init_velocity(queue q, range<DIM> R, const int m, const int n, double *psi,
+                   double *u, double *v, double *p) {
     double dx = 100000.;
     double dy = 100000.;
     double a = 1000000.;
@@ -620,7 +647,6 @@ void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
     double dj = tpi / n;
     double pcf = pi * pi * a * a / (el * el);
     
-    auto R = range<1>{DOMAIN_SIZE};
     auto e = q.parallel_for(R, [=](auto ij) {
         int j = ij%(n+2);
         int i = (int) (ij - j)/(n+2);
