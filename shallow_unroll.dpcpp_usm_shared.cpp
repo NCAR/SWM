@@ -448,21 +448,20 @@ void periodic_cont(queue q, range<DIM> R, int m, int n, double *u, double *v, do
 
 int output_csv_var( char *filename, int m, int n, double* var  )
 {
-    FILE *fp;
+  FILE *fp;
 
-    fp = fopen(filename, "w+");
-    for(int i=1; i<m+1; i++){
-       for(int j=1; j<n+1; j++){
-           int ij=i*(n+2)+j;
-           if (j==n)
-               fprintf(fp, "%.15f;",var[ij]);
-           else
-               fprintf(fp, "%.15f,",var[ij]);
-        }
-        fprintf(fp,"\n");
+  fp = fopen(filename, "w+");
+  for(int i=1; i<m+1; i++){
+    for(int j=1; j<n+1; j++){
+      int ij=i*(n+2)+j;
+      if (j==n)
+          fprintf(fp, "%.15f\n",var[ij]);
+      else
+          fprintf(fp, "%.15f,",var[ij]);
     }
-    fclose(fp);
-    return 0;
+  }
+  fclose(fp);
+  return 0;
 }
 
 
