@@ -1,6 +1,13 @@
 #!/bin/bash -l
 
-## the following template is translated from /glade/scratch/ssuresh/muram/pgi1910 bash script
+#PBS -N SWM_CPU_OMP_KOKKOS
+#PBS -A NTDD0002
+#PBS -l walltime=00:05:00
+#PBS -q casper
+### Merge output and error files
+#PBS -o SWM_CPU_OMP_KOKKOS.out
+#PBS -e SWM_CPU_OMP_KOKKOS.err
+#PBS -l select=1:ncpus=36:ompthreads=36
 
 ID="date"
 

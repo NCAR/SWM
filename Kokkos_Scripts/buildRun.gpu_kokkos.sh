@@ -1,12 +1,12 @@
 #!/bin/bash -l
 
-#PBS -N SWM_CPU_MP
+#PBS -N SWM_GPU_KOKKOS
 #PBS -A NTDD0002
 #PBS -l walltime=00:05:00
 #PBS -q casper
 ### Merge output and error files
-#PBS -o SWM_GPU.out
-#PBS -e SWM_GPU.err
+#PBS -o SWM_GPU_KOKKOS.out
+#PBS -e SWM_GPU_KOKKOS.err
 #PBS -l select=1:ncpus=1:ngpus=1
 #PBS -l gpu_type=v100
 

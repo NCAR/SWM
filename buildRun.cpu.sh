@@ -1,5 +1,14 @@
 #!/bin/bash -l
 
+#PBS -N SWM_CPU
+#PBS -A NTDD0002
+#PBS -l walltime=00:05:00
+#PBS -q casper
+### Merge output and error files
+#PBS -o SWM_CPU.out
+#PBS -e SWM_CPU.err
+#PBS -l select=1:ncpus=1
+
 ID="date"
 
 for arg in "$@"; do
