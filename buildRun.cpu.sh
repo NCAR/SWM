@@ -57,7 +57,7 @@ build_name=cpu
 # Kokkos install
 mkdir $project_dir/$build_name
 cd $project_dir/$build_name
-gcc -O2 -lm  $project_dir/shallow_unroll.c $project_dir/wtime.c -o SWM_$build_name
+gcc -O3 -lm  $project_dir/shallow_unroll.c $project_dir/wtime.c -o SWM_$build_name
 
 # Create results directories if they don't already exist
 [ ! -d "${project_dir}/results" ] && mkdir ${project_dir}/results
