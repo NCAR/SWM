@@ -37,8 +37,8 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 3072
-#define N 3072
+#define M 64
+#define N 128
 #define M_LEN M + 1
 #define N_LEN N + 1
 #define ITMAX 4000
@@ -104,20 +104,6 @@ void update(const int m, const int n,
 
 int main(int argc, char **argv) {
 
-
-  // solution arrays
-  real u[3][M+2][N+2],v[3][M+2][N+2],p[3][M+2][N+2];
-  real psi[M+2][N+2];
-
-#pragma acc enter data copyin(u[:3][:M+2][:N+2],v[:3][:M+2][:N+2],p[:3][:M+2][:N+2],\
-                              psi[:M+2][:N+2])
-  real dt,tdt,dx,dy,a,alpha,el,pi;
-  real tpi,di,dj,pcf;
-  real tdts8,tdtsdx,tdtsdy,fsdx,fsdy;
-
-  int mnmin,ncycle;
-  int i,j;
-
     int m;
     int n;
     char id[32] = "";
@@ -138,6 +124,21 @@ int main(int argc, char **argv) {
       m = M;
       n = N;
     }
+
+  // solution arrays
+  real u[3][m+2][n+2],v[3][m+2][n+2],p[3][m+2][n+2];
+  real psi[m+2][n+2];
+
+#pragma acc enter data copyin(u[:3][:M+2][:N+2],v[:3][:M+2][:N+2],p[:3][:M+2][:N+2],\
+                              psi[:M+2][:N+2])
+  real dt,tdt,dx,dy,a,alpha,el,pi;
+  real tpi,di,dj,pcf;
+  real tdts8,tdtsdx,tdtsdy,fsdx,fsdy;
+
+  int mnmin,ncycle;
+  int i,j;
+
+  // Time level indices
 
   int new = 2;
   int mid = 1;
@@ -191,8 +192,10 @@ int main(int argc, char **argv) {
       p[mid][i + 1][j + 1] = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
     }
   }
+
   // Periodic Continuation
   // (in a distributed memory code this would be MPI halo exchanges)
+
   periodic_cont_state_fused(m, n, u[mid], v[mid], p[mid]);
  
 #pragma omp parallel for simd private(i,j)
@@ -206,11 +209,58 @@ int main(int argc, char **argv) {
     }
   }
      
+       // Print initial values
+  if ( L_OUT ) {
+    printf(" number of points in the x direction %d\n", n); 
+    printf(" number of points in the y direction %d\n", m); 
+    printf(" grid spacing in the x direction     %f\n", dx); 
+    printf(" grid spacing in the y direction     %f\n", dy); 
+    printf(" time step                           %f\n", dt); 
+    printf(" time filter parameter               %f\n", alpha); 
+
+    mnmin = MIN(m,n);
+    printf("\n\n");
+    printf(" initial diagonal elements of p\n");
+    for (i=0; i<mnmin; i++) {
+      printf("%f ",p[mid][i+1][i+1]);
+    }
+    // print a patch of u
+#if 0
+    printf("\n initial diagonal elements of u\n");
+    for (i=0; i<4; i++) {
+      for (j=0; j<4; j++) {
+	printf("%f ",u[mid][i][j+1]);
+      }
+      printf("\n");
+    }
+#endif
+    printf("\n initial diagonal elements of u\n");
+    for (i=0; i<mnmin; i++) {
+      printf("%f ",u[mid][i][i+1]);
+    }
+#if 0
+    // print a patch of v
+    printf("\n initial diagonal elements of v\n");
+    for (i=0; i<4; i++) {
+      for (j=0; j<4; j++) {
+	printf("%f ",v[mid][i+1][j]);
+      }
+      printf("\n");
+    }
+#endif
+    printf("\n initial diagonal elements of v\n");
+    for (i=0; i<mnmin; i++) {
+      printf("%f ",v[mid][i+1][i]);
+    }
+    printf("\n");
+  }
     // Get difference of p values from 50000
     real dp[(M+2)*(N+2)];
-    for (int i=0; i<m+2; i++){
-      for (int j=0; j<n+2; j++)
-        dp[i*j]=p[mid][i][j]-50000.;
+    int ij;
+    for (i=0; i<m+2; i++){
+      for (j=0; j<n+2; j++)
+        ij=i*(n+2)+j;
+        dp[ij]=p[mid][i][j]-50000.;
     }
 
     // Set name of output csv file based on problem size
@@ -266,17 +316,18 @@ int main(int argc, char **argv) {
   }
 
   // Output p, u, v fields after first step.
+
   if (L_OUT) {
     printf("\n\n");
-    printf(" acc diagonal elements of p (1st step)\n");
+    printf(" diagonal elements of p (1st step)\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",p[new][i+1][i+1]);
     }
-    printf("\n acc diagonal elements of u (1st step)\n");
+    printf("\n diagonal elements of u (1st step)\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",u[new][i][i+1]);
     }
-    printf("\n acc diagonal elements of v (1st step)\n");
+    printf("\n diagonal elements of v (1st step)\n");
     for (i=0; i<mnmin; i++) {
       printf("%f ",v[new][i+1][i]);
     }
@@ -358,17 +409,17 @@ int main(int argc, char **argv) {
 #pragma acc update host(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2]) 
     ptime = time / 3600.;
     int nits = ITMAX-1;
-    printf(" acc cycle number %d model time in hours %f\n", nits, ptime);
+    printf(" update steps taken =  %d simulated time in hours %f\n", nits, ptime);
     printf("\n\n");
-    printf(" acc diagonal elements of p (%d steps)\n",nits);
+    printf(" diagonal elements of p (after %d steps)\n",nits+1);
     for (i=0; i<mnmin; i++) {
       printf("%f ",p[new][i+1][i+1]);
     }
-    printf("\n acc diagonal elements of u (%d steps)\n",nits);
+    printf("\n diagonal elements of u (after %d steps)\n",nits+1);
     for (i=0; i<mnmin; i++) {
       printf("%f ",u[new][i][i+1]);
     }
-    printf("\n acc diagonal elements of v (%d step)\n",nits);
+    printf("\n diagonal elements of v (after %d step)\n",nits+1);
     for (i=0; i<mnmin; i++) {
       printf("%f ",v[new][i+1][i]);
     }
@@ -381,15 +432,15 @@ int main(int argc, char **argv) {
 
     if ( tup > 0 )   { mflops_up   = nits * 65. * m * n / tup / 1000000; }
     if ( tcopy > 0 ) { mbps_copy   = nits * sizeof(real)*3*(m+2)*(n+2) / tcopy / 1000000; }
-    printf(" acc cycle number %d total computer time %f time per cycle %f\n", nits, ctime, tcyc);
-    printf(" acc time and megaflops for update %.6f %.6f\n", tup, mflops_up);
-    printf(" acc time and megabytes/sec for copy %.6f %.6f\n", tcopy, mbps_copy);
+    printf(" cycle number %d total computer time %f time per cycle %f\n", nits, ctime, tcyc);
+    printf(" time and megaflops for update %.6f %.6f\n", tup, mflops_up);
+    printf(" time and megabytes/sec for copy %.6f %.6f\n", tcopy, mbps_copy);
   }
 
     // output to .csv file
     
-    for (int i=0; i<m+2; i++){
-      for (int j=0; j<n+2; j++)
+    for (i=0; i<m+2; i++){
+      for (j=0; j<n+2; j++)
         dp[i*j]=p[new][i][j]-50000.;
     }
 
@@ -409,9 +460,10 @@ int output_csv_var( char *filename, int m, int n, double* var  )
     FILE *fp;
 
     fp = fopen(filename, "w+");
-    for(int i=1; i<m+1; i++){
-       for(int j=1; j<n+1; j++){
-           int ij=i*(n+2)+j;
+    int i,j,ij;
+    for(i=1; i<m+1; i++){
+       for(j=1; j<n+1; j++){
+           ij=i*(n+2)+j;
            if (j==n)
                fprintf(fp, "%.15f\n",var[ij]);
            else

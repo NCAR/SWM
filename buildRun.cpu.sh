@@ -46,8 +46,7 @@ module purge
 module load gnu/9.1.0
 module list
 
-#project_dir=/glade/work/$USER/SWM
-project_dir=/Users/zconnell/Documents/Git/SWM
+project_dir=/glade/work/$USER/SWM
 build_name=cpu
 
 # Check to see if a build directory exists for this Kokkos install in the
@@ -58,7 +57,7 @@ build_name=cpu
 # Kokkos install
 mkdir $project_dir/$build_name
 cd $project_dir/$build_name
-gcc -O2 -lm  $project_dir/shallow_unroll.acc.omp.c $project_dir/wtime.c -o SWM_$build_name
+gcc -O2 -lm  $project_dir/shallow_unroll.c $project_dir/wtime.c -o SWM_$build_name
 
 # Create results directories if they don't already exist
 [ ! -d "${project_dir}/results" ] && mkdir ${project_dir}/results
