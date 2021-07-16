@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 
     int m;
     int n;
-    char id[32] = "";
+    char id[128] = "";
     if (argc == 2) {
       m = atoi(argv[1]);
       n = atoi(argv[1]);
@@ -444,7 +444,7 @@ int main(int argc, char **argv) {
         dp[i*j]=p[new][i][j]-50000.;
     }
 
-    char endfile[32] = "swm_end.";
+    char endfile[128] = "swm_end.";
     strcat(endfile,tail);
 
     outerr = output_csv_var(endfile, m, n, dp);
@@ -658,8 +658,8 @@ void update(const int m, const int n,
 #pragma acc parallel loop collapse(2) present(u[:m+2][:n+2],v[:m+2][:n+2],p[:m+2][:n+2],\
                              unew[:m+2][:n+2],vnew[:m+2][:n+2],pnew[:m+2][:n+2],\
                              uold[:m+2][:n+2],vold[:m+2][:n+2],pold[:m+2][:n+2]) private(i,j)
-  for (int i=1;i<m+1;i++) {
-    for (int j=1;j<n+1;j++) {
+  for (i=1;i<m+1;i++) {
+    for (j=1;j<n+1;j++) {
         int im1 = i-1;
         int jm1 = j-1;
         int ip1 = i+1;

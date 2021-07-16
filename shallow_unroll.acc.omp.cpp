@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
 
     int m;
     int n;
-    char id[32] = "";
+    char id[128] = "";
     if (argc == 2) {
       m = atoi(argv[1]);
       n = atoi(argv[1]);
@@ -375,7 +375,7 @@ int main(int argc, char* argv[]) {
         dp[i]=p[tlnew][i]-50000.;
     }
 
-    char endfile[32] = "swm_end.";
+    char endfile[128] = "swm_end.";
     strcat(endfile,tail);
 
     outerr = output_csv_var(endfile, m, n, dp);
