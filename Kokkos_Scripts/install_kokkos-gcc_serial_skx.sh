@@ -30,4 +30,4 @@ cmake $SRC_DIR \
   -DKokkos_ARCH_SKX=On \
   -DKokkos_ENABLE_SERIAL=On
 
-make install
+make install VERBOSE=1

@@ -36,4 +36,4 @@ cmake $SRC_DIR \
   -DKokkos_ENABLE_OPENMP=On \
   -DKokkos_ENABLE_SERIAL=On
 
-make install
+make install VERBOSE=1
