@@ -2,7 +2,7 @@
 
 #PBS -N SWM_GPU_CPP
 #PBS -A NTDD0002
-#PBS -l walltime=00:05:00
+#PBS -l walltime=00:10:00
 #PBS -q casper
 ### Merge output and error files
 #PBS -o SWM_GPU_CPP.out
