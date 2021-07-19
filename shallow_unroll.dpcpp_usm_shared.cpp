@@ -36,8 +36,8 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 128
+//#define M 64
+//#define N 128
 #define DIM 1
 #define ITMAX 4000
 #define L_OUT TRUE
@@ -121,6 +121,7 @@ int main(int argc, char* argv[]) {
     queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
 
+    const int M=64, N=128;
     int m;
     int n;
     char id[128] = "";
@@ -145,7 +146,7 @@ int main(int argc, char* argv[]) {
     std::cout << "number of points in the x direction " << m << std::endl;
     std::cout << "number of points in the y direction " << n << std::endl;
 
-    constexpr size_t DOMAIN_SIZE = (M+2)*(N+2);
+    size_t DOMAIN_SIZE = (m+2)*(n+2);
     auto R = range<DIM>{DOMAIN_SIZE}; // Define range
 
     //Declare state arrays (3 time levels, (M+2)x(N+2) points
@@ -361,9 +362,9 @@ void periodic_cont(queue q, range<DIM> R, int m, int n, double *u, double *v, do
     int inw = m*(n+2)+1;
 
     auto e = q.parallel_for(R, [=](auto index) {
-        int j = index%(N+2);
-        int i = (int) (index - j)/(N+2);
-        if (i==0 || j==0 || i == M+1 || j== N+1) {}
+        int j = index%(n+2);
+        int i = (int) (index - j)/(n+2);
+        if (i==0 || j==0 || i == m+1 || j== n+1) {}
         else {
             // North-South periodic continuation
             // Labeling conventions:
