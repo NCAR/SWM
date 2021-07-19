@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-
+#include <string.h>
 #define MIN(x,y) ((x)>(y)?(y):(x))
 #define MAX(x,y) ((x)>(y)?(x):(y))
 
@@ -43,7 +43,7 @@ typedef double real;
 extern double wtime(); 
 extern void dswap(real **a, real **b);
 extern void periodic_cont_state_fused(const int m, const int n, real u[m+2][n+2], real v[m+2][n+2], real p[m+2][n+2]);
-
+extern int output_csv_var( char *filename, int m, int n, double* var);
 void advance(const int m, const int n, real u[m+2][n+2], real v[m+2][n+2], real p[m+2][n+2],
 	     real uold[m+2][n+2], real vold[m+2][n+2], real pold[m+2][n+2],
              real unew[m+2][n+2], real vnew[m+2][n+2], real pnew[m+2][n+2], 
@@ -97,8 +97,26 @@ void update(const int m, const int n,
 
 int main(int argc, char **argv) {
 
-  int m = M;
-  int n = N;
+    int m;
+    int n;
+    char id[128] = "";
+    if (argc == 2) {
+      m = atoi(argv[1]);
+      n = atoi(argv[1]);
+    }
+    else if (argc == 3) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+    }
+    else if (argc == 4) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+      strcat(id,argv[3]);
+    }
+    else {
+      m = M;
+      n = N;
+    }
 
   // solution arrays
   real u[3][m+2][n+2],v[3][m+2][n+2],p[3][m+2][n+2];
@@ -219,6 +237,35 @@ int main(int argc, char **argv) {
     printf("\n");
   }
 
+    // Get difference of p values from 50000
+    real dp[(m+2)*(n+2)];
+    int ij;
+    for (i=0; i<m+2; i++){
+      for (j=0; j<n+2; j++)
+        ij=i*(n+2)+j;
+        dp[ij]=p[mid][i][j]-50000.;
+    }
+
+    // Set name of output csv file based on problem size
+    char initfile[128] = "swm_init.";
+    char size_char[128];
+    char tail[128] = "";
+    sprintf(size_char, "%d", m);
+    strcat(tail,size_char);
+    strcat(tail,".");
+    sprintf(size_char, "%d", n);
+    strcat(tail,size_char);
+    strcat(tail,".");
+    strcat(tail,id);
+    strcat(tail,".csv");
+    strcat(initfile,tail);
+
+    int outerr = output_csv_var(initfile, m, n, dp);
+        
+    if (outerr == 0){
+    printf("init file output complete\n");
+    }
+
   // Start timer
 
   time = 0.;  // simulation time
@@ -236,15 +283,14 @@ int main(int argc, char **argv) {
   periodic_cont_state_fused(m, n, u[new], v[new], p[new]);
 
   time = time + tdt;
-  int k,l;
-  for (k=0;k<m+2;k++) {
-    for (l=0;l<n+2;l++) {
-      u[old][k][l] = u[mid][k][l];
-      v[old][k][l] = v[mid][k][l];
-      p[old][k][l] = p[mid][k][l];
-      u[mid][k][l] = u[new][k][l];
-      v[mid][k][l] = v[new][k][l];
-      p[mid][k][l] = p[new][k][l];
+  for (i=0;i<m+2;i++) {
+    for (j=0;j<n+2;j++) {
+      u[old][i][j] = u[mid][i][j];
+      v[old][i][j] = v[mid][i][j];
+      p[old][i][j] = p[mid][i][j];
+      u[mid][i][j] = u[new][i][j];
+      v[mid][i][j] = v[new][i][j];
+      p[mid][i][j] = p[new][i][j];
     }
   }
 
@@ -367,7 +413,41 @@ int main(int argc, char **argv) {
     printf(" time and megabytes/sec for copy %.6f %.6f\n", tcopy, mbps_copy);
   }
 
+ // output to .csv file
+    
+    for (i=0; i<m+2; i++){
+      for (j=0; j<n+2; j++)
+        dp[i*j]=p[new][i][j]-50000.;
+    }
+
+    char endfile[128] = "swm_end.";
+    strcat(endfile,tail);
+
+    outerr = output_csv_var(endfile, m, n, dp);
+    if (outerr == 0){
+        printf("end file output complete\n");
+    }
+
   return(0);
+}
+
+int output_csv_var( char *filename, int m, int n, double* var  )
+{
+    FILE *fp;
+
+    fp = fopen(filename, "w+");
+    int i,j,ij;
+    for(i=1; i<m+1; i++){
+       for(j=1; j<n+1; j++){
+           ij=i*(n+2)+j;
+           if (j==n)
+               fprintf(fp, "%.15f\n",var[ij]);
+           else
+               fprintf(fp, "%.15f,",var[ij]);
+        }
+    }
+    fclose(fp);
+    return 0;
 }
 
 void dswap(real **pA, real **pB)
