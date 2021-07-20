@@ -98,20 +98,20 @@ using namespace std;
 #include <cmath>
 #include <cstring>
 
-extern void periodic_cont(int m, int n, double u[], double v[], double p[]);
+extern void periodic_cont(int m, int n, const int DOMAIN_SIZE, double u[], double v[], double p[]);
 extern int output_csv_var( char *filename, int m, int n, double* var);
-extern void first_step(int m, int n,
+extern void first_step(int m, int n, const int DOMAIN_SIZE,
                        double umid[], double vmid[], double pmid[],
                        double uold[], double vold[], double pold[],
                        double unew[], double vnew[], double pnew[],
                        double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy);
-void update(const int m, const int n,
+void update(const int m, const int n, const int DOMAIN_SIZE,
             double u[], double v[], double p[],
             double uold[], double vold[], double pold[],
             double unew[], double vnew[], double pnew[],
             double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy, double alpha);
 
-extern void adv_nsteps(int m, int n,
+extern void adv_nsteps(int m, int n, const int DOMAIN_SIZE,
                        int tlold, int tlmid, int tlnew,
                        double* u, double* v, double* p,
                        double fsdx, double fsdy, double tdts8, double tdtsdx, double tdtsdy,
@@ -221,9 +221,9 @@ int main(int argc, char* argv[]) {
 
     // Periodic Continuation
     // (in a distributed memory code this would be MPI halo exchanges)
-    periodic_cont(m, n, u[tlmid], v[tlmid], p[tlmid]);
+    periodic_cont(m, n, DOMAIN_SIZE, u[tlmid], v[tlmid], p[tlmid]);
 
-#pragma acc update host(u[tlmid:1][:DOMAIN_SIZE],v[tlmid:1][:DOMAIN_SIZE][:n+2],p[tlmid:1][DOMAIN_SIZE][:n+2])
+#pragma acc update host(u[tlmid:1][:DOMAIN_SIZE],v[tlmid:1][:DOMAIN_SIZE],p[tlmid:1][DOMAIN_SIZE])
 #pragma acc parallel loop present(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE])
     for (int ij=0; ij<DOMAIN_SIZE; ij++) {
         u[tlold][ij] = u[tlmid][ij];
@@ -261,13 +261,13 @@ int main(int argc, char* argv[]) {
     double tdtsdx = tdt / dx;
     double tdtsdy = tdt / dy;
 
-    first_step(m, n,
+    first_step(m, n, DOMAIN_SIZE, 
             u[tlmid], v[tlmid], p[tlmid],
             u[tlold], v[tlold], p[tlold],
             u[tlnew], v[tlnew], p[tlnew],
             fsdx, fsdy, tdts8, tdtsdx, tdtsdy);
         
-    periodic_cont(m, n, u[tlnew], v[tlnew], p[tlnew]);
+    periodic_cont(m, n, DOMAIN_SIZE, u[tlnew], v[tlnew], p[tlnew]);
         
     time = time + tdt;
 #pragma acc update host(u[tlnew:1][:DOMAIN_SIZE], v[tlnew:1][:DOMAIN_SIZE], p[tlnew:1][:DOMAIN_SIZE])
@@ -297,7 +297,7 @@ int main(int argc, char* argv[]) {
             
         // Take a time step
         double c1 = wtime();
-        update(m, n,
+        update(m, n, DOMAIN_SIZE, 
             u[tlmid], v[tlmid], p[tlmid],
             u[tlold], v[tlold], p[tlold],
             u[tlnew], v[tlnew], p[tlnew],
@@ -308,7 +308,7 @@ int main(int argc, char* argv[]) {
         // Perform periodic continuation
         
         c1 = wtime();
-        periodic_cont(m, n, u[tlnew], v[tlnew], p[tlnew]);
+        periodic_cont(m, n, DOMAIN_SIZE, u[tlnew], v[tlnew], p[tlnew]);
         c2 = wtime();
         tpc = tpc + (c2-c1);
         
@@ -337,7 +337,7 @@ int main(int argc, char* argv[]) {
         
     if (L_OUT) {
         // if on the GPU, synch data with host
-#pragma acc update host(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE,p[:3][:DOMAIN_SIZE)
+#pragma acc update host(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE])
         double ptime = time / 3600.;
         int nits = ITMAX-1;
         int mnmin = std::min(m,n);
@@ -386,7 +386,7 @@ int main(int argc, char* argv[]) {
         
 }
 
-void periodic_cont(const int m, const int n, double u[], double v[], double p[]){
+void periodic_cont(const int m, const int n, const int DOMAIN_SIZE, double u[], double v[], double p[]){
 
     // North-South periodic continuation
     // Labeling conventions:
@@ -429,7 +429,7 @@ void periodic_cont(const int m, const int n, double u[], double v[], double p[])
     int isw = 1*(n+2)+1;
     int inw = m*(n+2)+1;
     
-#pragma acc  parallel loop  present(u(:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE]) private(i) async
+#pragma acc  parallel loop  present(u[:DOMAIN_SIZE],v[:DOMAIN_SIZE],p[:DOMAIN_SIZE]) private(i) async
     for (i=1; i<m+1; i++) {
 #pragma acc cache(u[:][n],u[:][0]) // HOW SHOULD THIS BE CHANGED for 1-D arrays???
         int hwest = i*(n+2);
@@ -488,7 +488,7 @@ int output_csv_var( char *filename, int m, int n, double* var  )
 
 // numerically the first step is special
 
-void first_step(const int m, const int n,
+void first_step(const int m, const int n, const int DOMAIN_SIZE, 
          double u[], double v[], double p[],
          double uold[], double vold[], double pold[],
          double unew[], double vnew[], double pnew[],
@@ -558,7 +558,7 @@ void first_step(const int m, const int n,
 
 // update (assumes first step has been called).
 
-void update(const int m, const int n,
+void update(const int m, const int n, const int DOMAIN_SIZE, 
          double u[], double v[], double p[],
          double uold[], double vold[], double pold[],
          double unew[], double vnew[], double pnew[],

@@ -69,7 +69,7 @@ build_name=gpu_cpp
 # Kokkos install
 mkdir $project_dir/$build_name
 cd $project_dir/$build_name
-nvcc -O3 -arch=compute_70 -std=c++11 $project_dir/shallow_unroll.acc.omp.cpp $project_dir/wtime.cpp -o SWM_$build_name
+nvc++ -O3 -acc -ta=tesla:cc70 -Minfo -Mnofma $project_dir/shallow_unroll.acc.omp.cpp $project_dir/wtime.cpp -o SWM_$build_name
 
 # Create results directories if they don't already exist
 [ ! -d "${project_dir}/results" ] && mkdir ${project_dir}/results

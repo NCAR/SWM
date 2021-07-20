@@ -104,36 +104,33 @@ void update(const int m, const int n,
 
 int main(int argc, char **argv) {
 
-  int _m_;
-  int _n_;
+  int m;
+  int n;
   char id[128] = "";
   if (argc == 2) {
-    _m_ = atoi(argv[1]);
-    _n_ = atoi(argv[1]);
+    m = atoi(argv[1]);
+    n = atoi(argv[1]);
   }
   else if (argc == 3) {
-    _m_ = atoi(argv[1]);
-    _n_ = atoi(argv[2]);
+    m = atoi(argv[1]);
+    n = atoi(argv[2]);
   }
   else if (argc == 4) {
-    _m_ = atoi(argv[1]);
-    _n_ = atoi(argv[2]);
+    m = atoi(argv[1]);
+    n = atoi(argv[2]);
     strcat(id,argv[3]);
   }
   else {
-    _m_ = M;
-    _n_ = N;
+    m = M;
+    n = N;
   }
-
-  const int m = _m_;
-  const int n = _n_;
 
   // solution arrays
   real u[3][m+2][n+2],v[3][m+2][n+2],p[3][m+2][n+2];
   real psi[m+2][n+2];
 
-#pragma acc enter data copyin(u[:3][:M+2][:N+2],v[:3][:M+2][:N+2],p[:3][:M+2][:N+2],\
-                              psi[:M+2][:N+2])
+#pragma acc enter data copyin(u[:3][:m+2][:n+2],v[:3][:m+2][:n+2],p[:3][:m+2][:n+2],\
+                              psi[:m+2][:n+2])
   real dt,tdt,dx,dy,a,alpha,el,pi;
   real tpi,di,dj,pcf;
   real tdts8,tdtsdx,tdtsdy,fsdx,fsdy;
