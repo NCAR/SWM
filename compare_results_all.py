@@ -18,7 +18,7 @@ if __name__ == "__main__":
         help="Unique identifier of test files you want to compare")
     args = vars(ap.parse_args())
 
-    dims = [48, 64, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072]
+    dims = [48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072]
 
     ref_dir = args['ref']
     test_dir = args['test']
