@@ -38,15 +38,12 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 128
-#define M_LEN (M + 2)
-#define N_LEN (N + 2)
-#define DOMAIN_SIZE M_LEN*N_LEN
 #define ITMAX 4000
 #define L_OUT TRUE
 
 using namespace sycl;
+
+size_t DOMAIN_SIZE;
 
 
 #if 0
@@ -127,7 +124,7 @@ void init_velocity(queue q, const int m, const int n, double psi[DOMAIN_SIZE],
 
 extern double wtime();
 
-int main() {
+int main(int argc, char* argv[]) {
     // Define device and queue
     cpu_selector c_selector;
     
@@ -145,18 +142,36 @@ int main() {
     queue q_c(c_selector);
     queue q(d_selector); 
     std::cout << "Device: " << q.get_device().get_info<info::device::name>() << std::endl;
-
-    //Declare state arrays (3 time levels, (M+2)x(N+2) points
     
+    int m = 64, n = 128;
+    char id[128] = "";
+    if (argc == 2) {
+      m = atoi(argv[1]);
+      n = atoi(argv[1]);
+    }
+    else if (argc == 3) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+    }
+    else if (argc == 4) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+      strcat(id,argv[3]);
+    }
+    else {}
+
+    std::cout << "number of points in the x direction " << m << std::endl;
+    std::cout << "number of points in the y direction " << n << std::endl;
+
+    DOMAIN_SIZE = (m+2)*(n+2);
+    
+    //Declare state arrays (3 time levels, (M+2)x(N+2) points    
     double u[3][DOMAIN_SIZE];
     double v[3][DOMAIN_SIZE];
     double p[3][DOMAIN_SIZE];
     double psi[DOMAIN_SIZE];
     
     // ** Initialisations **
-
-    int m = M;
-    int n = N;
 
     // Time level indices
     
@@ -187,8 +202,8 @@ int main() {
     
     double time; // Model time
     
- // Initial values of the stream function and p
- init_stream(q_c, m, n, psi);
+    // Initial values of the stream function and p
+    init_stream(q_c, m, n, psi);
 
  // Initialize velocities
  init_velocity(q_c, m, n, psi, u[tlmid], v[tlmid], p[tlmid]);
@@ -202,10 +217,22 @@ update_time(q, u[tlmid], v[tlmid], p[tlmid], u[tlold], v[tlold], p[tlold]);
 double* dp = new double [DOMAIN_SIZE];
 for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlmid][i]-50000.;
-    }
-char initfile[32] = "swm_init.csv";
+}
+
+    char initfile[128] = "swm_init.";
+    char size_char[128];
+    char tail[128] = "";
+    sprintf(size_char, "%d", m);
+    strcat(tail, size_char);
+    strcat(tail, ".");
+    sprintf(size_char, "%d", n);
+    strcat(tail, size_char);
+    strcat(tail, ".");
+    strcat(tail, id);
+    strcat(tail, ".csv");
+    strcat(initfile, tail);
  
-int outerr = output_csv_var(initfile, m, n, dp);
+    int outerr = output_csv_var(initfile, m, n, dp);
     
 if (outerr == 0){
    std::cout << "init file output complete" << std::endl;
@@ -327,11 +354,14 @@ for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlnew][i]-50000.;
     }
 
-char endfile[32] = "swm_h100_dpcpp.csv";
-outerr = output_csv_var(endfile, m, n, dp);
+    char endfile[128] = "swm_end.";
+    strcat(endfile,tail);
+    outerr = output_csv_var(endfile, m, n, dp);
+    
 if (outerr == 0){
    std::cout << "end file output complete" << std::endl;
-   }
+}
+    
 return(0);
     
 }
@@ -365,9 +395,9 @@ void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE],
     
 
         h.parallel_for(R, [=](auto index) {
-            int j = index%(N+2);
-            int i = (int) (index - j)/(N+2);
-            if (i==0 || j==0 || i == M+1 || j== N+1) {}
+            int j = index%(n+2);
+            int i = (int) (index - j)/(n+2);
+            if (i==0 || j==0 || i == m+1 || j== n+1) {}
             else {
                 // North-South periodic continuation
                 // Labeling conventions:
@@ -426,20 +456,18 @@ void periodic_cont(queue q, const int m, const int n, double u[DOMAIN_SIZE],
 }
 
 
-int output_csv_var( char *filename, int m, int n, double* var  )
-{
+int output_csv_var( char *filename, int m, int n, double* var) {
+    
     FILE *fp;
-
     fp = fopen(filename, "w+");
     for(int i=1; i<m+1; i++){
-       for(int j=1; j<n+1; j++){
-           int ij=i*(n+2)+j;
-           if (j==n)
-               fprintf(fp, "%.15f;",var[ij]);
-           else
-               fprintf(fp, "%.15f,",var[ij]);
-        }
-        fprintf(fp,"\n");
+      for(int j=1; j<n+1; j++){
+        int ij=i*(n+2)+j;
+        if (j==n)
+            fprintf(fp, "%.15f\n",var[ij]);
+        else
+            fprintf(fp, "%.15f,",var[ij]);
+      }
     }
     fclose(fp);
     return 0;

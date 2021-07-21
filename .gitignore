@@ -38,6 +38,7 @@ swm_dpcpp_usm
 swm_cpp
 swm_acc_omp
 test*
+build/*
 
 # Output files
 *.csv
@@ -45,4 +46,7 @@ test*
 # Job Submission
 *.sh.e*
 *.sh.o*
+
+# Profiling
+vtune_data/*
 
