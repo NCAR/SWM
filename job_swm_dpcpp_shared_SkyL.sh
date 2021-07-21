@@ -11,4 +11,4 @@ echo
 echo stop:  $(date "+%y%m%d.%H%M%S.%3N")
 echo
 
-# qsub -l nodes=1:gold6128:ppn=2 -d . job_swm_dpcpp_shared_SkyL.s
+# qsub -l nodes=1:gold6128:ppn=2 -d . job_swm_dpcpp_shared_SkyL.sh
