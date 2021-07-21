@@ -43,15 +43,12 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 128
-#define M_LEN (M + 2)
-#define N_LEN (N + 2)
-#define DOMAIN_SIZE M_LEN*N_LEN
 #define ITMAX 4000
 #define L_OUT TRUE
 
 using namespace std;
+
+int DOMAIN_SIZE;
 
 #if 0
 // This function reads in a bitmap and outputs an array of pixels
@@ -124,10 +121,31 @@ extern void adv_nsteps(int m, int n,
                        double alpha, int ncycles, double tdt, double time);
 extern double wtime();
 
-int main() {
+int main(int argc, char* argv[]) {
+    
+    int m = 64, n = 128;
+    char id[128] = "";
+    if (argc == 2) {
+      m = atoi(argv[1]);
+      n = atoi(argv[1]);
+    }
+    else if (argc == 3) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+    }
+    else if (argc == 4) {
+      m = atoi(argv[1]);
+      n = atoi(argv[2]);
+      strcat(id,argv[3]);
+    }
+    else {}
+
+    std::cout << "number of points in the x direction " << m << std::endl;
+    std::cout << "number of points in the y direction " << n << std::endl;
+
+    DOMAIN_SIZE = (m+2)*(n+2);
 
     //Declare state arrays (3 time levels, (M+2)x(N+2) points
-    
     double u[3][DOMAIN_SIZE];
     double v[3][DOMAIN_SIZE];
     double p[3][DOMAIN_SIZE];
@@ -137,9 +155,6 @@ int main() {
                               psi[:DOMAIN_SIZE])
     
     // ** Initialisations **
-
-    int m = M;
-    int n = N;
 
     // Time level indices
     
@@ -175,10 +190,10 @@ int main() {
 #pragma acc data present(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE],psi[:DOMAIN_SIZE])
 #pragma omp parallel
 {
+    int ii;
 #pragma omp for simd
  // Initial values of the stream function and p
-#pragma acc parallel loop present(psi)
-  int ii;
+#pragma acc parallel loop present(psi) 
   for (int i=0; i<m+1; i++) {
     for (int j=0; j<n+1; j++) {
       ii = i*(n+2)+j;
@@ -191,9 +206,9 @@ int main() {
    #pragma acc parallel loop present(u[:3][:DOMAIN_SIZE],v[:3][:DOMAIN_SIZE],p[:3][:DOMAIN_SIZE])
     for (int i=0; i<m; i++) {
       for (int j=0;j<n;j++) {
-          int ipjp = (i+1)*N_LEN + j+1;
-          int ipj = (i+1)*N_LEN + j;
-          int ijp = i*N_LEN + j+1;
+          int ipjp = (i+1)*(n+2) + j+1;
+          int ipj = (i+1)*(n+2) + j;
+          int ijp = i*(n+2) + j+1;
           u[tlmid][ipjp] = -(psi[ipjp] - psi[ipj]) / dy;
           v[tlmid][ipjp] = (psi[ipjp] - psi[ijp]) / dx;
           p[tlmid][ipjp] = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
@@ -218,7 +233,19 @@ double* dp = new double [DOMAIN_SIZE];
 for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlmid][i]-50000.;
     }
-char initfile[32] = "swm_init.csv";
+
+    char initfile[128] = "swm_init.";
+    char size_char[128];
+    char tail[128] = "";
+    sprintf(size_char, "%d", m);
+    strcat(tail, size_char);
+    strcat(tail, ".");
+    sprintf(size_char, "%d", n);
+    strcat(tail, size_char);
+    strcat(tail, ".");
+    strcat(tail, id);
+    strcat(tail, ".csv");
+    strcat(initfile, tail);
  
 int outerr = output_csv_var(initfile, m, n, dp);
     
@@ -344,7 +371,9 @@ for (int i=0; i<DOMAIN_SIZE; i++){
     dp[i]=p[tlnew][i]-50000.;
     }
 
-char endfile[32] = "swm_h100_acc_omp.csv";
+    char endfile[128] = "swm_end.";
+    strcat(endfile,tail);
+    
 outerr = output_csv_var(endfile, m, n, dp);
 if (outerr == 0){
    std::cout << "end file output complete" << std::endl;
@@ -432,20 +461,18 @@ void periodic_cont(const int m, const int n, double u[DOMAIN_SIZE], double v[DOM
 }
 
 
-int output_csv_var( char *filename, int m, int n, double* var  )
-{
+int output_csv_var( char *filename, int m, int n, double* var) {
+    
     FILE *fp;
-
     fp = fopen(filename, "w+");
     for(int i=1; i<m+1; i++){
-       for(int j=1; j<n+1; j++){
-           int ij=i*(n+2)+j;
-           if (j==n)
-               fprintf(fp, "%.15f;",var[ij]);
-           else
-               fprintf(fp, "%.15f,",var[ij]);
-        }
-        fprintf(fp,"\n");
+      for(int j=1; j<n+1; j++){
+        int ij=i*(n+2)+j;
+        if (j==n)
+            fprintf(fp, "%.15f\n",var[ij]);
+        else
+            fprintf(fp, "%.15f,",var[ij]);
+      }
     }
     fclose(fp);
     return 0;
