@@ -18,7 +18,7 @@ for arg in "$@"; do
         -n|--vsize)
             N=$2;
             shift;
-            shift;;
+            shift;;           
         -a|--all)
             ALL="true";
             shift;;
@@ -42,15 +42,22 @@ done
 
 orig_dir=$PWD
 project_dir=/home/u76219/Leila/SWM
-build_name=dpcpp_usm_shared
+build_name=dpcpp_usm_shared_SkyL
 exec_name=swm_dpcpp_usm_shared
+
+# Create build directories
+[ ! -d "${project_dir}/build" ] && mkdir ${project_dir}/build
+[ ! -d "${project_dir}/build/${build_name}" ] && mkdir ${project_dir}/build/${build_name}
 
 # Make
 [ ! -d "$exec_name" ] && make -B $exec_name
+mv $exec_name ${project_dir}/build/${build_name}/.
+cd ${project_dir}/build/${build_name}
 
 # Create results directories if they don't already exist
 [ ! -d "${project_dir}/results" ] && mkdir ${project_dir}/results
 [ ! -d "${project_dir}/results/${build_name}" ] && mkdir ${project_dir}/results/${build_name}
+[ ! -d "${project_dir}/results/${build_name}/csv" ] && mkdir ${project_dir}/results/${build_name}/csv
 
 # Set problem size based on command line arguments or lack there of
 if [ "$ALL" == "true" ]; then
@@ -82,13 +89,13 @@ for (( i=0; i<$NUM_PROBS; i++ )) do
     fi
 
     if [ "$SAVE" == "true" ]; then
-        ./$exec_name $M $N $build_name.$ID > $project_dir/results/$build_name/results.$M.$N.$build_name.$ID.txt;
+        ${project_dir}/build/${build_name}/$exec_name $M $N $build_name.$ID > $project_dir/results/$build_name/results.$M.$N.$build_name.$ID.txt;
     else
-        ./$exec_name $M $N $build_name.$ID;
+        ${project_dir}/build/${build_name}/$exec_name $M $N $build_name.$ID;
     fi
 done
 
 # Move csv file to results directory
-mv $project_dir/$build_name/*.csv $project_dir/results/$build_name
+mv $project_dir/build/$build_name/*.csv $project_dir/results/$build_name/csv
 
 cd $orig_dir
