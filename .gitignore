@@ -40,9 +40,6 @@ swm_acc_omp
 test*
 build/*
 
-# Output files
-*.csv
-
 # Job Submission
 *.sh.e*
 *.sh.o*
