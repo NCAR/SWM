@@ -5,7 +5,7 @@ echo
 echo start: $(date "+%y%m%d.%H%M%S.%3N")
 echo
 
-./buildRun.dpcpp_buf_SkyL.sh -s -a
+./buildRun.dpcpp_buf_SkyL.sh -s -a -i 002
  
 echo
 echo stop:  $(date "+%y%m%d.%H%M%S.%3N")
