@@ -29,10 +29,11 @@
 #include <chrono>
 #include <fstream>
 #include <stdio.h>
-#include <CL/sycl.hpp>
-#if FPGA || FPGA_EMULATOR
-#include <CL/sycl/INTEL/fpga_extensions.hpp>
-#endif
+#include <string.h>
+//#include <CL/sycl.hpp>
+///#if FPGA || FPGA_EMULATOR
+//#include <CL/sycl/INTEL/fpga_extensions.hpp>
+//#endif
 
 #ifdef _OPENACC
 #include <openacc.h>

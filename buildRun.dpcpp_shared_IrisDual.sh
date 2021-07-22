@@ -42,7 +42,7 @@ done
 
 orig_dir=$PWD
 project_dir=/home/u76219/Leila/SWM
-build_name=dpcpp_usm_shared_IrisDual
+build_name=dpcpp_usm_IrisDual
 exec_name=swm_dpcpp_usm_shared
 
 # Create build directories

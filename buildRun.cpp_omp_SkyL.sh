@@ -51,7 +51,7 @@ exec_name=swm_cpp_omp
 
 # Make
 export OMP_NUM_THREADS=36
-dpcpp -fiopenmp -fopenmp-targets=spir64 shallow_unroll.acc.omp.cpp wtime.cpp -o $exec_name
+icpx -fiopenmp -fopenmp-targets=spir64 shallow_unroll.acc.omp.cpp wtime.cpp -o $exec_name
 
 [ ! -d "$exec_name" ] && make -B $exec_name
 mv $exec_name ${project_dir}/build/${build_name}/.
