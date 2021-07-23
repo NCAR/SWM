@@ -44,6 +44,9 @@ build/*
 *.sh.e*
 *.sh.o*
 
+# Outputs
+*.csv
+
 # Profiling
 vtune_data/*
 
