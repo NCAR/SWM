@@ -7,7 +7,7 @@ They can be executed from any directory.
 The line defining SRC_DIR must be modified to the path to where you have cloned the kokkos repository (https://github.com/kokkos/kokkos.git).
 
 
-# Generating Executables
+# Building and Running Executables
 
 The buildRun*.sh scripts can be used to generate an executable using a particular kokkos install. They can be executed from any directory. And they should be executed using **source**, so the exported environment variables persist.
 
