@@ -11,15 +11,19 @@ The line defining SRC_DIR must be modified to the path to where you have cloned 
 
 The buildRun*.sh scripts can be used to generate an executable using a particular kokkos install. They can be executed from any directory. And they should be executed using **source**, so the exported environment variables persist.
 
-    source buildRun*.sh
+    source buildRun*.sh [-s [-i id [-a] [-m 64 [-n 128]]]]
 
-You have to use the script that contains in its filename the same compiler command that was used to build the particular kokkos install that you would like to be used to compile your source code (hereafter referred to as "the kokkos install").
+Use the following command to see a description of the available build and run options.
 
-The variable **install_name** must be modified match the name of the directory containing the kokkos install.
+    ./buildRun*.sh -h
 
-The variable **project_dir** must be modified to be the path to the directory containing the source code that you would like to compile.
+The variable **install_name** should match the name of the directory containing the kokkos install.
 
-The environment variable **Kokkos_DIR** must be modified to be the path to the kokkos install.
+The variable **project_dir** should be the path to the directory containing the source code that you would like to compile.
+
+The environment variable **Kokkos_DIR** should be the path to the kokkos install.
+
+The variable **build_name** should be the desired name for the directory in which results will be stored.
 
 
 # Setting up Kokkos Profiler
