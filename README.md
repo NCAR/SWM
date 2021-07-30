@@ -1,23 +1,13 @@
 SWM is a simplified kernel representing the nonlinear PDE's governing geophysical fluid flow.
 Please contact the Point of Contact below before distributing it further, or if any questions or issues arise.
 
-Resolution:
-
-Resolution may be changed by the following procedure.
-In shallow_swap.c change these 
-
-#define M 64
-#define N 64
-
-to the desired numbers. M and N can be changed independently.
-
 COPY vs SWAP:
 
 There is an optimization that avoids copies in loop 300 by swapping pointers. COPY can be turned on and off by defining _COPY_ or not, as desired.
 
 Building:
 
-Use __./buildRun*.sh__ with the version of build indicated by *. Use __./buildRun*.sh -h__ to see additional optinos for building and runs.
+Use __./buildRun*.sh__ with the version of build indicated by *. Use __./buildRun*.sh__ __-h__ to see additional optinos for building and runs.
 
 Validation: 
 
