@@ -7,7 +7,7 @@ There is an optimization that avoids copies in loop 300 by swapping pointers. CO
 
 Building:
 
-Use __./buildRun*.sh__ with the version of build indicated by *. Use __./buildRun*.sh__ __-h__ to see additional optinos for building and runs.
+Use __./buildRun*.sh__ to build and run your desired version of SWM. Use __./buildRun*.sh__ __-h__ to see additional optinos for building and runs.
 
 Validation: 
 
