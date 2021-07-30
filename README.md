@@ -17,7 +17,7 @@ There is an optimization that avoids copies in loop 300 by swapping pointers. CO
 
 Building:
 
-Use **./buildRun*.sh** with the version of build indicated by *. Use **./buildRun*.sh -h** to see additional optinos for building and runs.
+Use __./buildRun*.sh__ with the version of build indicated by *. Use __./buildRun*.sh -h__ to see additional optinos for building and runs.
 
 Validation: 
 
