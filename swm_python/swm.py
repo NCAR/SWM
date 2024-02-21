@@ -145,20 +145,20 @@ def main():
                                 tdtsdy * (cv[i, j + 1] - cv[i, j])
                                 )
                 
-        # # Periodic Boundary conditions
-        # for j in range(N):
-        #     unew[j, 0] = unew[j, N]
-        #     vnew[M, j + 1] = vnew[0, j + 1]
-        #     pnew[M, j] = pnew[0, j]
+        # Periodic Boundary conditions
+        for j in range(N):
+            unew[0,j] = unew[N,j]
+            vnew[M, j + 1] = vnew[0, j + 1]
+            pnew[M, j] = pnew[0, j]
 
-        # for i in range(M):
-        #     unew[i + 1, N] = unew[i + 1, 0]
-        #     vnew[i, 0] = vnew[i, N]
-        #     pnew[i, N] = pnew[i, 0]
+        for i in range(M):
+            unew[i + 1, N] = unew[i + 1, 0]
+            vnew[i, 0] = vnew[i, N]
+            pnew[i, N] = pnew[i, 0]
 
-        # unew[0, 0] = unew[0, N]
-        # vnew[M, 0] = vnew[0, 0]
-        # pnew[0, 0] = pnew[0, 0]
+        unew[0, 0] = unew[0, N]
+        vnew[M, 0] = vnew[0, 0]
+        pnew[0, 0] = pnew[0, 0] # TODO this is a no-op, looks wrong...
         
         # Print initial conditions
     if L_OUT:
