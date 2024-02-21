@@ -65,16 +65,16 @@ def main():
             
     # print(u.shape)
     # # Periodic Boundary conditions
-    # for j in range(N):
-    #     u[j, 0] = u[j, N]
-    #     v[M, j + 1] = v[0, j + 1]
+    for j in range(N):
+        u[0,j] = u[M, j]
+        v[M, j + 1] = v[0, j + 1]
         
-    # for i in range(M):
-    #     u[i + 1, N] = u[i + 1, 0]
-    #     v[i, 0] = v[i, N]
+    for i in range(M):
+        u[i + 1, N] = u[i + 1, 0]
+        v[i, 0] = v[i, N]
 
-    # u[0, 0] = u[0, N]
-    # v[M, 0] = v[0, 0]
+    u[0, 0] = u[0, N]
+    v[M, 0] = v[0, 0]
     
     # Save initial conditions
     uold = np.copy(u)
@@ -109,22 +109,22 @@ def main():
                                         v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
         
         # # Periodic Boundary conditions
-        # for j in range(N):
-        #     cu[j, 0] = cu[j, N]
-        #     cv[M, j + 1] = cv[0, j + 1]
-        #     z[j + 1, 0] = z[j + 1, N]
-        #     h[M, j] = h[0, j]
+        for j in range(N):
+            cu[0, j] = cu[M, j]
+            cv[M, j + 1] = cv[0, j + 1]
+            z[0,j + 1] = z[M, j + 1]
+            h[M, j] = h[0, j]
 
-        # for i in range(M):
-        #     cu[i + 1, N] = cu[i + 1, 0]
-        #     cv[i, 0] = cv[i, N]
-        #     z[i + 1, N] = z[i + 1, 0]
-        #     h[i, N] = h[i, 0]
+        for i in range(M):
+            cu[i + 1, N] = cu[i + 1, 0]
+            cv[i, 0] = cv[i, N]
+            z[i + 1, N] = z[i + 1, 0]
+            h[i, N] = h[i, 0]
 
-        # cu[0, 0] = cu[0, N]
-        # cv[M, 0] = cv[0, 0]
-        # z[0, 0] = z[M, N]
-        # h[M, N] = h[0, 0]
+        cu[0, 0] = cu[0, N]
+        cv[M, 0] = cv[0, 0]
+        z[0, 0] = z[M, N]
+        h[M, N] = h[0, 0]
         
         # Calclulate new values of u,v, and p
         tdts8 = tdt / 8.
