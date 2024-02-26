@@ -116,11 +116,11 @@ def main():
             for j in range(1, N):
                 cv[i, j] = .5 * (p[i, j] + p[i, j - 1]) * v[i, j]
                 
-        for i in range(M):
-            for j in range(N):
-                z[i + 1, j + 1] = (fsdx * (v[i + 1, j + 1] - v[i, j + 1]) - 
-                                   fsdy * (u[i + 1, j + 1] - u[i, j + 1] )
-                                   ) / (p[i, j] + p[i + 1, j] + p[i + 1, j + 1] + p[i, j + 1])
+        for i in range(1, M):
+            for j in range(1, N):
+                z[i, j] = (fsdx * (v[i, j] - v[i - 1, j]) - 
+                           fsdy * (u[i, j] - u[i, j - 1])
+                           ) / (p[i - 1, j - 1] + p[i, j - 1] + p[i, j] + p[i - 1, j])
                 
         for i in range(M):
             for j in range(N):
