@@ -58,18 +58,29 @@ def main():
             p[i, j] = pcf * (np.cos(2. * (i) * di) + np.cos(2. * (j) * dtheta)) + 50000.
             
     # Calculate initial u and v
-    for i in range(M):
-        for j in range(N):
-            u[i + 1, j] = (psi[i + 1, j + 1] - psi[i + 1, j]) / (dy)
-            v[i, j + 1] = (-psi[i, j + 1] + psi[i + 1, j + 1]) / (dx)
+    # for i in range(M):
+    #     for j in range(N):
+    #         u[i + 1, j] = (psi[i + 1, j + 1] - psi[i + 1, j]) / (dy)
+    #         v[i, j + 1] = (-psi[i, j + 1] + psi[i + 1, j + 1]) / (dx)
+            
+    for i in range(1, M):
+        for j in range(1, N):
+            u[i, j] = (psi[i, j] - psi[i, j - 1]) / dy
+            v[i, j] = (-psi[i - 1, j] + psi[i, j]) / dx
             
     # # Periodic Boundary conditions
     for j in range(N):
         u[0,j] = u[M, j]
-        v[M, j + 1] = v[0, j + 1]
+    # for j in range(N):
+    #     v[M, j + 1] = v[0, j + 1]
+    for j in range(1, N):
+        v[M, j] = v[0, j]
         
+    # for i in range(M):
+    #     u[i + 1, N] = u[i + 1, 0]
+    for i in range(1, M):
+        u[i, N] = u[i, 0]
     for i in range(M):
-        u[i + 1, N] = u[i + 1, 0]
         v[i, 0] = v[i, N]
 
     u[0, 0] = u[0, N]
@@ -97,28 +108,61 @@ def main():
         if ncycle % 100 == 0:
             print("cycle number ", ncycle)
         # Calculate cu, cv, z, and h
+        for i in range(1, M):
+            for j in range(N):
+                cu[i, j] = .5 * (p[i, j] + p[i - 1, j]) * u[i, j]
+        
+        for i in range(M):
+            for j in range(1, N):
+                cv[i, j] = .5 * (p[i, j] + p[i, j - 1]) * v[i, j]
+                
         for i in range(M):
             for j in range(N):
-                cu[i + 1, j] = .5 * (p[i + 1, j] + p[i, j]) * u[i + 1, j]
-                cv[i, j + 1] = .5 * (p[i, j + 1] + p[i, j]) * v[i, j + 1]
-                z[i + 1, j + 1] = (fsdx * (v[i + 1, j + 1] - v[i, j + 1]) -
-                                fsdy * (u[i + 1, j + 1] - u[i, j + 1] )
-                                ) / (p[i, j] + p[i + 1, j] + p[i + 1, j + 1] + p[i, j + 1])
-                h[i, j] = p[i, j] + 0.25 * (u[i + 1, j] * u[i + 1, j] + u[i, j] * u[i, j] +
-                                        v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
+                z[i + 1, j + 1] = (fsdx * (v[i + 1, j + 1] - v[i, j + 1]) - 
+                                   fsdy * (u[i + 1, j + 1] - u[i, j + 1] )
+                                   ) / (p[i, j] + p[i + 1, j] + p[i + 1, j + 1] + p[i, j + 1])
+                
+        for i in range(M):
+            for j in range(N):
+                h[i, j] = p[i, j] + 0.25 * (u[i + 1, j] * u[i + 1, j] + u[i, j] * u[i, j] + 
+                                            v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
+                
+        # for i in range(M):
+        #     for j in range(N):
+        #         cu[i + 1, j] = .5 * (p[i + 1, j] + p[i, j]) * u[i + 1, j]
+        #         cv[i, j + 1] = .5 * (p[i, j + 1] + p[i, j]) * v[i, j + 1]
+        #         z[i + 1, j + 1] = (fsdx * (v[i + 1, j + 1] - v[i, j + 1]) -
+        #                         fsdy * (u[i + 1, j + 1] - u[i, j + 1] )
+        #                         ) / (p[i, j] + p[i + 1, j] + p[i + 1, j + 1] + p[i, j + 1])
+        #         h[i, j] = p[i, j] + 0.25 * (u[i + 1, j] * u[i + 1, j] + u[i, j] * u[i, j] +
+        #                                 v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
         
         # # Periodic Boundary conditions
         for j in range(N):
             cu[0, j] = cu[M, j]
-            cv[M, j + 1] = cv[0, j + 1]
-            z[0,j + 1] = z[M, j + 1]
             h[M, j] = h[0, j]
+        # for j in range(N):
+        #     cv[M, j + 1] = cv[0, j + 1]
+        for j in range(1, N):
+            cv[M, j] = cv[0, j]
+        # for j in range(N):
+        #     z[0,j + 1] = z[M, j + 1]
+        for j in range(1, N):
+            z[0, j] = z[M, j]
+            
 
         for i in range(M):
-            cu[i + 1, N] = cu[i + 1, 0]
             cv[i, 0] = cv[i, N]
-            z[i + 1, N] = z[i + 1, 0]
             h[i, N] = h[i, 0]
+        # for i in range(M):
+        #     cu[i + 1, N] = cu[i + 1, 0]
+        for i in range(1, M):
+            cu[i, N] = cu[i, 0]
+        # for i in range(M):
+        #     z[i + 1, N] = z[i + 1, 0]
+        for i in range(1, M):
+            z[i, N] = z[i, 0]
+            
 
         cu[0, 0] = cu[0, N]
         cv[M, 0] = cv[0, 0]
@@ -130,16 +174,32 @@ def main():
         tdtsdx = tdt / dx
         tdtsdy = tdt / dy
         
+        # for i in range(M):
+        #     for j in range(N):
+        #         unew[i + 1, j] = (uold[i + 1, j] + tdts8 * (z[i + 1, j + 1] + z[i + 1, j]) *
+        #                         (cv[i + 1, j + 1] + cv[i + 1, j] + cv[i, j + 1] + cv[i, j]) -
+        #                         tdtsdx * (h[i + 1, j] - h[i, j])
+        #                         )
+        for i in range(1, M):
+            for j in range(N):
+                unew[i, j] = (uold[i, j] + tdts8 * (z[i, j + 1] + z[i, j]) * 
+                              (cv[i, j + 1] + cv[i, j] + cv[i - 1, j + 1] + cv[i - 1, j]) - 
+                              tdtsdx * (h[i, j] - h[i - 1, j])
+                              )
+        # for i in range(M):
+        #     for j in range(N):        
+        #         vnew[i, j + 1] = (vold[i, j + 1] - tdts8 * (z[i + 1, j + 1] + z[i, j + 1]) *
+        #                         (cu[i + 1, j + 1] + cu[i + 1, j] + cu[i, j + 1] + cu[i, j]) -
+        #                         tdtsdy * (h[i, j + 1] - h[i, j])
+        #                         )
+        for i in range(M):
+            for j in range(1, N):        
+                vnew[i, j] = (vold[i, j] - tdts8 * (z[i + 1, j] + z[i, j]) * 
+                              (cu[i + 1, j] + cu[i + 1, j - 1] + cu[i, j] + cu[i, j - 1]) - 
+                              tdtsdy * (h[i, j] - h[i, j - 1])
+                              )
         for i in range(M):
             for j in range(N):
-                unew[i + 1, j] = (uold[i + 1, j] + tdts8 * (z[i + 1, j + 1] + z[i + 1, j]) *
-                                (cv[i + 1, j + 1] + cv[i + 1, j] + cv[i, j + 1] + cv[i, j]) -
-                                tdtsdx * (h[i + 1, j] - h[i, j])
-                                )
-                vnew[i, j + 1] = (vold[i, j + 1] - tdts8 * (z[i + 1, j + 1] + z[i, j + 1]) *
-                                (cu[i + 1, j + 1] + cu[i + 1, j] + cu[i, j + 1] + cu[i, j]) -
-                                tdtsdy * (h[i, j + 1] - h[i, j])
-                                )
                 pnew[i, j] = (pold[i, j] - tdtsdx * (cu[i + 1, j] - cu[i, j]) -
                                 tdtsdy * (cv[i, j + 1] - cv[i, j])
                                 )
@@ -147,11 +207,17 @@ def main():
         # Periodic Boundary conditions
         for j in range(N):
             unew[0, j] = unew[M, j]
-            vnew[M, j + 1] = vnew[0, j + 1]
             pnew[M, j] = pnew[0, j]
+        # for j in range(N):
+        #     vnew[M, j + 1] = vnew[0, j + 1]
+        for j in range(1, N):
+            vnew[M, j] = vnew[0, j]
 
+        # for i in range(M):
+        #     unew[i + 1, N] = unew[i + 1, 0]
+        for i in range(1, M):
+            unew[i, N] = unew[i, 0]
         for i in range(M):
-            unew[i + 1, N] = unew[i + 1, 0]
             vnew[i, 0] = vnew[i, N]
             pnew[i, N] = pnew[i, 0]
 
