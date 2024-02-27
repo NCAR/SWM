@@ -40,9 +40,11 @@
 #define SIZE ((M_LEN)*(N_LEN))
 #define ITMAX 4000
 #define L_OUT TRUE
+#define VAL_OUT TRUE
 
 extern double wtime(); 
 extern void dswap(double **a, double **b);
+extern void write_to_file(double *array, int tM, int tN, char *filename);
 
 //! Benchmark weather prediction program for comparing the
 //! preformance of current supercomputers. The model is
@@ -360,8 +362,15 @@ int main(int argc, char **argv) {
   dswap( (double **)&p, (double **)&pnew);
 
   // Output p, u, v fields and run times.
+  if(VAL_OUT){
+    write_to_file(pnew, M_LEN, N_LEN, "p.txt");
+    write_to_file(unew, M_LEN, N_LEN, "u.txt");
+    write_to_file(vnew, M_LEN, N_LEN, "v.txt");
+  }
+
   if (L_OUT) {
     ptime = time / 3600.;
+
     printf(" cycle number %d model time in hours %f\n", ITMAX, ptime);
     printf(" diagonal elements of p\n");
     for (i=0; i<mnmin; i++) {
@@ -376,6 +385,8 @@ int main(int argc, char **argv) {
       printf("%f ",vnew[i*N_LEN+i]);
     }
     printf("\n");
+
+  
 
     mfs100 = 0.0;
     mfs200 = 0.0;
@@ -418,4 +429,19 @@ void dswap(double **pA, double **pB)
   double *pTemp = *pA;
   *pA = *pB;
   *pB = pTemp;
+}
+
+void write_to_file(double *array, int tM, int tN, char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        printf("Error opening file %s\n", filename);
+        return;
+    }
+    for (int i = 0; i < tM; i++) {
+        for (int j = 0; j < tN; j++) {
+            fprintf(file, "%f ", array[(i*(tN))+j]);
+        }
+        fprintf(file, "\n");
+    }
+    fclose(file);
 }
