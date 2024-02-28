@@ -1,5 +1,6 @@
 import numpy as np
 import argparse
+from time import perf_counter
 
 def main():
     parser = argparse.ArgumentParser(description="Shallow Water Model")
@@ -14,10 +15,12 @@ def main():
     # Initialize model parameters
     M = args.M
     N = args.N
+    #M = 64
+    #N = 64
     M_LEN = M + 1
     N_LEN = N + 1
     L_OUT = args.L_OUT
-    ITMAX = 500
+    ITMAX = 4000
     dt = 90.
     tdt = dt
     dx = 100000.
@@ -29,11 +32,15 @@ def main():
     el = N * dx
     pi = 4. * np.arctan(1.)
     tpi = 2. * pi
-    di = tpi / M
-    dj = tpi / N
+    d_i = tpi / M
+    d_j = tpi / N
     dtheta = tpi / M
     pcf = (pi * pi * a * a) / (el * el)
     SIZE = M_LEN * N_LEN
+    dt0=0.
+    dt1=0.
+    dt2=0.
+    dt3=0.
 
     # Model Variables
     u = np.zeros((M_LEN, N_LEN))
@@ -52,16 +59,21 @@ def main():
     psi = np.zeros((M_LEN, N_LEN))
     
     # Initial values of the stream function and p
-    for i in range(M + 1):
-        for j in range(N + 1):
-            psi[i, j] = a * np.sin((i + .5) * di) * np.sin((j + .5) * dtheta)
-            p[i, j] = pcf * (np.cos(2. * (i) * di) + np.cos(2. * (j) * dtheta)) + 50000.
+    # for i in range(M + 1):
+    #    for j in range(N + 1):
+    #        psi[i, j] = a * np.sin((i + .5) * d_i) * np.sin((j + .5) * d_j)
+    #        p[i, j] = pcf * (np.cos(2. * (i) * d_i) + np.cos(2. * (j) * d_j)) + 50000.
+    psi[...] = a * np.sin((np.arange(0,M_LEN)[:np.newaxis]+0.5) * d_i) * np.sin((np.arange(0,N_LEN)+ .5) * d_j)
+    p[...]   = pcf * (np.cos(2. * np.arange(0,M_LEN)[:, np.newaxis] * d_i) + np.cos(2. * np.arange(0,N_LEN) * d_j)) + 50000.
+
             
     # Calculate initial u and v
-    for i in range(M):
-        for j in range(N):
-            u[i+1,j] = -(psi[i+1,j+1] - psi[i+1,j]) / dy
-            v[i,j+1] = (psi[i+1,j+1] - psi[i,j+1]) / dx
+    #for i in range(M):
+    #    for j in range(N):
+    #        u[i+1,j] = -(psi[i+1,j+1] - psi[i+1,j]) / dy
+    #        v[i,j+1] = (psi[i+1,j+1] - psi[i,j+1]) / dx
+    u[1:,:-1] = -(psi[1:,1:] - psi[1:,:-1]) / dy
+    v[:-1,1:] = (psi[1:,1:] - psi[:-1,1:]) / dx
             
     # # Periodic Boundary conditions
     u[0, :] = u[M, :]
@@ -89,6 +101,7 @@ def main():
         print(" Initial u:\n", u.diagonal()[:-1])
         print(" Initial v:\n", v.diagonal()[:-1])
     
+    t0_start = perf_counter()
     time = 0.0 
     # Main time loop
     for ncycle in range(ITMAX):
@@ -114,15 +127,29 @@ def main():
         #         h[i, j] = p[i, j] + 0.25 * (u[i + 1, j] * u[i + 1, j] + u[i, j] * u[i, j] + 
         #                                     v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
                 
-        for i in range(M):
-            for j in range(N):
-                cu[i + 1, j] = .5 * (p[i + 1, j] + p[i, j]) * u[i + 1, j]
-                cv[i, j + 1] = .5 * (p[i, j + 1] + p[i, j]) * v[i, j + 1]
-                z[i + 1, j + 1] = (fsdx * (v[i + 1, j + 1] - v[i, j + 1]) -
-                                fsdy * (u[i + 1, j + 1] - u[i, j + 1] )
-                                ) / (p[i, j] + p[i + 1, j] + p[i + 1, j + 1] + p[i, j + 1])
-                h[i, j] = p[i, j] + 0.25 * (u[i + 1, j] * u[i + 1, j] + u[i, j] * u[i, j] +
-                                        v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
+        t1_start = perf_counter()
+        # loop:  i+1 --> 1:
+        #        i   --> :-1
+        #        j+1 --> 1:
+        #        j   --> :-1
+        #for i in range(M):
+        #    for j in range(N):
+        #        cu[i + 1, j] = .5 * (p[i + 1, j] + p[i, j]) * u[i + 1, j]
+        #        cv[i, j + 1] = .5 * (p[i, j + 1] + p[i, j]) * v[i, j + 1]
+        #        z[i + 1, j + 1] = (fsdx * (v[i + 1, j + 1] - v[i, j + 1]) -
+        #                        fsdy * (u[i + 1, j + 1] - u[i+1, j] )
+        #                        ) / (p[i, j] + p[i + 1, j] + p[i + 1, j + 1] + p[i, j + 1])
+        #        h[i, j] = p[i, j] + 0.25 * (u[i + 1, j] * u[i + 1, j] + u[i, j] * u[i, j] +
+        #                                v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
+        cu[1:,:-1] = .5 * (p[1:,:-1] + p[:-1,:-1]) * u[1:,:-1]
+        cv[:-1,1:] = .5 * (p[:-1,1:] + p[:-1,:-1]) * v[:-1,1:]
+        z[1:,1:] = (fsdx * (v[1:,1:] - v[:-1,1:]) -
+                    fsdy * (u[1:,1:] - u[1:,:-1] )
+                    ) / (p[:-1,:-1] + p[1:,:-1] + p[1:,1:] + p[:-1,1:])
+        h[:-1,:-1] = p[:-1,:-1] + 0.25 * (u[1:,:-1] * u[1:, :-1] + u[:-1,:-1] * u[:-1,:-1] +
+                                          v[:-1,1:] * v[:-1,1:] + v[:-1,:-1] * v[:-1,:-1])
+        t1_stop = perf_counter()
+        dt1 = dt1 + (t1_stop - t1_start)
         
         # # Periodic Boundary conditions
         cu[0, :] = cu[M, :]
@@ -145,11 +172,21 @@ def main():
         tdtsdx = tdt / dx
         tdtsdy = tdt / dy
         
-        for i in range(M):
-            for j in range(N):
-                unew[i+1,j] = uold[i+1,j] + tdts8 * (z[i+1,j+1] + z[i+1,j]) * (cv[i+1,j+1] + cv[i+1,j] + cv[i,j+1] + cv[i,j]) - tdtsdx * (h[i+1,j] - h[i,j])
-                vnew[i,j+1] = vold[i,j+1] - tdts8 * (z[i+1,j+1] + z[i,j+1]) * (cu[i+1,j+1] + cu[i+1,j] + cu[i,j+1] + cu[i,j]) - tdtsdy * (h[i,j+1] - h[i,j])
-                pnew[i,j] = pold[i,j] - tdtsdx * (cu[i+1,j] - cu[i,j]) - tdtsdy * (cv[i,j+1] - cv[i,j])
+        t2_start = perf_counter()
+        # loop:  i+1 --> 1:
+        #        i   --> :-1
+        #        j+1 --> 1:
+        #        j   --> :-1
+        #for i in range(M):
+        #    for j in range(N):
+        #        unew[i+1,j] = uold[i+1,j] + tdts8 * (z[i+1,j+1] + z[i+1,j]) * (cv[i+1,j+1] + cv[i+1,j] + cv[i,j+1] + cv[i,j]) - tdtsdx * (h[i+1,j] - h[i,j])
+        #        vnew[i,j+1] = vold[i,j+1] - tdts8 * (z[i+1,j+1] + z[i,j+1]) * (cu[i+1,j+1] + cu[i+1,j] + cu[i,j+1] + cu[i,j]) - tdtsdy * (h[i,j+1] - h[i,j])
+        #        pnew[i,j] = pold[i,j] - tdtsdx * (cu[i+1,j] - cu[i,j]) - tdtsdy * (cv[i,j+1] - cv[i,j])
+        unew[1:,:-1] = uold[1:,:-1] + tdts8 * (z[1:,1:] + z[1:,:-1]) * (cv[1:,1:] + cv[1:,:-1] + cv[:-1,1:] + cv[:-1,:-1]) - tdtsdx * (h[1:,:-1] - h[:-1,:-1])
+        vnew[:-1,1:] = vold[:-1,1:] - tdts8 * (z[1:,1:] + z[:-1,1:]) * (cu[1:,1:] + cu[1:,:-1] + cu[:-1,1:] + cu[:-1,:-1]) - tdtsdy * (h[:-1,1:] - h[:-1,:-1])
+        pnew[:-1,:-1] = pold[:-1,:-1] - tdtsdx * (cu[1:,:-1] - cu[:-1,:-1]) - tdtsdy * (cv[:-1,1:] - cv[:-1,:-1])
+        t2_stop = perf_counter()
+        dt2 = dt2 + (t2_stop - t2_start)
         # for i in range(M):
         #     for j in range(N):
         #         unew[i + 1, j] = (uold[i + 1, j] + tdts8 * (z[i + 1, j + 1] + z[i + 1, j]) *
@@ -194,18 +231,22 @@ def main():
         
         time = time + dt
 
-        if(ncycle > 1):
-            for i in range(M_LEN):
-                for j in range(N_LEN):
-                    uold[i,j] = u[i,j] + alpha * (unew[i,j] - 2 * u[i,j] + uold[i,j])
-                    vold[i,j] = v[i,j] + alpha * (vnew[i,j] - 2 * v[i,j] + vold[i,j])
-                    pold[i,j] = p[i,j] + alpha * (pnew[i,j] - 2 * p[i,j] + pold[i,j])
+        if(ncycle > 0):
+            t3_start = perf_counter()
+            #for i in range(M_LEN):
+            #    for j in range(N_LEN):
+            #        uold[i,j] = u[i,j] + alpha * (unew[i,j] - 2 * u[i,j] + uold[i,j])
+            #        vold[i,j] = v[i,j] + alpha * (vnew[i,j] - 2 * v[i,j] + vold[i,j])
+            #        pold[i,j] = p[i,j] + alpha * (pnew[i,j] - 2 * p[i,j] + pold[i,j])
+            uold[...] = u + alpha * (unew - 2 * u + uold)
+            vold[...] = v + alpha * (vnew - 2 * v + vold)
+            pold[...] = p + alpha * (pnew - 2 * p + pold)
                     
-            for i in range(M_LEN):
-                for j in range(N_LEN):
-                    u[i,j] = unew[i,j]
-                    v[i,j] = vnew[i,j]
-                    p[i,j] = pnew[i,j]
+            u[...] = unew
+            v[...] = vnew
+            p[...] = pnew
+            t3_stop = perf_counter()
+            dt3 = dt3 + (t3_stop - t3_start)
         else:
             tdt = tdt + tdt
             uold = np.copy(u)
@@ -216,11 +257,17 @@ def main():
             p = np.copy(pnew)
         
         # Print initial conditions
+    t0_stop = perf_counter()
+    dt0 = dt0 + (t0_stop - t0_start)
     if L_OUT:
         print("cycle number ", ITMAX)
         print(" diagonal elements of p:\n", pnew.diagonal()[:-1])
         print(" diagonal elements of u:\n", unew.diagonal()[:-1])
         print(" diagonal elements of v:\n", vnew.diagonal()[:-1])
+    print("total: ",dt0)
+    print("t100: ",dt1)
+    print("t200: ",dt2)
+    print("t300: ",dt3)
 
 if __name__ == "__main__":
     main()
