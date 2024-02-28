@@ -41,8 +41,8 @@ dtype = np.float64
 import gt4py.next as gtx
 
 #allocator = gtx.itir_python # should match the executor
-allocator = gtx.gtfn_cpu
-# allocator = gtx.gtfn_gpu
+#allocator = gtx.gtfn_cpu
+allocator = gtx.gtfn_gpu
 
 # Note: for gt4py.next, names don't matter, for gt4py.cartesian they have to be "I", "J", "K"
 I = gtx.Dimension("I")
