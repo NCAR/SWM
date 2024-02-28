@@ -309,7 +309,7 @@ def main():
         vval = np.zeros((M_LEN, N_LEN))
         pval = np.zeros((M_LEN, N_LEN))
 
-        uref, vref, pref = read_arrays(v_val_f, u_val_f, p_val_f)
+        uref, vref, pref = read_arrays(u_val_f, v_val_f, p_val_f)
         uval = uref-unew
         vval = vref-vnew
         pval = pref-pnew
