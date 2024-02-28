@@ -1,13 +1,16 @@
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
+import numpy as np
+import gt4py.next as gtx
+import gt4py.cartesian.gtscript as gtscript
 from time import perf_counter
 #import cupy
 #import gt4py
 
 # Initialize model parameters
-M = 512 # args.M
-N = 512 # args.N
+M = 64 # args.M
+N = 64 # args.N
 M_LEN = M + 1
 N_LEN = N + 1
 L_OUT = True # args.L_OUT
@@ -131,10 +134,6 @@ if L_OUT:
     print(" Initial p:\n", p[:,:,0].diagonal()[:-1])
     print(" Initial u:\n", u[:,:,0].diagonal()[:-1])
     print(" Initial v:\n", v[:,:,0].diagonal()[:-1])
-        
-import numpy as np
-import gt4py.next as gtx
-import gt4py.cartesian.gtscript as gtscript
 
 nx = M
 ny = N
@@ -263,13 +262,51 @@ if gt4py_type == "cartesian":
     ):
         with computation(PARALLEL), interval(...):
             vnew = vold - tdts8 * (z[1,0,0] + z) * (cu[1,0,0] + cu[1,-1,0] + cu + cu[0,-1,0]) - tdtsdy * (h - h[0,-1,0])
+            
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_pold(
+        p: gtscript.Field[dtype],
+        alpha: float,
+        pnew: gtscript.Field[dtype],
+        pold: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            pold = p + alpha * (pnew - 2 * p + pold)
+    
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_uold(
+        u: gtscript.Field[dtype],
+        alpha: float,
+        unew: gtscript.Field[dtype],
+        uold: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            uold = u + alpha * (unew - 2 * u + uold)
+    
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_vold(
+        v: gtscript.Field[dtype],
+        alpha: float,
+        vnew: gtscript.Field[dtype],
+        vold: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            vold = v + alpha * (vnew - 2 * v + vold)
+            
+    @gtscript.stencil(backend=cartesian_backend)
+    def copy_var(
+        inp: gtscript.Field[dtype],
+        out: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            out = inp
     
     t0_start = perf_counter()
     time = 0.0
     # Main time loop
     for ncycle in range(ITMAX):
         if((ncycle%100==0) & (VIS==False)):
-            print("cycle number ", ncycle)
+            print(f"cycle number{ncycle} and gt4py type {gt4py_type}")
         t1_start = perf_counter()
         # Calculate cu, cv, z, and h
         calc_h(p=p_gt, u=u_gt, v=v_gt, h=h_gt, origin=(0,0,0), domain=(nx,ny,nz)) 
@@ -343,15 +380,25 @@ if gt4py_type == "cartesian":
     
         if(ncycle > 0):
             t3_start = perf_counter()
-            uold[...] = u + alpha * (unew - 2 * u + uold)
-            vold[...] = v + alpha * (vnew - 2 * v + vold)
-            pold[...] = p + alpha * (pnew - 2 * p + pold)
-
-            u[...] = unew
-            v[...] = vnew
-            p[...] = pnew
+            calc_pold(p=p_gt, alpha=alpha, pnew=pnew_gt, pold=pold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            pold = pold_gt.asnumpy()
+            calc_uold(u=u_gt, alpha=alpha, unew=unew_gt, uold=uold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            uold = uold_gt.asnumpy()
+            calc_vold(v=v_gt, alpha=alpha, vnew=vnew_gt, vold=vold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            vold = vold_gt.asnumpy()
+            #uold[...] = u + alpha * (unew - 2 * u + uold)
+            #vold[...] = v + alpha * (vnew - 2 * v + vold)
+            #pold[...] = p + alpha * (pnew - 2 * p + pold)
+            
+            copy_var(unew_gt, u_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            copy_var(vnew_gt, v_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            copy_var(pnew_gt, p_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            #u[...] = unew
+            #v[...] = vnew
+            #p[...] = pnew
             t3_stop = perf_counter()
             dt3 = dt3 + (t3_stop - t3_start)
+    
         else:
             tdt = tdt+tdt
     

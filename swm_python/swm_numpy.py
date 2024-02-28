@@ -1,11 +1,40 @@
 import numpy as np
 import argparse
 from time import perf_counter
+from IPython.display import clear_output
+from matplotlib import pyplot as plt
+
+def read_arrays(u_file, v_file, p_file):
+    u_v = np.loadtxt(u_file,)
+    v_v = np.loadtxt(v_file)
+    p_v = np.loadtxt(p_file)
+    return u_v, v_v, p_v
+
+def live_plot_val(fu, fv, fp, title=''):
+    mxu = fu.max()
+    mxv = fv.max()
+    mxp = fp.max()
+    clear_output(wait=True)
+    fig, (ax1, ax2, ax3) = plt.subplots(figsize=(13, 3), ncols=3)
+
+    pos1 = ax1.imshow(fp, cmap='Blues', vmin=-mxp, vmax=mxp,interpolation='none')
+    ax1.set_title('p')
+    plt.colorbar(pos1,ax=ax1)
+    pos2 = ax2.imshow(fu, cmap='Reds', vmin=-mxu, vmax=mxu,interpolation='none')
+    ax2.set_title('u')
+    plt.colorbar(pos2,ax=ax2)
+    pos3 = ax3.imshow(fv, cmap='Greens',vmin=-mxv, vmax=mxv,interpolation='none')
+    ax3.set_title('v')
+    plt.colorbar(pos3, ax=ax3)
+
+    fig.suptitle(title)
+    plt.show()
+
 
 def main():
     parser = argparse.ArgumentParser(description="Shallow Water Model")
-    parser.add_argument('--M', type=int, default=256, help='Number of points in the x direction')
-    parser.add_argument('--N', type=int, default=256, help='Number of points in the y direction')
+    parser.add_argument('--M', type=int, default=64, help='Number of points in the x direction')
+    parser.add_argument('--N', type=int, default=64, help='Number of points in the y direction')
     parser.add_argument('--L_OUT', type=bool, default=True, help='a boolean for L_OUT')
 
     
@@ -20,6 +49,7 @@ def main():
     M_LEN = M + 1
     N_LEN = N + 1
     L_OUT = args.L_OUT
+    VAL=True
     ITMAX = 4000
     dt = 90.
     tdt = dt
@@ -268,6 +298,35 @@ def main():
     print("t100: ",dt1)
     print("t200: ",dt2)
     print("t300: ",dt3)
+
+
+    if VAL:
+
+        u_val_f = 'ref/u.64.64.IT4000.txt'
+        v_val_f = 'ref/v.64.64.IT4000.txt'
+        p_val_f = 'ref/p.64.64.IT4000.txt'
+        uval = np.zeros((M_LEN, N_LEN))
+        vval = np.zeros((M_LEN, N_LEN))
+        pval = np.zeros((M_LEN, N_LEN))
+
+        uref, vref, pref = read_arrays(v_val_f, u_val_f, p_val_f)
+        uval = uref-unew
+        vval = vref-vnew
+        pval = pref-pnew
+        
+        uLinfN= np.linalg.norm(uval, np.inf)
+        vLinfN= np.linalg.norm(vval, np.inf)
+        pLinfN= np.linalg.norm(pval, np.inf)
+
+        
+
+        live_plot_val(uval, vval, pval, "Val")
+        print("uLinfN: ", uLinfN)
+        print("vLinfN: ", vLinfN)
+        print("pLinfN: ", pLinfN)
+        print("udiff max: ",uval.max())
+        print("vdiff max: ",vval.max())
+        print("pdiff max: ",pval.max())
 
 if __name__ == "__main__":
     main()
