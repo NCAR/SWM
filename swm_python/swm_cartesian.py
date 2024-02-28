@@ -109,10 +109,6 @@ uold = np.copy(u[...])
 vold = np.copy(v[...])
 pold = np.copy(p[...])
 
-
-# In[6]:
-
-
 # Print initial conditions
 if L_OUT:
     print(" Number of points in the x direction: ", M)
@@ -155,89 +151,77 @@ cartesian_backend = "numpy"
 next_backend = gtx.itir_python
 
 if gt4py_type == "cartesian":
+    #for i in range(M):
+    #    for j in range(N):
+    #        h[i, j,0] = p[i, j,0] + 0.25 * (u[i + 1, j,0] * u[i + 1, j,0] + u[i, j,0] * u[i, j,0] +
+    #                                v[i, j + 1,0] * v[i, j + 1,0] + v[i, j,0] * v[i, j,0])
+    # i --> 0,M
+    #j --> 0,N
+    # at nx+1 its the boundary region, mask one region and 
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_h(
+        p: gtscript.Field[dtype],
+        u: gtscript.Field[dtype],
+        v: gtscript.Field[dtype],
+        h: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            h = p + 0.25 * u[1,0,0] * u[1,0,0] + u * u + v[0,1,0] * v[0,1,0] + v * v
+    
+    #nx = M
+    #ny = N
+    #nz = 1
+    # i --> 1,M+1  (1,1,0) (nx,ny,nz)
+    #j --> 1,N+1
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_z(
+        fsdx: float,
+        fsdy: float,
+        u: gtscript.Field[dtype],
+        v: gtscript.Field[dtype],
+        p: gtscript.Field[dtype],
+        z: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            z = (fsdx * (v - v[-1,0,0]) - fsdy * (u - u[0,-1,0])) / (p[-1,-1,0] + p[0,-1,0] + p + p[-1,0,0])
+            
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_cu(
+        u: gtscript.Field[dtype],
+        p: gtscript.Field[dtype],
+        cu: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            cu = .5 * (p + p) * u
+            
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_cv(
+        v: gtscript.Field[dtype],
+        p: gtscript.Field[dtype],
+        cv: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            cv = .5 * (p + p) * v   
+    
     time = 0.0
     # Main time loop
     for ncycle in range(ITMAX):
         if((ncycle%100==0) & (VIS==False)):
             print("cycle number ", ncycle)
         # Calculate cu, cv, z, and h
-        #for i in range(M):
-        #    for j in range(N):
-        #        h[i, j,0] = p[i, j,0] + 0.25 * (u[i + 1, j,0] * u[i + 1, j,0] + u[i, j,0] * u[i, j,0] +
-        #                                v[i, j + 1,0] * v[i, j + 1,0] + v[i, j,0] * v[i, j,0])
-        # i --> 0,M
-        #j --> 0,N
-        # at nx+1 its the boundary region, mask one region and 
-        @gtscript.stencil(backend=cartesian_backend)
-        def calc_h(
-            p: gtscript.Field[dtype],
-            u: gtscript.Field[dtype],
-            v: gtscript.Field[dtype],
-            h: gtscript.Field[dtype]
-        ):
-            with computation(PARALLEL), interval(...):
-                h = p + 0.25 * u[1,0,0] * u[1,0,0] + u * u + v[0,1,0] * v[0,1,0] + v * v
-    
-        calc_h(p=p_gt, u=u_gt, v=v_gt, h=h_gt, origin=(0,0,0), domain=(nx,ny,nz))
-    
+        calc_h(p=p_gt, u=u_gt, v=v_gt, h=h_gt, origin=(0,0,0), domain=(nx,ny,nz)) 
         h = h_gt.asnumpy()
-
-        #nx = M
-        #ny = N
-        #nz = 1
-        # i --> 1,M+1  (1,1,0) (nx,ny,nz)
-        #j --> 1,N+1
-        @gtscript.stencil(backend=cartesian_backend)
-        def calc_z(
-            fsdx: float,
-            fsdy: float,
-            u: gtscript.Field[dtype],
-            v: gtscript.Field[dtype],
-            p: gtscript.Field[dtype],
-            z: gtscript.Field[dtype]
-        ):
-            with computation(PARALLEL), interval(...):
-                z = (fsdx * (v - v[-1,0,0]) - fsdy * (u - u[0,-1,0])) / (p[-1,-1,0] + p[0,-1,0] + p + p[-1,0,0])
 
         calc_z(fsdx=fsdx, fsdy=fsdy, u=u_gt, v=v_gt, p=p_gt, z=z_gt, origin=(1,1,0), domain=(nx,ny,nz)) # domain(nx+1,ny+1,nz) gives error why?
         z = z_gt.asnumpy()
 
-        @gtscript.stencil(backend=cartesian_backend)
-        def calc_cu(
-            u: gtscript.Field[dtype],
-            p: gtscript.Field[dtype],
-            cu: gtscript.Field[dtype]
-        ):
-            with computation(PARALLEL), interval(...):
-                cu = .5 * (p + p) * u
-
-        #for i in range(1,M+1):
-        #    for j in range(N):
-        #        cu2[i, j,0] = .5 * (p[i, j,0] + p[i, j,0]) * u[i, j,0]
         calc_cu(u=u_gt, p=p_gt, cu=cu_gt, origin=(1,0,0), domain=(nx,ny+1,nz)) # domain(nx+1,ny+1,nz) gives error why? try removing ny+1
         cu = cu_gt.asnumpy()
-
-        @gtscript.stencil(backend=cartesian_backend)
-        def calc_cv(
-            v: gtscript.Field[dtype],
-            p: gtscript.Field[dtype],
-            cv: gtscript.Field[dtype]
-        ):
-            with computation(PARALLEL), interval(...):
-                cv = .5 * (p + p) * v
 
         calc_cv(v=v_gt, p=p_gt, cv=cv_gt, origin=(0,1,0), domain=(nx+1,ny,nz)) # domain(nx+1,ny+1,nz) gives error why?
         cv = cv_gt.asnumpy()
     
-        #for i in range(M):
-        #    for j in range(N):
-        #        #cu[i + 1, j,0] = .5 * (p[i + 1, j,0] + p[i, j,0]) * u[i + 1, j,0]
-        #        cv[i, j + 1,0] = .5 * (p[i, j + 1,0] + p[i, j,0]) * v[i, j + 1,0]
-        #        #z[i + 1, j + 1,0] = (fsdx * (v[i + 1, j + 1,0] - v[i, j + 1,0]) -
-        #        #                fsdy * (u[i + 1, j + 1,0] - u[i+1, j,0] )
-        #        #                ) / (p[i, j,0] + p[i + 1, j,0] + p[i + 1, j + 1,0] + p[i, j + 1,0])
-    
-            # # Periodic Boundary conditions
+        # # Periodic Boundary conditions
         #try region
         cu[0, :,0] = cu[M, :,0]
         h[M, :,0] = h[0, :,0]
