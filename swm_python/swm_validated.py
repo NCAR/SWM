@@ -13,10 +13,10 @@ def main():
     print(args.M, args.N)
     
     # Initialize model parameters
-    #M = args.M
-    #N = args.N
-    M = 64
-    N = 64
+    M = args.M
+    N = args.N
+    #M = 64
+    #N = 64
     M_LEN = M + 1
     N_LEN = N + 1
     L_OUT = args.L_OUT
