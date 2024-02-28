@@ -33,18 +33,19 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 64
+#define M 16
+#define N 16
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define SIZE ((M_LEN)*(N_LEN))
-#define ITMAX 4000
+#define ITMAX 1
 #define L_OUT TRUE
 #define VAL_OUT TRUE
 
 extern double wtime(); 
 extern void dswap(double **a, double **b);
 extern void write_to_file(double *array, int tM, int tN, char *filename);
+extern void print_to_file(double *array, int tM, int tN, char *filename);
 
 //! Benchmark weather prediction program for comparing the
 //! preformance of current supercomputers. The model is
@@ -363,9 +364,12 @@ int main(int argc, char **argv) {
 
   // Output p, u, v fields and run times.
   if(VAL_OUT){
-    write_to_file(pnew, M_LEN, N_LEN, "p.txt");
-    write_to_file(unew, M_LEN, N_LEN, "u.txt");
-    write_to_file(vnew, M_LEN, N_LEN, "v.txt");
+    write_to_file(pnew, M_LEN, N_LEN, "p.bin");
+    write_to_file(unew, M_LEN, N_LEN, "u.bin");
+    write_to_file(vnew, M_LEN, N_LEN, "v.bin");
+    print_to_file(pnew, M_LEN, N_LEN, "p.txt");
+    print_to_file(unew, M_LEN, N_LEN, "u.txt");
+    print_to_file(vnew, M_LEN, N_LEN, "v.txt");
   }
 
   if (L_OUT) {
@@ -431,7 +435,7 @@ void dswap(double **pA, double **pB)
   *pB = pTemp;
 }
 
-void write_to_file(double *array, int tM, int tN, char *filename) {
+void print_to_file(double *array, int tM, int tN, char *filename) {
     FILE *file = fopen(filename, "w");
     if (file == NULL) {
         printf("Error opening file %s\n", filename);
@@ -440,6 +444,21 @@ void write_to_file(double *array, int tM, int tN, char *filename) {
     for (int i = 0; i < tM; i++) {
         for (int j = 0; j < tN; j++) {
             fprintf(file, "%f ", array[(i*(tN))+j]);
+        }
+        fprintf(file, "\n");
+    }
+    fclose(file);
+}
+
+void write_to_file(double *array, int tM, int tN, char *filename) {
+    FILE *file = fopen(filename, "wb");
+    if (file == NULL) {
+        printf("Error opening file %s\n", filename);
+        return;
+    }
+    for (int i = 0; i < tM; i++) {
+        for (int j = 0; j < tN; j++) {
+          fwrite(&array[(i*(tN))+j], sizeof(double), 1, file);
         }
         fprintf(file, "\n");
     }
