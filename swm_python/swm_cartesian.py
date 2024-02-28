@@ -1,12 +1,13 @@
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
+from time import perf_counter
 #import cupy
 #import gt4py
 
 # Initialize model parameters
-M = 64 # args.M
-N = 64 # args.N
+M = 512 # args.M
+N = 512 # args.N
 M_LEN = M + 1
 N_LEN = N + 1
 L_OUT = True # args.L_OUT
@@ -28,6 +29,11 @@ d_i = tpi / M
 d_j = tpi / N
 pcf = (pi * pi * a * a) / (el * el)
 SIZE = M_LEN * N_LEN
+dt0=0.
+dt1=0.
+dt2=0.
+dt3=0.
+
 
 # Model Variables
 u = np.zeros((M_LEN, N_LEN, 1))
@@ -69,16 +75,21 @@ def live_plot3(fu, fv, fp, title=''):
     plt.show()
 
 # Initial values of the stream function and p
-for i in range(M + 1):
-    for j in range(N + 1):
-        psi[i, j, 0] = a * np.sin((i + .5) * d_i) * np.sin((j + .5) * d_j)
-        p[i, j, 0] = pcf * (np.cos(2. * (i) * d_i) + np.cos(2. * (j) * d_j)) + 50000.
+# for i in range(M + 1):
+#    for j in range(N + 1):
+#        psi[i, j, 0] = a * np.sin((i + .5) * d_i) * np.sin((j + .5) * d_j)
+#        p[i, j, 0] = pcf * (np.cos(2. * (i) * d_i) + np.cos(2. * (j) * d_j)) + 50000.
+psi[:,:,0] = a * np.sin((np.arange(0,M_LEN)[:np.newaxis]+0.5) * d_i) * np.sin((np.arange(0,N_LEN)+ .5) * d_j)
+p[:,:,0]   = pcf * (np.cos(2. * np.arange(0,M_LEN)[:, np.newaxis] * d_i) + np.cos(2. * np.arange(0,N_LEN) * d_j)) + 50000.
             
 # Calculate initial u and v
-    for i in range(M):
-        for j in range(N):
-            u[i+1,j, 0] = -(psi[i+1,j+1,0] - psi[i+1,j,0]) / dy
-            v[i,j+1, 0] = (psi[i+1,j+1,0] - psi[i,j+1,0]) / dx
+# for i in range(M):
+#     for j in range(N):
+#         u[i+1,j, 0] = -(psi[i+1,j+1,0] - psi[i+1,j,0]) / dy
+#         v[i,j+1, 0] = (psi[i+1,j+1,0] - psi[i,j+1,0]) / dx
+u[1:,:-1,0] = -(psi[1:,1:,0] - psi[1:,:-1,0]) / dy
+v[:-1,1:,0] =  (psi[1:,1:,0] - psi[:-1,1:,0]) / dx
+
             
 
 if VIS==True:
@@ -253,11 +264,13 @@ if gt4py_type == "cartesian":
         with computation(PARALLEL), interval(...):
             vnew = vold - tdts8 * (z[1,0,0] + z) * (cu[1,0,0] + cu[1,-1,0] + cu + cu[0,-1,0]) - tdtsdy * (h - h[0,-1,0])
     
+    t0_start = perf_counter()
     time = 0.0
     # Main time loop
     for ncycle in range(ITMAX):
         if((ncycle%100==0) & (VIS==False)):
             print("cycle number ", ncycle)
+        t1_start = perf_counter()
         # Calculate cu, cv, z, and h
         calc_h(p=p_gt, u=u_gt, v=v_gt, h=h_gt, origin=(0,0,0), domain=(nx,ny,nz)) 
         h = h_gt.asnumpy()
@@ -270,6 +283,8 @@ if gt4py_type == "cartesian":
 
         calc_cv(v=v_gt, p=p_gt, cv=cv_gt, origin=(0,1,0), domain=(nx,ny,nz)) #(nx+1,ny,nz)--> works domain(nx+1,ny+1,nz) gives error why?
         cv = cv_gt.asnumpy()
+        t1_stop = perf_counter()
+        dt1 = dt1 + (t1_stop - t1_start)
     
         # # Periodic Boundary conditions
         #try region
@@ -294,6 +309,7 @@ if gt4py_type == "cartesian":
         tdtsdy = tdt / dy
         #print(tdts8, tdtsdx, tdtsdy)
     
+        t2_start = perf_counter()
         calc_unew(tdts8=tdts8, tdtsdx=tdtsdx, uold=uold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, unew=unew_gt, origin=(1,0,0), domain=(nx,ny,nz))
         unew = unew_gt.asnumpy()
         
@@ -302,6 +318,8 @@ if gt4py_type == "cartesian":
         
         calc_pnew(tdtsdx=tdtsdx, tdtsdy=tdtsdy, pold=pold_gt, cu=cu_gt, cv=cv_gt, pnew=pnew_gt, origin=(0,0,0), domain=(nx,ny,nz))
         pnew = pnew_gt.asnumpy()
+        t2_stop = perf_counter()
+        dt2 = dt2 + (t2_stop - t2_start)
             
         # for i in range(M):
         #     for j in range(N):
@@ -324,6 +342,7 @@ if gt4py_type == "cartesian":
         time = time + dt
     
         if(ncycle > 0):
+            t3_start = perf_counter()
             uold[...] = u + alpha * (unew - 2 * u + uold)
             vold[...] = v + alpha * (vnew - 2 * v + vold)
             pold[...] = p + alpha * (pnew - 2 * p + pold)
@@ -331,7 +350,8 @@ if gt4py_type == "cartesian":
             u[...] = unew
             v[...] = vnew
             p[...] = pnew
-    
+            t3_stop = perf_counter()
+            dt3 = dt3 + (t3_stop - t3_start)
         else:
             tdt = tdt+tdt
     
@@ -345,12 +365,18 @@ if gt4py_type == "cartesian":
         if((VIS == True) & (ncycle%VIS_DT==0)):
             live_plot3(u, v, p, "ncycle: " + str(ncycle))
             
+    t0_stop = perf_counter()
+    dt0 = dt0 + (t0_stop - t0_start)
     # Print initial conditions
     if L_OUT:
            print("cycle number ", ITMAX)
            print(" diagonal elements of p:\n", pnew[:,:,0].diagonal()[:-1])
            print(" diagonal elements of u:\n", unew[:,:,0].diagonal()[:-1])
            print(" diagonal elements of v:\n", vnew[:,:,0].diagonal()[:-1])
+    print("total: ",dt0)
+    print("t100: ",dt1)
+    print("t200: ",dt2)
+    print("t300: ",dt3)
 
 
 # gt4py NEXT part!!!!!!!!!!!!!!!!!!!!
