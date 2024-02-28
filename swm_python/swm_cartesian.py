@@ -252,6 +252,36 @@ if gt4py_type == "cartesian":
     ):
         with computation(PARALLEL), interval(...):
             vnew = vold - tdts8 * (z[1,0,0] + z) * (cu[1,0,0] + cu[1,-1,0] + cu + cu[0,-1,0]) - tdtsdy * (h - h[0,-1,0])
+            
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_pold(
+        p: gtscript.Field[dtype],
+        alpha: float,
+        pnew: gtscript.Field[dtype],
+        pold: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            pold = p + alpha * (pnew - 2 * p + pold)
+    
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_uold(
+        u: gtscript.Field[dtype],
+        alpha: float,
+        unew: gtscript.Field[dtype],
+        uold: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            uold[...] = u + alpha * (unew - 2 * u + uold)
+    
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_vold(
+        v: gtscript.Field[dtype],
+        alpha: float,
+        vnew: gtscript.Field[dtype],
+        vold: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            vold[...] = v + alpha * (vnew - 2 * v + vold)
     
     time = 0.0
     # Main time loop
@@ -324,9 +354,15 @@ if gt4py_type == "cartesian":
         time = time + dt
     
         if(ncycle > 0):
-            uold[...] = u + alpha * (unew - 2 * u + uold)
-            vold[...] = v + alpha * (vnew - 2 * v + vold)
-            pold[...] = p + alpha * (pnew - 2 * p + pold)
+            calc_pold(p=p_gt, alpha=alpha, pnew=pnew_gt, pold=pold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            pold = pold_gt.asnumpy()
+            calc_uold(u=u_gt, alpha=alpha, unew=unew_gt, uold=uold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            uold = uold_gt.asnumpy()
+            calc_vold(v=v_gt, alpha=alpha, vnew=vnew_gt, vold=vold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            vold = vold_gt.asnumpy()
+            #uold[...] = u + alpha * (unew - 2 * u + uold)
+            #vold[...] = v + alpha * (vnew - 2 * v + vold)
+            #pold[...] = p + alpha * (pnew - 2 * p + pold)
 
             u[...] = unew
             v[...] = vnew
