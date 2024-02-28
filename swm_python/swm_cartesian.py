@@ -271,7 +271,7 @@ if gt4py_type == "cartesian":
         uold: gtscript.Field[dtype]
     ):
         with computation(PARALLEL), interval(...):
-            uold[...] = u + alpha * (unew - 2 * u + uold)
+            uold = u + alpha * (unew - 2 * u + uold)
     
     @gtscript.stencil(backend=cartesian_backend)
     def calc_vold(
@@ -281,13 +281,13 @@ if gt4py_type == "cartesian":
         vold: gtscript.Field[dtype]
     ):
         with computation(PARALLEL), interval(...):
-            vold[...] = v + alpha * (vnew - 2 * v + vold)
+            vold = v + alpha * (vnew - 2 * v + vold)
     
     time = 0.0
     # Main time loop
     for ncycle in range(ITMAX):
         if((ncycle%100==0) & (VIS==False)):
-            print("cycle number ", ncycle)
+            print(f"cycle number{ncycle} and gt4py type {gt4py_type}")
         # Calculate cu, cv, z, and h
         calc_h(p=p_gt, u=u_gt, v=v_gt, h=h_gt, origin=(0,0,0), domain=(nx,ny,nz)) 
         h = h_gt.asnumpy()
