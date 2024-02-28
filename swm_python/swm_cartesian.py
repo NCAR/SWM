@@ -1,6 +1,9 @@
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
+import numpy as np
+import gt4py.next as gtx
+import gt4py.cartesian.gtscript as gtscript
 #import cupy
 #import gt4py
 
@@ -120,10 +123,6 @@ if L_OUT:
     print(" Initial p:\n", p[:,:,0].diagonal()[:-1])
     print(" Initial u:\n", u[:,:,0].diagonal()[:-1])
     print(" Initial v:\n", v[:,:,0].diagonal()[:-1])
-        
-import numpy as np
-import gt4py.next as gtx
-import gt4py.cartesian.gtscript as gtscript
 
 nx = M
 ny = N
@@ -282,6 +281,14 @@ if gt4py_type == "cartesian":
     ):
         with computation(PARALLEL), interval(...):
             vold = v + alpha * (vnew - 2 * v + vold)
+            
+    @gtscript.stencil(backend=cartesian_backend)
+    def copy_var(
+        inp: gtscript.Field[dtype],
+        out: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            out = inp
     
     time = 0.0
     # Main time loop
@@ -363,10 +370,13 @@ if gt4py_type == "cartesian":
             #uold[...] = u + alpha * (unew - 2 * u + uold)
             #vold[...] = v + alpha * (vnew - 2 * v + vold)
             #pold[...] = p + alpha * (pnew - 2 * p + pold)
-
-            u[...] = unew
-            v[...] = vnew
-            p[...] = pnew
+            
+            copy_var(unew_gt, u_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            copy_var(vnew_gt, v_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            copy_var(pnew_gt, p_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            #u[...] = unew
+            #v[...] = vnew
+            #p[...] = pnew
     
         else:
             tdt = tdt+tdt
