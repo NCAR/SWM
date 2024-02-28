@@ -93,7 +93,7 @@ def main():
     #    for j in range(N + 1):
     #        psi[i, j] = a * np.sin((i + .5) * d_i) * np.sin((j + .5) * d_j)
     #        p[i, j] = pcf * (np.cos(2. * (i) * d_i) + np.cos(2. * (j) * d_j)) + 50000.
-    psi[...] = a * np.sin((np.arange(0,M_LEN)[:np.newaxis]+0.5) * d_i) * np.sin((np.arange(0,N_LEN)+ .5) * d_j)
+    psi[...] = a * np.sin((np.arange(0,M_LEN)[:, np.newaxis]+0.5) * d_i) * np.sin((np.arange(0,N_LEN)+ .5) * d_j)
     p[...]   = pcf * (np.cos(2. * np.arange(0,M_LEN)[:, np.newaxis] * d_i) + np.cos(2. * np.arange(0,N_LEN) * d_j)) + 50000.
 
             
