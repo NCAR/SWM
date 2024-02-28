@@ -146,6 +146,12 @@ v_gt = gtx.as_field(domain,v,allocator=allocator)
 z_gt = gtx.as_field(domain,z,allocator=allocator)
 cu_gt = gtx.as_field(domain,cu,allocator=allocator)
 cv_gt = gtx.as_field(domain,cv,allocator=allocator)
+pnew_gt = gtx.as_field(domain,pnew,allocator=allocator)
+unew_gt = gtx.as_field(domain,unew,allocator=allocator)
+vnew_gt = gtx.as_field(domain,vnew,allocator=allocator)
+uold_gt = gtx.as_field(domain,uold,allocator=allocator)
+vold_gt = gtx.as_field(domain,vold,allocator=allocator)
+pold_gt = gtx.as_field(domain,pold,allocator=allocator)
 
 cartesian_backend = "numpy"
 next_backend = gtx.itir_python
@@ -201,7 +207,51 @@ if gt4py_type == "cartesian":
         cv: gtscript.Field[dtype]
     ):
         with computation(PARALLEL), interval(...):
-            cv = .5 * (p + p) * v   
+            cv = .5 * (p + p) * v
+    
+    #recheck this section
+    #pnew[i,j,0] = pold[i,j,0] - tdtsdx * (cu[i+1,j,0] - cu[i,j,0]) - tdtsdy * (cv[i,j+1,0] - cv[i,j,0])
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_pnew(
+        tdtsdx: float,
+        tdtsdy: float,
+        pold: gtscript.Field[dtype],
+        cu: gtscript.Field[dtype],
+        cv: gtscript.Field[dtype],
+        pnew: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            pnew = pold - tdtsdx * (cu[1,0,0] - cu) - tdtsdy * (cv[0,1,0] - cv)
+    
+    #unew[i+1,j,0] = uold[i+1,j,0] + tdts8 * (z[i+1,j+1,0] + z[i+1,j,0]) * (cv[i+1,j+1,0] + cv[i+1,j,0] + cv[i,j+1,0] + cv[i,j,0]) - tdtsdx * (h[i+1,j,0] - h[i,j,0])
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_unew(
+        tdts8: float,
+        tdtsdx: float,
+        uold: gtscript.Field[dtype],
+        cu: gtscript.Field[dtype],
+        cv: gtscript.Field[dtype],
+        z: gtscript.Field[dtype],
+        h: gtscript.Field[dtype],
+        unew: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            unew = uold + tdts8 * (z + z[0,1,0]) * (cv[0,1,0] + cv + cv[-1,1,0] + cv[-1,0,0]) - tdtsdx * (h - h[-1,0,0])
+
+        #vnew[i,j+1,0] = vold[i,j+1,0] - tdts8 * (z[i+1,j+1,0] + z[i,j+1,0]) * (cu[i+1,j+1,0] + cu[i+1,j,0] + cu[i,j+1,0] + cu[i,j,0]) - tdtsdy * (h[i,j+1,0] - h[i,j,0])    
+    @gtscript.stencil(backend=cartesian_backend)
+    def calc_vnew(
+        tdts8: float,
+        tdtsdy: float,
+        vold: gtscript.Field[dtype],
+        cu: gtscript.Field[dtype],
+        cv: gtscript.Field[dtype],
+        z: gtscript.Field[dtype],
+        h: gtscript.Field[dtype],
+        vnew: gtscript.Field[dtype]
+    ):
+        with computation(PARALLEL), interval(...):
+            vnew = vold - tdts8 * (z[1,0,0] + z) * (cu[1,0,0] + cu[1,-1,0] + cu + cu[0,-1,0]) - tdtsdy * (h - h[0,-1,0])
     
     time = 0.0
     # Main time loop
@@ -215,10 +265,10 @@ if gt4py_type == "cartesian":
         calc_z(fsdx=fsdx, fsdy=fsdy, u=u_gt, v=v_gt, p=p_gt, z=z_gt, origin=(1,1,0), domain=(nx,ny,nz)) # domain(nx+1,ny+1,nz) gives error why?
         z = z_gt.asnumpy()
 
-        calc_cu(u=u_gt, p=p_gt, cu=cu_gt, origin=(1,0,0), domain=(nx,ny+1,nz)) # domain(nx+1,ny+1,nz) gives error why? try removing ny+1
+        calc_cu(u=u_gt, p=p_gt, cu=cu_gt, origin=(1,0,0), domain=(nx,ny,nz)) # (nx,ny+1,nz)-->works domain(nx+1,ny+1,nz) gives error why? try removing ny+1
         cu = cu_gt.asnumpy()
 
-        calc_cv(v=v_gt, p=p_gt, cv=cv_gt, origin=(0,1,0), domain=(nx+1,ny,nz)) # domain(nx+1,ny+1,nz) gives error why?
+        calc_cv(v=v_gt, p=p_gt, cv=cv_gt, origin=(0,1,0), domain=(nx,ny,nz)) #(nx+1,ny,nz)--> works domain(nx+1,ny+1,nz) gives error why?
         cv = cv_gt.asnumpy()
     
         # # Periodic Boundary conditions
@@ -244,14 +294,21 @@ if gt4py_type == "cartesian":
         tdtsdy = tdt / dy
         #print(tdts8, tdtsdx, tdtsdy)
     
-    
-        for i in range(M):
-            for j in range(N):
-                unew[i+1,j,0] = uold[i+1,j,0] + tdts8 * (z[i+1,j+1,0] + z[i+1,j,0]) * (cv[i+1,j+1,0] + cv[i+1,j,0] + cv[i,j+1,0] + cv[i,j,0]) - tdtsdx * (h[i+1,j,0] - h[i,j,0])
-                vnew[i,j+1,0] = vold[i,j+1,0] - tdts8 * (z[i+1,j+1,0] + z[i,j+1,0]) * (cu[i+1,j+1,0] + cu[i+1,j,0] + cu[i,j+1,0] + cu[i,j,0]) - tdtsdy * (h[i,j+1,0] - h[i,j,0])
-                pnew[i,j,0] = pold[i,j,0] - tdtsdx * (cu[i+1,j,0] - cu[i,j,0]) - tdtsdy * (cv[i,j+1,0] - cv[i,j,0])
-                    
+        calc_unew(tdts8=tdts8, tdtsdx=tdtsdx, uold=uold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, unew=unew_gt, origin=(1,0,0), domain=(nx,ny,nz))
+        unew = unew_gt.asnumpy()
         
+        calc_vnew(tdts8=tdts8, tdtsdy=tdtsdy, vold=vold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, vnew=vnew_gt, origin=(0,1,0), domain=(nx,ny,nz))
+        vnew = vnew_gt.asnumpy()
+        
+        calc_pnew(tdtsdx=tdtsdx, tdtsdy=tdtsdy, pold=pold_gt, cu=cu_gt, cv=cv_gt, pnew=pnew_gt, origin=(0,0,0), domain=(nx,ny,nz))
+        pnew = pnew_gt.asnumpy()
+            
+        # for i in range(M):
+        #     for j in range(N):
+        #         unew[i+1,j,0] = uold[i+1,j,0] + tdts8 * (z[i+1,j+1,0] + z[i+1,j,0]) * (cv[i+1,j+1,0] + cv[i+1,j,0] + cv[i,j+1,0] + cv[i,j,0]) - tdtsdx * (h[i+1,j,0] - h[i,j,0])
+        #         vnew[i,j+1,0] = vold[i,j+1,0] - tdts8 * (z[i+1,j+1,0] + z[i,j+1,0]) * (cu[i+1,j+1,0] + cu[i+1,j,0] + cu[i,j+1,0] + cu[i,j,0]) - tdtsdy * (h[i,j+1,0] - h[i,j,0])
+        #         pnew[i,j,0] = pold[i,j,0] - tdtsdx * (cu[i+1,j,0] - cu[i,j,0]) - tdtsdy * (cv[i,j+1,0] - cv[i,j,0])
+                           
         # Periodic Boundary conditions
         unew[0, :,0] = unew[M, :,0]
         pnew[M, :,0] = pnew[0, :,0]
@@ -267,20 +324,13 @@ if gt4py_type == "cartesian":
         time = time + dt
     
         if(ncycle > 0):
-            for i in range(M_LEN):
-                for j in range(N_LEN):
-                    uoldtemp=uold[i,j,0]
-                    voldtemp=vold[i,j,0]
-                    poldtemp=pold[i,j,0] 
-                    uold[i,j,0] = u[i,j,0] + alpha * (unew[i,j,0] - 2. * u[i,j,0] + uoldtemp)
-                    vold[i,j,0] = v[i,j,0] + alpha * (vnew[i,j,0] - 2. * v[i,j,0] + voldtemp)
-                    pold[i,j,0] = p[i,j,0] + alpha * (pnew[i,j,0] - 2. * p[i,j,0] + poldtemp)
-    
-            for i in range(M_LEN):
-                    for j in range(N_LEN):
-                        u[i,j,0] = unew[i,j,0]
-                        v[i,j,0] = vnew[i,j,0]
-                        p[i,j,0] = pnew[i,j,0]
+            uold[...] = u + alpha * (unew - 2 * u + uold)
+            vold[...] = v + alpha * (vnew - 2 * v + vold)
+            pold[...] = p + alpha * (pnew - 2 * p + pold)
+
+            u[...] = unew
+            v[...] = vnew
+            p[...] = pnew
     
         else:
             tdt = tdt+tdt
