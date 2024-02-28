@@ -1,6 +1,32 @@
 import numpy as np
 import argparse
 
+def calculate_cu_cv_z_h_numpy(u, v, p, fsdx, fsdy):
+    cu=np.zeros_like(u)
+    cv=np.zeros_like(v)
+    h=np.zeros_like(u)
+    z=np.zeros_like(u)
+    cu[1:,:-1] = 0.5 * (p[1:, :-1] + p[:-1, :-1]) * u[1:, :-1]
+    cv[:-1,1:] = 0.5 * (p[:-1, 1:] + p[:-1, :-1]) * v[:-1, 1:]
+    z[1:,1:] = fsdx * (v[1:, 1:] - v[:-1, 1:]) - fsdy * (u[1:, 1:] - u[1:, :-1]) / (
+        p[:-1, :-1] + p[1:, :-1] + p[1:, 1:] + p[:-1, 1:]
+    )
+    h[:-1,:-1] = p[:-1, :-1] + 0.25 * (
+        u[1:, :-1] * u[1:, :-1]
+        + u[:-1, :-1] * u[:-1, :-1]
+        + v[:-1, 1:] * v[:-1, 1:]
+        + v[:-1, :-1] * v[:-1, :-1]
+    )
+    return cu, cv, z, h
+def update_u_v_p_numpy(u,v,p,cu,cv,h,z,tdts8,tdtsdx,tdtsdy):
+    unew=np.zeros_like(u)
+    vnew=np.zeros_like(v)
+    pnew=np.zeros_like(u)
+    unew[1:,:-1] = (u[1:,:-1] + tdts8 * (z[1:,1:]+z[1:,:-1]) * (cv[1:,1:]+cv[1:,:-1] + cv[:-1,1:]+cv[:-1,:-1])-tdtsdx *(h[1:,:-1]-h[:-1,:-1]))
+    vnew[:-1,1:] = (v[:-1,1:]-tdts8*(z[1:,1:]+z[:-1,1:])*(cu[1:,1:]+cu[1:,:-1]+cu[:-1,1:]+cu[:-1,:-1])-tdtsdy*(h[:-1,1:]-h[:-1,:-1])) 
+    pnew[:-1,:-1] = (p[:-1,:-1]-tdtsdx*(cu[1:,:-1]-cu[:-1,:-1])-tdtsdy*(cv[:-1,1:]-cv[:-1,:-1]))
+    return unew,vnew,pnew
+
 def main():
     parser = argparse.ArgumentParser(description="Shallow Water Model")
     parser.add_argument('--M', type=int, default=64, help='Number of points in the x direction')
@@ -45,10 +71,10 @@ def main():
     uold = np.zeros((M_LEN, N_LEN))
     vold = np.zeros((M_LEN, N_LEN))
     pold = np.zeros((M_LEN, N_LEN))
-    cu = np.zeros((M_LEN, N_LEN))
-    cv = np.zeros((M_LEN, N_LEN))
-    z = np.zeros((M_LEN, N_LEN))
-    h = np.zeros((M_LEN, N_LEN))
+    #cu = np.zeros((M_LEN, N_LEN))
+    #cv = np.zeros((M_LEN, N_LEN))
+    #z = np.zeros((M_LEN, N_LEN))
+    #h = np.zeros((M_LEN, N_LEN))
     psi = np.zeros((M_LEN, N_LEN))
     
     # Initial values of the stream function and p
@@ -108,6 +134,7 @@ def main():
         if ncycle % 100 == 0:
             print("cycle number ", ncycle)
         # Calculate cu, cv, z, and h
+        '''
         for i in range(1, M):
             for j in range(N):
                 cu[i, j] = .5 * (p[i, j] + p[i - 1, j]) * u[i, j]
@@ -126,7 +153,8 @@ def main():
             for j in range(N):
                 h[i, j] = p[i, j] + 0.25 * (u[i + 1, j] * u[i + 1, j] + u[i, j] * u[i, j] + 
                                             v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
-                
+        '''       
+        cu,cv,z,h=calculate_cu_cv_z_h_numpy(u,v,p,fsdx,fsdy) 
         # for i in range(M):
         #     for j in range(N):
         #         cu[i + 1, j] = .5 * (p[i + 1, j] + p[i, j]) * u[i + 1, j]
@@ -136,38 +164,27 @@ def main():
         #                         ) / (p[i, j] + p[i + 1, j] + p[i + 1, j + 1] + p[i, j + 1])
         #         h[i, j] = p[i, j] + 0.25 * (u[i + 1, j] * u[i + 1, j] + u[i, j] * u[i, j] +
         #                                 v[i, j + 1] * v[i, j + 1] + v[i, j] * v[i, j])
-        
+       
+       
+ 
         # # Periodic Boundary conditions
-        for j in range(N):
-            cu[0, j] = cu[M, j]
-            h[M, j] = h[0, j]
-        # for j in range(N):
-        #     cv[M, j + 1] = cv[0, j + 1]
-        for j in range(1, N):
-            cv[M, j] = cv[0, j]
-        # for j in range(N):
-        #     z[0,j + 1] = z[M, j + 1]
-        for j in range(1, N):
-            z[0, j] = z[M, j]
-            
+        cu[0, :] = cu[M, :]
+        h[M, :] = h[0, :]
+        cv[M, 1:] = cv[0, 1:]
+        z[0, 1:] = z[M, 1:]
 
-        for i in range(M):
-            cv[i, 0] = cv[i, N]
-            h[i, N] = h[i, 0]
-        # for i in range(M):
-        #     cu[i + 1, N] = cu[i + 1, 0]
-        for i in range(1, M):
-            cu[i, N] = cu[i, 0]
-        # for i in range(M):
-        #     z[i + 1, N] = z[i + 1, 0]
-        for i in range(1, M):
-            z[i, N] = z[i, 0]
-            
+        cv[:, 0] = cv[:, N]
+        h[:, N] = h[:, 0]
+        cu[1:, N] = cu[1:, 0]
+        z[1:, N] = z[1:, 0]
 
-        cu[0, 0] = cu[0, N]
-        cv[M, 0] = cv[0, 0]
+        cu[0, N] = cu[M, 0]
+        cv[M, 0] = cv[0, N]
         z[0, 0] = z[M, N]
         h[M, N] = h[0, 0]
+
+            
+
         
         # Calclulate new values of u,v, and p
         tdts8 = tdt / 8.
@@ -180,30 +197,42 @@ def main():
         #                         (cv[i + 1, j + 1] + cv[i + 1, j] + cv[i, j + 1] + cv[i, j]) -
         #                         tdtsdx * (h[i + 1, j] - h[i, j])
         #                         )
-        for i in range(1, M):
-            for j in range(N):
-                unew[i, j] = (uold[i, j] + tdts8 * (z[i, j + 1] + z[i, j]) * 
-                              (cv[i, j + 1] + cv[i, j] + cv[i - 1, j + 1] + cv[i - 1, j]) - 
-                              tdtsdx * (h[i, j] - h[i - 1, j])
-                              )
+        ##for i in range(1, M):
+        ##    for j in range(N):
+        ##        unew[i, j] = (uold[i, j] + tdts8 * (z[i, j + 1] + z[i, j]) * 
+        ##                      (cv[i, j + 1] + cv[i, j] + cv[i - 1, j + 1] + cv[i - 1, j]) - 
+        ##                      tdtsdx * (h[i, j] - h[i - 1, j])
+        ##                      )
         # for i in range(M):
         #     for j in range(N):        
         #         vnew[i, j + 1] = (vold[i, j + 1] - tdts8 * (z[i + 1, j + 1] + z[i, j + 1]) *
         #                         (cu[i + 1, j + 1] + cu[i + 1, j] + cu[i, j + 1] + cu[i, j]) -
         #                         tdtsdy * (h[i, j + 1] - h[i, j])
         #                         )
-        for i in range(M):
-            for j in range(1, N):        
-                vnew[i, j] = (vold[i, j] - tdts8 * (z[i + 1, j] + z[i, j]) * 
-                              (cu[i + 1, j] + cu[i + 1, j - 1] + cu[i, j] + cu[i, j - 1]) - 
-                              tdtsdy * (h[i, j] - h[i, j - 1])
-                              )
-        for i in range(M):
-            for j in range(N):
-                pnew[i, j] = (pold[i, j] - tdtsdx * (cu[i + 1, j] - cu[i, j]) -
-                                tdtsdy * (cv[i, j + 1] - cv[i, j])
-                                )
-                
+        ##for i in range(M):
+        ##    for j in range(1, N):        
+        ##        vnew[i, j] = (vold[i, j] - tdts8 * (z[i + 1, j] + z[i, j]) * 
+        ##                      (cu[i + 1, j] + cu[i + 1, j - 1] + cu[i, j] + cu[i, j - 1]) - 
+        ##                      tdtsdy * (h[i, j] - h[i, j - 1])
+        ##                      )
+        ##for i in range(M):
+        ##    for j in range(N):
+        ##        pnew[i, j] = (pold[i, j] - tdtsdx * (cu[i + 1, j] - cu[i, j]) -
+        ##                        tdtsdy * (cv[i, j + 1] - cv[i, j])
+        ##                        )
+               
+        unew,vnew,pnew=update_u_v_p_numpy(uold,vold,pold,cu,cv,h,z,tdts8,tdtsdx,tdtsdy) 
+        unew[0, :] = unew[M, :]
+        pnew[M, :] = pnew[0, :]
+        vnew[M, 1:] = vnew[0, 1:]
+        unew[1:, N] = unew[1:, 0]
+        vnew[:, 0] = vnew[:, N]
+        pnew[:, N] = pnew[:, 0]
+
+        unew[0, N] = unew[M, 0]
+        vnew[M, 0] = vnew[0, N]
+        pnew[M, N] = pnew[0, 0]
+        '''
         # Periodic Boundary conditions
         for j in range(N):
             unew[0, j] = unew[M, j]
@@ -220,10 +249,10 @@ def main():
         for i in range(M):
             vnew[i, 0] = vnew[i, N]
             pnew[i, N] = pnew[i, 0]
-
         unew[0, 0] = unew[0, N]
         vnew[M, 0] = vnew[0, 0]
         pnew[0, 0] = pnew[0, 0]
+        '''
         
         # Print initial conditions
     if L_OUT:

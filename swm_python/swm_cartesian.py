@@ -9,8 +9,8 @@ from time import perf_counter
 #import gt4py
 
 # Initialize model parameters
-M = 64 # args.M
-N = 64 # args.N
+M = 512 # args.M
+N = 512 # args.N
 M_LEN = M + 1
 N_LEN = N + 1
 L_OUT = True # args.L_OUT
@@ -169,6 +169,7 @@ dtype = np.float64
 gt4py_type = "cartesian"
 #gt4py_type = "next"
 allocator = gtx.itir_python
+allocator = gtx.gtfn_gpu
 
 I = gtx.Dimension("I")
 J = gtx.Dimension("J")
@@ -191,6 +192,7 @@ vold_gt = gtx.as_field(domain,vold,allocator=allocator)
 pold_gt = gtx.as_field(domain,pold,allocator=allocator)
 
 cartesian_backend = "numpy"
+cartesian_backend = "gt:gpu"
 next_backend = gtx.itir_python
 
 if gt4py_type == "cartesian":
@@ -452,7 +454,7 @@ if gt4py_type == "cartesian":
     print("t200: ",dt2)
     print("t300: ",dt3)
 
-    if VAL:
+    if VAL and M==64:
 
         u_val_f = 'ref/u.64.64.IT4000.txt'
         v_val_f = 'ref/v.64.64.IT4000.txt'
