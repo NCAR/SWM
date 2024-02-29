@@ -241,6 +241,10 @@ def main():
     vold_gt = gtx.as_field(domain,vold,allocator=allocator)
     pold_gt = gtx.as_field(domain,pold,allocator=allocator)
 
+    u_gt = gtx.as_field(domain,u,allocator=allocator)
+    p_gt = gtx.as_field(domain,p,allocator=allocator)
+    v_gt = gtx.as_field(domain,v,allocator=allocator)
+
 
     t0_start = perf_counter()
     time = 0.0
@@ -248,9 +252,9 @@ def main():
     # Main time loop
     for ncycle in range(ITMAX):
         t05_start = perf_counter()
-        p_gt = gtx.as_field(domain,p,allocator=allocator)
-        u_gt = gtx.as_field(domain,u,allocator=allocator)
-        v_gt = gtx.as_field(domain,v,allocator=allocator)
+        # p_gt = gtx.as_field(domain,p,allocator=allocator)
+        # u_gt = gtx.as_field(domain,u,allocator=allocator)
+        # v_gt = gtx.as_field(domain,v,allocator=allocator)
         t05_stop = perf_counter()
         dt05 = dt05 + (t05_stop - t05_start)
 
@@ -258,6 +262,9 @@ def main():
             print(f"cycle number{ncycle} and gt4py type {gt4py_type}")
         
         if config.VAL_DEEP and ncycle <= 3:
+            u = u_gt.asnumpy()
+            v = v_gt.asnumpy()
+            p = p_gt.asnumpy()
             utils.validate_uvp(u, v, p, M, N, ncycle, 'init')
             utils.validate_uvp(u_gt.asnumpy(), v_gt.asnumpy(), p_gt.asnumpy(), M, N, ncycle, 'init')
         
@@ -403,9 +410,9 @@ def main():
             dt3 = dt3 + (t3_stop - t3_start)
 
             t35_start = perf_counter()
-            u = u_gt.asnumpy()
-            v = v_gt.asnumpy()
-            p = p_gt.asnumpy()
+            # u = u_gt.asnumpy()
+            # v = v_gt.asnumpy()
+            # p = p_gt.asnumpy()
             t35_stop = perf_counter()
             dt35 = dt35 + (t35_stop - t35_start)
 
@@ -413,14 +420,24 @@ def main():
         else:
             tdt = tdt+tdt
 
-            uold = np.copy(u[...])
-            vold = np.copy(v[...])
-            pold = np.copy(p[...])
-            u = np.copy(unew[...])
-            v = np.copy(vnew[...])
-            p = np.copy(pnew[...])
+            copy_var(u_gt,uold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            copy_var(v_gt,vold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            copy_var(p_gt,pold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            # uold = np.copy(u[...])
+            # vold = np.copy(v[...])
+            # pold = np.copy(p[...])
+
+            copy_var(unew_gt,u_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            copy_var(vnew_gt,v_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            copy_var(pnew_gt,p_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            # u = np.copy(unew[...])
+            # v = np.copy(vnew[...])
+            # p = np.copy(pnew[...])
 
         if((config.VIS == True) & (ncycle%config.VIS_DT==0)):
+            u = u_gt.asnumpy() 
+            v = v_gt.asnumpy() 
+            p = p_gt.asnumpy() 
             utils.live_plot3(u, v, p, "ncycle: " + str(ncycle))
             
     t0_stop = perf_counter()
