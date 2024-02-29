@@ -165,11 +165,13 @@ def copy_var(
 
 def main():
     dt0  = 0.
+    dt05 = 0.
     dt1  = 0.
     dt15 = 0.
     dt2  = 0.
     dt25 = 0.
     dt3  = 0.
+    dt35 = 0.
 
     M_LEN = config.M_LEN
     N_LEN = config.N_LEN
@@ -245,9 +247,12 @@ def main():
     tdt = config.dt
     # Main time loop
     for ncycle in range(ITMAX):
+        t05_start = perf_counter()
         p_gt = gtx.as_field(domain,p,allocator=allocator)
         u_gt = gtx.as_field(domain,u,allocator=allocator)
         v_gt = gtx.as_field(domain,v,allocator=allocator)
+        t05_stop = perf_counter()
+        dt05 = dt05 + (t05_stop - t05_start)
 
         if((ncycle%100==0) & (config.VIS==False)):
             print(f"cycle number{ncycle} and gt4py type {gt4py_type}")
@@ -394,13 +399,16 @@ def main():
             copy_var(unew_gt, u_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
             copy_var(vnew_gt, v_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
             copy_var(pnew_gt, p_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            t3_stop = perf_counter()
+            dt3 = dt3 + (t3_stop - t3_start)
 
+            t35_start = perf_counter()
             u = u_gt.asnumpy()
             v = v_gt.asnumpy()
             p = p_gt.asnumpy()
+            t35_stop = perf_counter()
+            dt35 = dt35 + (t35_stop - t35_start)
 
-            t3_stop = perf_counter()
-            dt3 = dt3 + (t3_stop - t3_start)
 
         else:
             tdt = tdt+tdt
@@ -424,11 +432,13 @@ def main():
             print(" diagonal elements of u:\n", unew[:,:,0].diagonal()[:-1])
             print(" diagonal elements of v:\n", vnew[:,:,0].diagonal()[:-1])
     print("total: ",dt0)
+    print("t050: ",dt05)
     print("t100: ",dt1)
     print("t150: ",dt15)
     print("t200: ",dt2)
     print("t250: ",dt25)
     print("t300: ",dt3)
+    print("t350: ",dt35)
 
     if config.VAL:
         utils.final_validation(u, v, p, ITMAX=ITMAX, M=M, N=N)
