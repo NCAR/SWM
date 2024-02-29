@@ -23,6 +23,18 @@ def read_cucvzh(step, suffix, M, N):
     return cu, cv, z, h
 
 def validate_uvp(u, v, p, M, N, step, suffix):
+    if u.ndim ==3:
+        assert v.ndim == 3
+        assert p.ndim == 3
+
+        assert u.shape[2] == 1
+        assert v.shape[2] == 1
+        assert p.shape[2] == 1
+
+        u = u[:,:,0]
+        v = v[:,:,0]
+        p = p[:,:,0]
+    
     u_ref, v_ref, p_ref = read_uvp(step, suffix, M, N)
     np.testing.assert_allclose(u, u_ref)
     np.testing.assert_allclose(v, v_ref)
@@ -30,6 +42,21 @@ def validate_uvp(u, v, p, M, N, step, suffix):
     print(f"step {step} {suffix} values are correct.")
 
 def validate_cucvzh(cu, cv, z, h, M, N, step, suffix):
+    if cu.ndim ==3:
+        assert cv.ndim == 3
+        assert z.ndim == 3
+        assert h.ndim == 3
+
+        assert cu.shape[2] == 1
+        assert cv.shape[2] == 1
+        assert z.shape[2] == 1
+        assert h.shape[2] == 1
+
+        cu = cu[:,:,0]
+        cv = cv[:,:,0]
+        z = z[:,:,0]
+        h = h[:,:,0]
+
     cu_ref, cv_ref, z_ref, h_ref = read_cucvzh(step, suffix, M, N)
     np.testing.assert_allclose(cu, cu_ref)
     np.testing.assert_allclose(cv, cv_ref)
@@ -56,6 +83,22 @@ def live_plot_val(fu, fv, fp, title=''):
     plt.colorbar(pos3, ax=ax3)
 
     fig.suptitle(title)
+    plt.show()
+
+def live_plot3(fu, fv, fp, title=''):
+    clear_output(wait=True)
+    fig, (ax1, ax2, ax3) = plt.subplots(figsize=(13, 3), ncols=3)
+
+    pos1 = ax1.imshow(fp, cmap='Blues', vmin=49999, vmax=50001,interpolation='none')
+    ax1.set_title('p')
+    pos2 = ax2.imshow(fu, cmap='Reds', vmin=-1, vmax=1,interpolation='none')
+    ax2.set_title('u')
+    pos3 = ax3.imshow(fv, cmap='Greens',vmin=-1, vmax=1,interpolation='none')
+    ax3.set_title('v')
+
+    fig.suptitle(title)
+    #plt.xlabel('x')
+    #plt.ylabel('y')
     plt.show()
 
 def final_validation(u,v,p,ITMAX, M, N):

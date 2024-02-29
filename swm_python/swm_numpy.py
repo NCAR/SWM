@@ -6,7 +6,6 @@ import initial_conditions
 import config
 
 def main():
-
     dt0=0.
     dt1=0.
     dt2=0.
