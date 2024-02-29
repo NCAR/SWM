@@ -2,6 +2,12 @@ import numpy as np
 from IPython.display import clear_output
 from matplotlib import pyplot as plt
 
+def _to_2d(x):
+    if x.ndim == 3:
+        assert x.shape[2] == 1
+        return x[:,:,0]
+    return x
+
 def read_uvp(step, suffix, M, N):
     u_file = f'u.step{step}.{suffix}.bin'
     v_file = f'v.step{step}.{suffix}.bin'
@@ -23,17 +29,7 @@ def read_cucvzh(step, suffix, M, N):
     return cu, cv, z, h
 
 def validate_uvp(u, v, p, M, N, step, suffix):
-    if u.ndim ==3:
-        assert v.ndim == 3
-        assert p.ndim == 3
-
-        assert u.shape[2] == 1
-        assert v.shape[2] == 1
-        assert p.shape[2] == 1
-
-        u = u[:,:,0]
-        v = v[:,:,0]
-        p = p[:,:,0]
+    u, v, p = _to_2d(u), _to_2d(v), _to_2d(p)
     
     u_ref, v_ref, p_ref = read_uvp(step, suffix, M, N)
     np.testing.assert_allclose(u, u_ref)
@@ -42,20 +38,7 @@ def validate_uvp(u, v, p, M, N, step, suffix):
     print(f"step {step} {suffix} values are correct.")
 
 def validate_cucvzh(cu, cv, z, h, M, N, step, suffix):
-    if cu.ndim ==3:
-        assert cv.ndim == 3
-        assert z.ndim == 3
-        assert h.ndim == 3
-
-        assert cu.shape[2] == 1
-        assert cv.shape[2] == 1
-        assert z.shape[2] == 1
-        assert h.shape[2] == 1
-
-        cu = cu[:,:,0]
-        cv = cv[:,:,0]
-        z = z[:,:,0]
-        h = h[:,:,0]
+    cu, cv, z, h = _to_2d(cu), _to_2d(cv), _to_2d(z), _to_2d(h)
 
     cu_ref, cv_ref, z_ref, h_ref = read_cucvzh(step, suffix, M, N)
     np.testing.assert_allclose(cu, cu_ref)
@@ -102,6 +85,8 @@ def live_plot3(fu, fv, fp, title=''):
     plt.show()
 
 def final_validation(u,v,p,ITMAX, M, N):
+    u, v, p = _to_2d(u), _to_2d(v), _to_2d(p)
+
     uref, vref, pref = read_uvp(ITMAX, 'final', M, N)
 
     uval = uref-u
