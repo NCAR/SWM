@@ -29,6 +29,29 @@ def calc_h(
         h = p + 0.25 * (u[1,0,0] * u[1,0,0] + u * u + v[0,1,0] * v[0,1,0] + v * v)
 
 @gtscript.stencil(backend=cartesian_backend)
+def update_bndry(
+    old:   gtscript.Field[dtype],
+    new:   gtscript.Field[dtype],
+    north:  int,
+    south:  int,
+    west:   int,
+    east:   int):
+    with computation(PARALLEL), interval(...):
+         with horizontal(region[:,0,0]):
+              if(south==1):
+                new = old[0,1,0]
+         with horizontal(region[:,16,0]):
+              if(north==1):
+                new = old[0,-1,0]
+         with horizontal(region[0,:,0]):
+              if(west==1):
+                new = old[1,0,0]
+         with horizontal(region[16,:,0]):
+              if(east==1):
+                new = old[-1,0,0]
+
+
+@gtscript.stencil(backend=cartesian_backend)
 def calc_z(
     fsdx: float,
     fsdy: float,
@@ -141,10 +164,12 @@ def copy_var(
         out = inp
 
 def main():
-    dt0 = 0.
-    dt1 = 0.
-    dt2 = 0.
-    dt3 = 0.
+    dt0  = 0.
+    dt1  = 0.
+    dt15 = 0.
+    dt2  = 0.
+    dt25 = 0.
+    dt3  = 0.
 
     M_LEN = config.M_LEN
     N_LEN = config.N_LEN
@@ -159,7 +184,10 @@ def main():
     uold = np.zeros((M_LEN, N_LEN, 1))
     vold = np.zeros((M_LEN, N_LEN, 1))
     pold = np.zeros((M_LEN, N_LEN, 1))
+
     cu = np.zeros((M_LEN, N_LEN, 1))
+    cu_new = np.zeros((M_LEN, N_LEN, 1))
+
     cv = np.zeros((M_LEN, N_LEN, 1))
     z = np.zeros((M_LEN, N_LEN, 1))
     h = np.zeros((M_LEN, N_LEN, 1))
@@ -199,7 +227,10 @@ def main():
 
     h_gt = gtx.as_field(domain,h,allocator=allocator)
     z_gt = gtx.as_field(domain,z,allocator=allocator)
+
     cu_gt = gtx.as_field(domain,cu,allocator=allocator)
+    cu_new_gt = gtx.as_field(domain,cu_new,allocator=allocator)
+
     cv_gt = gtx.as_field(domain,cv,allocator=allocator)
     pnew_gt = gtx.as_field(domain,pnew,allocator=allocator)
     unew_gt = gtx.as_field(domain,unew,allocator=allocator)
@@ -228,34 +259,78 @@ def main():
         t1_start = perf_counter()
         # Calculate cu, cv, z, and h
         calc_h(p=p_gt, u=u_gt, v=v_gt, h=h_gt, origin=(0,0,0), domain=(nx,ny,nz)) 
-        h = h_gt.asnumpy()
-
         calc_z(fsdx=config.fsdx, fsdy=config.fsdy, u=u_gt, v=v_gt, p=p_gt, z=z_gt, origin=(1,1,0), domain=(nx,ny,nz)) # domain(nx+1,ny+1,nz) gives error why?
-        z = z_gt.asnumpy()
-
         calc_cu(u=u_gt, p=p_gt, cu=cu_gt, origin=(1,0,0), domain=(nx,ny,nz)) # (nx,ny+1,nz)-->works domain(nx+1,ny+1,nz) gives error why? try removing ny+1
-        cu = cu_gt.asnumpy()
-
         calc_cv(v=v_gt, p=p_gt, cv=cv_gt, origin=(0,1,0), domain=(nx,ny,nz)) #(nx+1,ny,nz)--> works domain(nx+1,ny+1,nz) gives error why?
-        cv = cv_gt.asnumpy()
         t1_stop = perf_counter()
         dt1 = dt1 + (t1_stop - t1_start)
+
+        t15_start = perf_counter()
         # # Periodic Boundary conditions
         #try region
+
+
+        cu = cu_gt.asnumpy()
+
+        # update_bndry(old=cu_gt,new=cu_new_gt,north=0,south=0,west=1,east=0,domain=(nx,ny,nz))
+        # np.testing.assert_allclose(cu_gt, cu_new_gt)
+        cu_new= cu_new_gt.asnumpy()
+        # print('numpy: old, new:[0,0] ',cu[0,0],cu_new[0,0])
+        # print('numpy: old, new:[0,16] ',cu[0,16],cu_new[0,16])
+        # print('numpy: old, new:[16,0] ',cu[16,0],cu_new[16,0])
+        # print('numpy: old, new:[16,16] ',cu[16,16],cu_new[16,16])
+        # exit()
+        #            i[0:M]       
+        #        0 -----------------
+        #        |X X X X X X X X  |
+        #        |---------------  |
+        # j[0:N] |              |  |
+        #        |              |  |
+        #        |              |  |
+        #        |              |  |
+        #        |------------------
         cu[0, :,0] = cu[M, :,0]
-        h[M, :,0] = h[0, :,0]
-        cv[M, 1:,0] = cv[0, 1:,0]
-        z[0, 1:,0] = z[M, 1:,0]
-        
-        cv[:, 0,0] = cv[:, N,0]
-        h[:, N,0] = h[:, 0,0]
+
+
+         #           i[0:M]       
+         #        0 -----------------
+         #        |                 |
+         #        |--------------- X|
+         # j[0:N] |              | X|
+         #        |              | X|
+         #        |              | X|
+         #        |              | X|
+         #        |------------------
         cu[1:, N,0] = cu[1:, 0,0]
-        z[1:, 0,0] = z[1:, N,0]
-            
+
+         #            i[0:M]       
+         #        0 -----------------
+         #        |                X|
+         #        |---------------  |
+         # j[0:N] |              |  |
+         #        |              |  |
+         #        |              |  |
+         #        |              |  |
+         #        |------------------
         cu[0, N,0] = cu[M, 0,0]
-        cv[M, 0,0] = cv[0, N,0]
-        z[0, 0,0] = z[M, N,0]
+
+        h = h_gt.asnumpy()
+        h[M, :,0] = h[0, :,0]
+        h[:, N,0] = h[:, 0,0]
         h[M, N,0] = h[0, 0,0]
+
+        cv = cv_gt.asnumpy()
+        cv[M, 1:,0] = cv[0, 1:,0]
+        cv[:, 0,0] = cv[:, N,0]
+        cv[M, 0,0] = cv[0, N,0]
+
+        z = z_gt.asnumpy()
+        z[0, 1:,0] = z[M, 1:,0]
+        z[1:, 0,0] = z[1:, N,0]
+        z[0, 0,0] = z[M, N,0]
+
+        t15_stop = perf_counter()
+        dt15 = dt15 + (t15_stop - t15_start)
             
         if config.VAL_DEEP and ncycle <=1:
             utils.validate_cucvzh(cu, cv, z, h, M, N, ncycle, 't100')
@@ -268,13 +343,8 @@ def main():
 
         t2_start = perf_counter()
         calc_unew(tdts8=tdts8, tdtsdx=tdtsdx, uold=uold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, unew=unew_gt, origin=(1,0,0), domain=(nx,ny,nz))
-        unew = unew_gt.asnumpy()
-        
         calc_vnew(tdts8=tdts8, tdtsdy=tdtsdy, vold=vold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, vnew=vnew_gt, origin=(0,1,0), domain=(nx,ny,nz))
-        vnew = vnew_gt.asnumpy()
-        
         calc_pnew(tdtsdx=tdtsdx, tdtsdy=tdtsdy, pold=pold_gt, cu=cu_gt, cv=cv_gt, pnew=pnew_gt, origin=(0,0,0), domain=(nx,ny,nz))
-        pnew = pnew_gt.asnumpy()
         t2_stop = perf_counter()
         dt2 = dt2 + (t2_stop - t2_start)
             
@@ -284,17 +354,26 @@ def main():
         #         vnew[i,j+1,0] = vold[i,j+1,0] - tdts8 * (z[i+1,j+1,0] + z[i,j+1,0]) * (cu[i+1,j+1,0] + cu[i+1,j,0] + cu[i,j+1,0] + cu[i,j,0]) - tdtsdy * (h[i,j+1,0] - h[i,j,0])
         #         pnew[i,j,0] = pold[i,j,0] - tdtsdx * (cu[i+1,j,0] - cu[i,j,0]) - tdtsdy * (cv[i,j+1,0] - cv[i,j,0])
                             
+        t25_start = perf_counter()
         # Periodic Boundary conditions
+
+        unew = unew_gt.asnumpy()
         unew[0, :,0] = unew[M, :,0]
-        pnew[M, :,0] = pnew[0, :,0]
-        vnew[M, 1:,0] = vnew[0, 1:,0]
         unew[1:, N,0] = unew[1:, 0,0]
-        vnew[:, 0,0] = vnew[:, N,0]
-        pnew[:, N,0] = pnew[:, 0,0]
-        
         unew[0, N,0] = unew[M, 0,0]
-        vnew[M, 0,0] = vnew[0, N,0]
+
+        pnew = pnew_gt.asnumpy()
+        pnew[M, :,0] = pnew[0, :,0]
+        pnew[:, N,0] = pnew[:, 0,0]
         pnew[M, N,0] = pnew[0, 0,0]
+
+        vnew = vnew_gt.asnumpy()
+        vnew[M, 1:,0] = vnew[0, 1:,0]
+        vnew[:, 0,0] = vnew[:, N,0]
+        vnew[M, 0,0] = vnew[0, N,0]
+
+        t25_stop = perf_counter()
+        dt25 = dt25 + (t25_stop - t25_start)
         
         if config.VAL_DEEP and ncycle <= 1:
             utils.validate_uvp(unew, vnew, pnew, M, N, ncycle, 't200')
@@ -304,11 +383,13 @@ def main():
         if(ncycle > 0):
             t3_start = perf_counter()
             calc_pold(p=p_gt, alpha=config.alpha, pnew=pnew_gt, pold=pold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
-            pold = pold_gt.asnumpy()
             calc_uold(u=u_gt, alpha=config.alpha, unew=unew_gt, uold=uold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
-            uold = uold_gt.asnumpy()
             calc_vold(v=v_gt, alpha=config.alpha, vnew=vnew_gt, vold=vold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
-            vold = vold_gt.asnumpy()
+
+            # I don't think we need these .asnumpy() calls 
+            #pold = pold_gt.asnumpy()
+            #uold = uold_gt.asnumpy()
+            #vold = vold_gt.asnumpy()
             
             copy_var(unew_gt, u_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
             copy_var(vnew_gt, v_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
@@ -344,7 +425,9 @@ def main():
             print(" diagonal elements of v:\n", vnew[:,:,0].diagonal()[:-1])
     print("total: ",dt0)
     print("t100: ",dt1)
+    print("t150: ",dt15)
     print("t200: ",dt2)
+    print("t250: ",dt25)
     print("t300: ",dt3)
 
     if config.VAL:
