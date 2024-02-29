@@ -9,30 +9,19 @@ def _to_2d(x):
     return x
 
 def read_uvp(step, suffix, M, N):
-    if N == 16 and M == 16: 
-        u_file = f'../ref/16x16/u.step{step}.{suffix}.bin'
-        v_file = f'../ref/16x16/v.step{step}.{suffix}.bin'
-        p_file = f'../ref/16x16/p.step{step}.{suffix}.bin'
-    elif N==64 and M == 64:
-        u_file = f'../ref/64x64/u.step{step}.{suffix}.bin'
-        v_file = f'../ref/64x64/v.step{step}.{suffix}.bin'
-        p_file = f'../ref/64x64/p.step{step}.{suffix}.bin'
+    u_file = f'../ref/{M}x{N}/u.step{step}.{suffix}.bin'
+    v_file = f'../ref/{M}x{N}/v.step{step}.{suffix}.bin'
+    p_file = f'../ref/{M}x{N}/p.step{step}.{suffix}.bin'
     u = np.fromfile(u_file).reshape(M + 1, N + 1)
     v = np.fromfile(v_file).reshape(M + 1, N + 1)
     p = np.fromfile(p_file).reshape(M + 1, N + 1)
     return u, v, p
 
 def read_cucvzh(step, suffix, M, N):
-    if N == 16 and M == 16: 
-        cu_file = f'../ref/16x16/cu.step{step}.{suffix}.bin'
-        cv_file = f'../ref/16x16/cv.step{step}.{suffix}.bin'
-        z_file = f'../ref/16x16/z.step{step}.{suffix}.bin'
-        h_file = f'../ref/16x16/h.step{step}.{suffix}.bin'
-    elif N==64 and M == 64:
-        cu_file = f'../ref/64x64/cu.step{step}.{suffix}.bin'
-        cv_file = f'../ref/64x64/cv.step{step}.{suffix}.bin'
-        z_file = f'../ref/64x64/z.step{step}.{suffix}.bin'
-        h_file = f'../ref/64x64/h.step{step}.{suffix}.bin'
+    cu_file = f'../ref/{M}x{N}/cu.step{step}.{suffix}.bin'
+    cv_file = f'../ref/{M}x{N}/cv.step{step}.{suffix}.bin'
+    z_file = f'../ref/{M}x{N}/z.step{step}.{suffix}.bin'
+    h_file = f'../ref/{M}x{N}/h.step{step}.{suffix}.bin'
     cu = np.fromfile(cu_file).reshape(M + 1, N + 1)
     cv = np.fromfile(cv_file).reshape(M + 1, N + 1)
     z = np.fromfile(z_file).reshape(M + 1, N + 1)
