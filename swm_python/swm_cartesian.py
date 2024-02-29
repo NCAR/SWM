@@ -47,7 +47,7 @@ def calc_cu(
     cu: gtscript.Field[dtype]
 ):
     with computation(PARALLEL), interval(...):
-        cu = .5 * (p + p) * u
+        cu = .5 * (p + p[-1,0,0]) * u
         
 @gtscript.stencil(backend=cartesian_backend)
 def calc_cv(
@@ -56,7 +56,7 @@ def calc_cv(
     cv: gtscript.Field[dtype]
 ):
     with computation(PARALLEL), interval(...):
-        cv = .5 * (p + p) * v
+        cv = .5 * (p[0,-1,0] + p) * v
 
 #recheck this section
 #pnew[i,j,0] = pold[i,j,0] - tdtsdx * (cu[i+1,j,0] - cu[i,j,0]) - tdtsdy * (cv[i,j+1,0] - cv[i,j,0])
@@ -198,9 +198,6 @@ def main():
     domain = gtx.domain({I:nx+1, J:ny+1, K:nz})
 
     h_gt = gtx.as_field(domain,h,allocator=allocator)
-    p_gt = gtx.as_field(domain,p,allocator=allocator)
-    u_gt = gtx.as_field(domain,u,allocator=allocator)
-    v_gt = gtx.as_field(domain,v,allocator=allocator)
     z_gt = gtx.as_field(domain,z,allocator=allocator)
     cu_gt = gtx.as_field(domain,cu,allocator=allocator)
     cv_gt = gtx.as_field(domain,cv,allocator=allocator)
@@ -217,6 +214,10 @@ def main():
     tdt = config.dt
     # Main time loop
     for ncycle in range(ITMAX):
+        p_gt = gtx.as_field(domain,p,allocator=allocator)
+        u_gt = gtx.as_field(domain,u,allocator=allocator)
+        v_gt = gtx.as_field(domain,v,allocator=allocator)
+
         if((ncycle%100==0) & (config.VIS==False)):
             print(f"cycle number{ncycle} and gt4py type {gt4py_type}")
         
@@ -302,22 +303,21 @@ def main():
 
         if(ncycle > 0):
             t3_start = perf_counter()
-            calc_pold(p=p_gt, alpha=config.alpha, pnew=pnew_gt, pold=pold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            calc_pold(p=p_gt, alpha=config.alpha, pnew=pnew_gt, pold=pold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
             pold = pold_gt.asnumpy()
-            calc_uold(u=u_gt, alpha=config.alpha, unew=unew_gt, uold=uold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            calc_uold(u=u_gt, alpha=config.alpha, unew=unew_gt, uold=uold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
             uold = uold_gt.asnumpy()
-            calc_vold(v=v_gt, alpha=config.alpha, vnew=vnew_gt, vold=vold_gt, origin=(0,0,0), domain=(nx,ny,nz))
+            calc_vold(v=v_gt, alpha=config.alpha, vnew=vnew_gt, vold=vold_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
             vold = vold_gt.asnumpy()
-            #uold[...] = u + alpha * (unew - 2 * u + uold)
-            #vold[...] = v + alpha * (vnew - 2 * v + vold)
-            #pold[...] = p + alpha * (pnew - 2 * p + pold)
             
-            copy_var(unew_gt, u_gt, origin=(0,0,0), domain=(nx,ny,nz))
-            copy_var(vnew_gt, v_gt, origin=(0,0,0), domain=(nx,ny,nz))
-            copy_var(pnew_gt, p_gt, origin=(0,0,0), domain=(nx,ny,nz))
-            #u[...] = unew
-            #v[...] = vnew
-            #p[...] = pnew
+            copy_var(unew_gt, u_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            copy_var(vnew_gt, v_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+            copy_var(pnew_gt, p_gt, origin=(0,0,0), domain=(nx+1,ny+1,nz))
+
+            u = u_gt.asnumpy()
+            v = v_gt.asnumpy()
+            p = p_gt.asnumpy()
+
             t3_stop = perf_counter()
             dt3 = dt3 + (t3_stop - t3_start)
 
