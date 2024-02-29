@@ -44,8 +44,8 @@
 
 extern double wtime(); 
 extern void dswap(double **a, double **b);
-extern void write_to_file(double *array, int tM, int tN, char *filename);
-extern void print_to_file(double *array, int tM, int tN, char *filename);
+extern void write_to_file(double *array, int tM, int tN, const char *filename);
+extern void print_to_file(double *array, int tM, int tN, const char *filename);
 
 //! Benchmark weather prediction program for comparing the
 //! preformance of current supercomputers. The model is
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
   alpha = .001;
 
   el = N * dx;
-  pi = 4. * atanf(1.);
+  pi = 4. * atan(1.);
   tpi = pi + pi;
   di = tpi / M;
   dj = tpi / N;
@@ -255,7 +255,7 @@ int main(int argc, char **argv) {
     for (i=0;i<M;i++) {
       cu[(i + 1)*N_LEN +N] = cu[(i + 1)*N_LEN];
       cv[i*N_LEN] = cv[i*N_LEN + N];
-      z[(i + 1)*N_LEN] = z[i*N_LEN + N];
+      z[(i + 1)*N_LEN] = z[(i+1)*N_LEN + N];
       h[i*N_LEN + N] = h[i*N_LEN];
     }
 
@@ -343,16 +343,19 @@ int main(int argc, char **argv) {
       t300 = t300 + (c2 - c1);
      
     } else {
-
       tdt = tdt + tdt;
-      *uold = *u;
-      *vold = *v;
-      *pold = *p;
-      *u = *unew;
-      *v = *vnew;
-      *p = *pnew;
-   
 
+      for (i=0;i<M_LEN;i++) {
+        for (j=0;j<N_LEN;j++) {
+          int idx = i*N_LEN+j;
+          uold[idx] = u[idx];
+          vold[idx] = v[idx];
+          pold[idx] = p[idx];
+        }
+      }
+      dswap(&unew, &u);
+      dswap(&vnew, &v);
+      dswap(&pnew, &p);
     }
   } // ** End of time loop ** 
 
@@ -435,7 +438,7 @@ void dswap(double **pA, double **pB)
   *pB = pTemp;
 }
 
-void print_to_file(double *array, int tM, int tN, char *filename) {
+void print_to_file(double *array, int tM, int tN, const char *filename) {
     FILE *file = fopen(filename, "w");
     if (file == NULL) {
         printf("Error opening file %s\n", filename);
@@ -450,7 +453,7 @@ void print_to_file(double *array, int tM, int tN, char *filename) {
     fclose(file);
 }
 
-void write_to_file(double *array, int tM, int tN, char *filename) {
+void write_to_file(double *array, int tM, int tN, const char *filename) {
     FILE *file = fopen(filename, "wb");
     if (file == NULL) {
         printf("Error opening file %s\n", filename);
@@ -460,7 +463,6 @@ void write_to_file(double *array, int tM, int tN, char *filename) {
         for (int j = 0; j < tN; j++) {
           fwrite(&array[(i*(tN))+j], sizeof(double), 1, file);
         }
-        fprintf(file, "\n");
     }
     fclose(file);
 }
