@@ -185,7 +185,8 @@ vold_gt = gtx.as_field(domain,vold,allocator=allocator)
 pold_gt = gtx.as_field(domain,pold,allocator=allocator)
 
 cartesian_backend = "numpy"
-next_backend = gtx.itir_python
+#next_backend = None
+next_backend = gtx.gtfn_cpu
 
 if gt4py_type == "cartesian":
     # i --> 0,M
@@ -651,13 +652,13 @@ if gt4py_type == "next":
         #                                v[i, j + 1,0] * v[i, j + 1,0] + v[i, j,0] * v[i, j,0])
 
         start_time = t.time()
-        calc_h_program(p=p_gt, u=u_gt, v=v_gt, h=h_gt, offset_provider={"Ioff":I, "Joff":J})
+        calc_h_program(p=p_gt, u=u_gt, v=v_gt, h=h_gt, offset_provider={"I":I, "J":J})
         h = h_gt.asnumpy()
-        calc_z_program(p=p_gt, u=u_gt, v=v_gt, z=z_gt, fsdx=fsdx, fsdy=fsdy, offset_provider={"Ioff":I, "Joff":J})
+        calc_z_program(p=p_gt, u=u_gt, v=v_gt, z=z_gt, fsdx=fsdx, fsdy=fsdy, offset_provider={"I":I, "J":J})
         z = z_gt.asnumpy()
-        calc_cu_program(p=p_gt, u=u_gt, cu=cu_gt, offset_provider={"Ioff":I, "Joff":J})
+        calc_cu_program(p=p_gt, u=u_gt, cu=cu_gt, offset_provider={"I":I, "J":J})
         cu = cu_gt.asnumpy()
-        calc_cv_program(p=p_gt, v=v_gt, cv=cv_gt, offset_provider={"Ioff":I, "Joff":J})
+        calc_cv_program(p=p_gt, v=v_gt, cv=cv_gt, offset_provider={"I":I, "J":J})
         cv = cv_gt.asnumpy()
     
         #cu[1:,:-1] = .5 * (p[1:,:-1] + p[:-1,:-1]) * u[1:,:-1]
@@ -698,11 +699,11 @@ if gt4py_type == "next":
         #unew[1:,:-1] = uold[1:,:-1] + tdts8 * (z[1:,1:] + z[1:,:-1]) * (cv[1:,1:] + cv[1:,:-1] + cv[:-1,1:] + cv[:-1,:-1]) - tdtsdx * (h[1:,:-1] - h[:-1,:-1])
         #vnew[:-1,1:] = vold[:-1,1:] - tdts8 * (z[1:,1:] + z[:-1,1:]) * (cu[1:,1:] + cu[1:,:-1] + cu[:-1,1:] + cu[:-1,:-1]) - tdtsdy * (h[:-1,1:] - h[:-1,:-1])
         #pnew[:-1,:-1] = pold[:-1,:-1] - tdtsdx * (cu[1:,:-1] - cu[:-1,:-1]) - tdtsdy * (cv[:-1,1:] - cv[:-1,:-1])
-        calc_unew_program(uold=uold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, tdts8=tdts8, tdtsdx=tdtsdx, unew=unew_gt, offset_provider={"Ioff":I, "Joff":J})
+        calc_unew_program(uold=uold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, tdts8=tdts8, tdtsdx=tdtsdx, unew=unew_gt, offset_provider={"I":I, "J":J})
         unew = unew_gt.asnumpy()
-        calc_vnew_program(vold=vold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, tdts8=tdts8, tdtsdy=tdtsdy, vnew=vnew_gt, offset_provider={"Ioff":I, "Joff":J})
+        calc_vnew_program(vold=vold_gt, cu=cu_gt, cv=cv_gt, z=z_gt, h=h_gt, tdts8=tdts8, tdtsdy=tdtsdy, vnew=vnew_gt, offset_provider={"I":I, "J":J})
         vnew = vnew_gt.asnumpy()
-        calc_pnew_program(pold=p_gt, cu=cu_gt, cv=cv_gt, pnew=pnew_gt, tdtsdx=tdtsdx, tdtsdy=tdtsdy, offset_provider={"Ioff":I, "Joff":J})
+        calc_pnew_program(pold=p_gt, cu=cu_gt, cv=cv_gt, pnew=pnew_gt, tdtsdx=tdtsdx, tdtsdy=tdtsdy, offset_provider={"I":I, "J":J})
         pnew = pnew_gt.asnumpy()
 
         # for i in range(M):
@@ -730,11 +731,11 @@ if gt4py_type == "next":
             #uold[...] = u + alpha * (unew - 2 * u + uold)
             #vold[...] = v + alpha * (vnew - 2 * v + vold)
             #pold[...] = p + alpha * (pnew - 2 * p + pold)
-            calc_uold_program(u=u_gt, alpha=alpha, unew=unew_gt, uold=uold_gt, offset_provider={"Ioff":I, "Joff":J})
+            calc_uold_program(u=u_gt, alpha=alpha, unew=unew_gt, uold=uold_gt, offset_provider={"I":I, "J":J})
             uold = uold_gt.asnumpy()
-            calc_vold_program(v=v_gt, alpha=alpha, vnew=vnew_gt, vold=vold_gt, offset_provider={"Ioff":I, "Joff":J})
+            calc_vold_program(v=v_gt, alpha=alpha, vnew=vnew_gt, vold=vold_gt, offset_provider={"I":I, "J":J})
             vold = vold_gt.asnumpy()
-            calc_pold_program(p=p_gt, alpha=alpha, pnew=pnew_gt, pold=pold_gt, offset_provider={"Ioff":I, "Joff":J})
+            calc_pold_program(p=p_gt, alpha=alpha, pnew=pnew_gt, pold=pold_gt, offset_provider={"I":I, "J":J})
             pold = pold_gt.asnumpy()
 
             u[...] = unew
