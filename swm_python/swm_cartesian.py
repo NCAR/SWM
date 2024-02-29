@@ -81,7 +81,9 @@ def copy_3var(inp0: gtscript.Field[dtype], inp1: gtscript.Field[dtype], inp2: gt
 def main():
     dt0 = 0.
     dt1 = 0.
+    dt15 = 0.
     dt2 = 0.
+    dt25 = 0.
     dt3 = 0.
 
     
@@ -167,6 +169,7 @@ def main():
         )
 
         t1_stop = perf_counter()
+        t15_start = perf_counter()
         dt1 = dt1 + (t1_stop - t1_start)
         # # Periodic Boundary conditions
         # try region
@@ -186,6 +189,9 @@ def main():
         cv_gt[M, 0,0] = cv_gt[0, N,0]
         z_gt[0, 0,0] = z_gt[M, N,0]
         h_gt[M, N,0] = h_gt[0, 0,0]
+
+        t15_stop = perf_counter()
+        dt15 = dt15 + (t15_stop - t15_start)
 
         if config.VAL_DEEP and ncycle <=1:
             utils.validate_cucvzh(cu_gt.asnumpy(), cv_gt.asnumpy(), z_gt.asnumpy(), h_gt.asnumpy(), M, N, ncycle, 't100')
@@ -228,6 +234,7 @@ def main():
         )
 
         t2_stop = perf_counter()
+        t25_start = perf_counter()
         dt2 = dt2 + (t2_stop - t2_start)
 
         # Periodic Boundary conditions
@@ -241,6 +248,9 @@ def main():
         unew_gt[0, N,0] = unew_gt[M, 0,0]
         vnew_gt[M, 0,0] = vnew_gt[0, N,0]
         pnew_gt[M, N,0] = pnew_gt[0, 0,0]
+
+        t25_stop = perf_counter()
+        dt25 = dt25 + (t25_stop - t25_start)
 
         if config.VAL_DEEP and ncycle <= 1:
             utils.validate_uvp(unew_gt.asnumpy(), vnew_gt.asnumpy(), pnew_gt.asnumpy(), M, N, ncycle, 't200')
@@ -279,7 +289,9 @@ def main():
         print(" diagonal elements of v:\n", vnew_gt.asnumpy()[:,:,0].diagonal()[:-1])
     print("total: ",dt0)
     print("t100: ",dt1)
+    print("t150: ",dt15)
     print("t200: ",dt2)
+    print("t250: ",dt25)
     print("t300: ",dt3)
 
     if config.VAL:
