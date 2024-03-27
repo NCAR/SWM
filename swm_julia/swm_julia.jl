@@ -86,20 +86,7 @@ global tdt = dt
 for ncycle in 1:ITMAX
     @time begin
     global p, u, v, cu, cv, z, h, uold, vold, pold, unew, vnew, pnew, tdt, tdtsdx, tdtsdy, time, tdts8
-    # println(size(h[1:end-1, 1:end-1]))
-    # println(size(p[1:end-1, 1:end-1]))
-    # println(size(u[2:end, 1:end-1]))
-    # println(size(u[2:end, 1:end-1]))
-
-    # println(size(u[1:end-1, 1:end-1]))
-    # println(size(u[1:end-1, 1:end-1]))
-    # println(size(v[1:end-1, 2:end]))
-    # println(size(v[1:end-1, 2:end]))
-    # println(size(v[1:end-1, 1:end-1]))
-    # println(size(v[1,end-1, 1:end-1]))
-    #println((fsdx .* (v[2:end, 2:end] .- v[1:end-1, 2:end])))
-    #println((fsdy .* (u[2:end, 2:end] .- u[2:end, 1:end-1])))
-    #println((p[1:end-1, 1:end-1] .+ p[2:end,1:end-1] .+ p[2:end,2:end] .+ p[1:end-1,2:end]))
+    
     cu[2:end, 1:end-1] = ((p[2:end, 1:end-1] .+ p[1:end-1, 1:end-1]) .* u[2:end,1:end-1]) ./ 2.0
     cv[1:end-1, 2:end] = ((p[1:end-1, 2:end] .+ p[1:end-1, 1:end-1]) .* v[1:end-1,2:end]) ./ 2.0
     z[2:end, 2:end] = (fsdx .* (v[2:end, 2:end] .- v[1:end-1, 2:end]) .- 
