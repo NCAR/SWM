@@ -107,17 +107,17 @@ global alpha_d = CUDA.CuArray([alpha])
 CUDA.allowscalar(true)
 
 function calc_cu_cv_z_h!(cu_d, cv_d, z_d, h_d, p_d, u_d, v_d, fsdx_d, fsdy_d)
-    CUDA.@sync for i in 1:size(cu_d, 1)-1
-        for j in 1:size(cu_d, 2)-1
-            cu_d[i+1, j] = ((p_d[i+1, j] + p_d[i, j]) * u_d[i+1, j]) / 2.0
-            cv_d[i, j+1] = ((p_d[i, j+1] + p_d[i, j]) * v_d[i, j+1]) / 2.0
-            z_d[i+1, j+1] = (fsdx_d[1] * (v_d[i+1, j+1] - v_d[i, j+1]) - 
+    i = (blockIdx().x - 1) * blockDim().x + threadIdx().x
+    j = (blockIdx().y - 1) * blockDim().y + threadIdx().y
+    if i < size(cu_d, 1) && j < size(cu_d, 2)
+            @inbounds cu_d[i+1, j] = ((p_d[i+1, j] + p_d[i, j]) * u_d[i+1, j]) / 2.0
+            @inbounds cv_d[i, j+1] = ((p_d[i, j+1] + p_d[i, j]) * v_d[i, j+1]) / 2.0
+            @inbounds z_d[i+1, j+1] = (fsdx_d[1] * (v_d[i+1, j+1] - v_d[i, j+1]) - 
                             fsdy_d[1] * (u_d[i+1, j+1] - u_d[i+1, j])) /
                             (p_d[i, j] + p_d[i+1, j] + p_d[i+1, j+1] + p_d[i, j+1])
-            h_d[i, j] = p_d[i, j] + 0.25 * (u_d[i+1, j] * u_d[i+1, j] +
+            @inbounds h_d[i, j] = p_d[i, j] + 0.25 * (u_d[i+1, j] * u_d[i+1, j] +
                             u_d[i, j] * u_d[i, j] + v_d[i, j+1] * v_d[i, j+1] +
                             v_d[i, j] * v_d[i, j])
-        end
     end
     return nothing
 end
@@ -159,8 +159,10 @@ for ncycle in 1:ITMAX
     
     global p, u, v, cu, cv, z, h, uold, vold, pold, unew, vnew, pnew, tdt, tdtsdx, tdtsdy, time, tdts8
     global cu_d, p_d, u_d, v_d, cv_d, z_d, h_d, unew_d, vnew_d, pnew_d, uold_d, vold_d, pold_d
+    block_size = (16, 16)
+    grid_size = (div(M_LEN + block_size[1] - 1, block_size[1]), div(N_LEN + block_size[2] - 1, block_size[2]))
     @time begin
-        calc_cu_cv_z_h!(cu_d, cv_d, z_d, h_d, p_d, u_d, v_d, fsdx_d, fsdy_d)
+        @cuda threads=block_size blocks=grid_size calc_cu_cv_z_h!(cu_d, cv_d, z_d, h_d, p_d, u_d, v_d, fsdx_d, fsdy_d)
     end
 
     cu_d[1, :] = cu_d[M, :]
