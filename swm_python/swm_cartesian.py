@@ -92,7 +92,7 @@ def main():
     N_LEN = config.N_LEN
     M = config.M
     N = config.N
-    ITMAX = config.ITMAX
+
     
     _u, _v, _p = initial_conditions.initialize(M, N, config.dx, config.dy, config.a)
     _u = _u[:,:,np.newaxis]
@@ -134,6 +134,10 @@ def main():
         print(" Initial v:\n", v_gt.asnumpy()[:,:,0].diagonal()[:-1])
 
 
+    u_gt = gtx.as_field(domain,u,allocator=allocator)
+    p_gt = gtx.as_field(domain,p,allocator=allocator)
+    v_gt = gtx.as_field(domain,v,allocator=allocator)
+
 
     t0_start = perf_counter()
     time = 0.0
@@ -171,6 +175,8 @@ def main():
         t1_stop = perf_counter()
         t15_start = perf_counter()
         dt1 = dt1 + (t1_stop - t1_start)
+
+        t15_start = perf_counter()
         # # Periodic Boundary conditions
         # try region
         cu_gt[0, :,0] = cu_gt[M, :,0]
@@ -252,6 +258,7 @@ def main():
         t25_stop = perf_counter()
         dt25 = dt25 + (t25_stop - t25_start)
 
+        
         if config.VAL_DEEP and ncycle <= 1:
             utils.validate_uvp(unew_gt.asnumpy(), vnew_gt.asnumpy(), pnew_gt.asnumpy(), M, N, ncycle, 't200')
 
@@ -260,11 +267,18 @@ def main():
         if(ncycle > 0):
             t3_start = perf_counter()
             calc_uvp_old(alpha=config.alpha, v=v_gt, vnew=vnew_gt, vold=vold_gt, u=u_gt, unew=unew_gt, uold=uold_gt, p=p_gt, pnew=pnew_gt, pold=pold_gt, domain=(M+1, N+1, 1))
-
             copy_3var(unew_gt, vnew_gt, pnew_gt, u_gt, v_gt, p_gt, origin=(0,0,0), domain=(M+1,N+1,1))
 
             t3_stop = perf_counter()
             dt3 = dt3 + (t3_stop - t3_start)
+
+            t35_start = perf_counter()
+            # u = u_gt.asnumpy()
+            # v = v_gt.asnumpy()
+            # p = p_gt.asnumpy()
+            t35_stop = perf_counter()
+            dt35 = dt35 + (t35_stop - t35_start)
+
 
         else:
             tdt = tdt+tdt
@@ -288,11 +302,13 @@ def main():
         print(" diagonal elements of u:\n", unew_gt.asnumpy()[:,:,0].diagonal()[:-1])
         print(" diagonal elements of v:\n", vnew_gt.asnumpy()[:,:,0].diagonal()[:-1])
     print("total: ",dt0)
+    print("t050: ",dt05)
     print("t100: ",dt1)
     print("t150: ",dt15)
     print("t200: ",dt2)
     print("t250: ",dt25)
     print("t300: ",dt3)
+    print("t350: ",dt35)
 
     if config.VAL:
         utils.final_validation(u_gt.asnumpy(), v_gt.asnumpy(), p_gt.asnumpy(), ITMAX=ITMAX, M=M, N=N)

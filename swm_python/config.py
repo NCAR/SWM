@@ -22,6 +22,7 @@ VAL=False
 VAL_DEEP=False #args.VAL_DEEP
 VIS = False
 VIS_DT = 100
+
 ITMAX = args.ITMAX
 dt = 90.
 dt = dt

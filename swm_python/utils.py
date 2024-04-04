@@ -9,19 +9,19 @@ def _to_2d(x):
     return x
 
 def read_uvp(step, suffix, M, N):
-    u_file = f'u.step{step}.{suffix}.bin'
-    v_file = f'v.step{step}.{suffix}.bin'
-    p_file = f'p.step{step}.{suffix}.bin'
+    u_file = f'../ref/{M}x{N}/u.step{step}.{suffix}.bin'
+    v_file = f'../ref/{M}x{N}/v.step{step}.{suffix}.bin'
+    p_file = f'../ref/{M}x{N}/p.step{step}.{suffix}.bin'
     u = np.fromfile(u_file).reshape(M + 1, N + 1)
     v = np.fromfile(v_file).reshape(M + 1, N + 1)
     p = np.fromfile(p_file).reshape(M + 1, N + 1)
     return u, v, p
 
 def read_cucvzh(step, suffix, M, N):
-    cu_file = f'cu.step{step}.{suffix}.bin'
-    cv_file = f'cv.step{step}.{suffix}.bin'
-    z_file = f'z.step{step}.{suffix}.bin'
-    h_file = f'h.step{step}.{suffix}.bin'
+    cu_file = f'../ref/{M}x{N}/cu.step{step}.{suffix}.bin'
+    cv_file = f'../ref/{M}x{N}/cv.step{step}.{suffix}.bin'
+    z_file = f'../ref/{M}x{N}/z.step{step}.{suffix}.bin'
+    h_file = f'../ref/{M}x{N}/h.step{step}.{suffix}.bin'
     cu = np.fromfile(cu_file).reshape(M + 1, N + 1)
     cv = np.fromfile(cv_file).reshape(M + 1, N + 1)
     z = np.fromfile(z_file).reshape(M + 1, N + 1)
@@ -97,7 +97,7 @@ def final_validation(u,v,p,ITMAX, M, N):
     vLinfN= np.linalg.norm(vval, np.inf)
     pLinfN= np.linalg.norm(pval, np.inf)
 
-    live_plot_val(uval, vval, pval, "Val")
+    #live_plot_val(uval, vval, pval, "Val")
     print("uLinfN: ", uLinfN)
     print("vLinfN: ", vLinfN)
     print("pLinfN: ", pLinfN)
