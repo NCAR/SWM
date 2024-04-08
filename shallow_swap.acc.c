@@ -250,7 +250,7 @@ int main(int argc, char **argv) {
     
     // Compute capital u, capital v, z and h
     c1 = wtime();  
-#pragma acc parallel loop independent present(p[:SIZE],u[:SIZE],v[:SIZE]) deviceptr(cu,cv,z,h)
+#pragma acc parallel loop collapse(2) present(p[:SIZE],u[:SIZE],v[:SIZE]) deviceptr(cu,cv,z,h)
     for (i=0;i<M;i++) {
       for (j=0;j<N;j++) {
         int idx00 = (i*N_LEN) + j;
@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
 }
     c1 = wtime(); 
 
-#pragma acc parallel loop independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE]) deviceptr(cu,cv,z,h,uold,vold,pold)
+#pragma acc parallel loop collapse(2) present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE]) deviceptr(cu,cv,z,h,uold,vold,pold)
     for (i=0;i<M;i++) {
       for (j=0;j<N;j++) {
         int idx00 = (i*N_LEN) + j;
@@ -315,7 +315,7 @@ int main(int argc, char **argv) {
     // Periodic continuation
 #pragma acc parallel loop independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
     for (j=0;j<N;j++) {
-#pragma acc cache(unew[M*N_LEN:N_LEN],vnew[:N_LEN],pnew[:N_LEN])
+//#pragma acc cache(unew[M*N_LEN:N_LEN],vnew[:N_LEN],pnew[:N_LEN])
       //printf("N loop unew %d -> %d, vnew %d -> %d , pnew %d -> %d\n",M*N_LEN+j,j,j+1,M*N_LEN +j + 1,j,M*N_LEN +j);
       unew[j] = unew[M*N_LEN+j];
       vnew[M*N_LEN +j + 1] = vnew[j + 1];
