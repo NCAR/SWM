@@ -1,29 +1,29 @@
 import numpy as np
-import numpy as np
-import gt4py.next as gtx
 import gt4py.cartesian.gtscript as gtscript
+import gt4py.storage as gts
+from gt4py.storage.cartesian import utils as gts_utils
 from time import perf_counter
-# import cupy
-# import gt4py
 import initial_conditions
 import utils
 import config
 
-I = gtx.Dimension("I")
-J = gtx.Dimension("J")
-K = gtx.Dimension("K", kind = gtx.DimensionKind.VERTICAL)
-
 dtype = np.float64
 
 cartesian_backend = config.backend
-allocator = gtx.gtfn_cpu
-if cartesian_backend in ("gt:gpu", "cuda", "dace:gpu"):
-    allocator = gtx.gtfn_gpu
 
-print(f"Using {cartesian_backend} backend with {allocator.__name__} allocator.")
+print(f"Using {cartesian_backend} backend.")
 
 @gtscript.stencil(backend=cartesian_backend)
-def calc_cucvzh(u: gtscript.Field[dtype], v: gtscript.Field[dtype], p: gtscript.Field[dtype], cu: gtscript.Field[dtype], cv: gtscript.Field[dtype], z: gtscript.Field[dtype], h: gtscript.Field[dtype], fsdx:float, fsdy: float):
+def calc_cucvzh(u: gtscript.Field[dtype],
+                v: gtscript.Field[dtype],
+                p: gtscript.Field[dtype],
+                cu: gtscript.Field[dtype],
+                cv: gtscript.Field[dtype],
+                z: gtscript.Field[dtype],
+                h: gtscript.Field[dtype],
+                fsdx:float,
+                fsdy: float):
+
     with computation(PARALLEL), interval(...):
         cu = .5 * (p[1,0,0] + p) * u
         cv = .5 * (p[0,1,0] + p) * v
@@ -44,8 +44,8 @@ def calc_uvp(
     h: gtscript.Field[dtype],
     unew: gtscript.Field[dtype],
     vnew: gtscript.Field[dtype],
-    pnew: gtscript.Field[dtype]
-):
+    pnew: gtscript.Field[dtype]):
+
     with computation(PARALLEL), interval(...):
         unew = uold + tdts8 * (z + z[0,-1,0]) * (cv[1,0,0] + cv + cv[0,-1,0] + cv[1,-1,0]) - tdtsdx * (h[1,0,0] - h)
         vnew = vold - tdts8 * (z + z[-1,0,0]) * (cu[-1,0,0] + cu[-1,1,0] + cu + cu[0,1,0]) - tdtsdy * (h[0,1,0] - h)
@@ -62,8 +62,8 @@ def calc_uvp_old(
     uold: gtscript.Field[dtype],
     p: gtscript.Field[dtype],
     pnew: gtscript.Field[dtype],
-    pold: gtscript.Field[dtype],
-):
+    pold: gtscript.Field[dtype]):
+
     with computation(PARALLEL), interval(...):
         uold = u + alpha * (unew - 2 * u + uold)
         vold = v + alpha * (vnew - 2 * v + vold)
@@ -71,7 +71,13 @@ def calc_uvp_old(
 
 
 @gtscript.stencil(backend=cartesian_backend)
-def copy_3var(inp0: gtscript.Field[dtype], inp1: gtscript.Field[dtype], inp2: gtscript.Field[dtype], out0: gtscript.Field[dtype], out1: gtscript.Field[dtype], out2: gtscript.Field[dtype]):
+def copy_3var(inp0: gtscript.Field[dtype],
+              inp1: gtscript.Field[dtype],
+              inp2: gtscript.Field[dtype],
+              out0: gtscript.Field[dtype],
+              out1: gtscript.Field[dtype],
+              out2: gtscript.Field[dtype]):
+
     with computation(PARALLEL), interval(...):
         out0 = inp0
         out1 = inp1
@@ -86,35 +92,28 @@ def main():
     dt25 = 0.
     dt3 = 0.
 
-    
-
-    M_LEN = config.M_LEN
-    N_LEN = config.N_LEN
     M = config.M
     N = config.N
-
     
     _u, _v, _p = initial_conditions.initialize(M, N, config.dx, config.dy, config.a)
     _u = _u[:,:,np.newaxis]
     _v = _v[:,:,np.newaxis]
     _p = _p[:,:,np.newaxis]
 
-    domain = gtx.domain({I:M+1, J:N+1, K:1})
-
-    h_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    z_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    cu_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    cv_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    pnew_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    unew_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    vnew_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    uold_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    vold_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-    pold_gt = gtx.empty(domain,dtype=dtype,allocator=allocator)
-
-    u_gt = gtx.as_field(domain,_u,allocator=allocator)
-    v_gt = gtx.as_field(domain,_v,allocator=allocator)
-    p_gt = gtx.as_field(domain,_p,allocator=allocator)
+    shape = (M+1,N+1,1)
+    h_gt  = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    z_gt  = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    cu_gt = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    cv_gt = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    pnew_gt = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    unew_gt = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    vnew_gt = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    uold_gt = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    vold_gt = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    pold_gt = gts.empty(dtype=dtype,backend=cartesian_backend,shape=shape)
+    u_gt    = gts.from_array(_u,dtype=dtype,backend=cartesian_backend)
+    v_gt    = gts.from_array(_v,dtype=dtype,backend=cartesian_backend)
+    p_gt    = gts.from_array(_p,dtype=dtype,backend=cartesian_backend)
 
     # Save initial conditions
     uold_gt[...] = u_gt[...]
@@ -129,15 +128,10 @@ def main():
         print(" grid spacing in the y direction: ", config.dy)
         print(" time step: ", config.dt)
         print(" time filter coefficient: ", config.alpha)
-        print(" Initial p:\n", p_gt.asnumpy()[:,:,0].diagonal()[:-1])
-        print(" Initial u:\n", u_gt.asnumpy()[:,:,0].diagonal()[:-1])
-        print(" Initial v:\n", v_gt.asnumpy()[:,:,0].diagonal()[:-1])
-
-
-    u_gt = gtx.as_field(domain,u,allocator=allocator)
-    p_gt = gtx.as_field(domain,p,allocator=allocator)
-    v_gt = gtx.as_field(domain,v,allocator=allocator)
-
+        
+        print(" Initial p:\n", p_gt[:,:,0].diagonal()[:-1])
+        print(" Initial u:\n", u_gt[:,:,0].diagonal()[:-1])
+        print(" Initial v:\n", v_gt[:,:,0].diagonal()[:-1])
 
     t0_start = perf_counter()
     time = 0.0
@@ -148,13 +142,13 @@ def main():
     p_origin=(0,0,0)
     z_origin=(1,1,0)
     # Main time loop
-    for ncycle in range(ITMAX):
+    for ncycle in range(config.ITMAX):
 
         if((ncycle%100==0) & (config.VIS==False)):
             print(f"cycle number{ncycle} and gt4py type cartesian")
 
         if config.VAL_DEEP and ncycle <= 3:
-            utils.validate_uvp(u_gt.asnumpy(), v_gt.asnumpy(), p_gt.asnumpy(), M, N, ncycle, 'init')
+            utils.validate_uvp(gts_utils.cpu_copy(u_gt), gts_utils.cpu_copy(v_gt), gts_utils.cpu_copy(p_gt), M, N, ncycle, 'init')
 
         t1_start = perf_counter()
 
@@ -200,7 +194,7 @@ def main():
         dt15 = dt15 + (t15_stop - t15_start)
 
         if config.VAL_DEEP and ncycle <=1:
-            utils.validate_cucvzh(cu_gt.asnumpy(), cv_gt.asnumpy(), z_gt.asnumpy(), h_gt.asnumpy(), M, N, ncycle, 't100')
+            utils.validate_cucvzh(gts_utils.cpu_copy(cu_gt), gts_utils.cpu_copy(cv_gt), gts_utils.cpu_copy(z_gt), gts_utils.cpu_copy(h_gt), M, N, ncycle, 't100')
 
         # Calclulate new values of u,v, and p
         tdts8 = tdt / 8.
@@ -260,7 +254,7 @@ def main():
 
         
         if config.VAL_DEEP and ncycle <= 1:
-            utils.validate_uvp(unew_gt.asnumpy(), vnew_gt.asnumpy(), pnew_gt.asnumpy(), M, N, ncycle, 't200')
+            utils.validate_uvp(gts_utils.cpu_copy(unew_gt), gts_utils.cpu_copy(vnew_gt), gts_utils.cpu_copy(pnew_gt), M, N, ncycle, 't200')
 
         time = time + config.dt
 
@@ -272,14 +266,6 @@ def main():
             t3_stop = perf_counter()
             dt3 = dt3 + (t3_stop - t3_start)
 
-            t35_start = perf_counter()
-            # u = u_gt.asnumpy()
-            # v = v_gt.asnumpy()
-            # p = p_gt.asnumpy()
-            t35_stop = perf_counter()
-            dt35 = dt35 + (t35_stop - t35_start)
-
-
         else:
             tdt = tdt+tdt
 
@@ -290,28 +276,26 @@ def main():
             v_gt[...] = vnew_gt[...]
             p_gt[...] = pnew_gt[...]
 
-        if((config.VIS == True) & (ncycle%config.VIS_DT==0)):
-            utils.live_plot3(u_gt.asnumpy(), v_gt.asnumpy(), p_gt.asnumpy(), "ncycle: " + str(ncycle))
+        if((config.VIS) & (ncycle%config.VIS_DT==0)):
+            utils.live_plot3(gts_utils.cpu_copy(u_gt), gts_utils.cpu_copy(v_gt), gts_utils.cpu_copy(p_gt), "ncycle: " + str(ncycle))
 
     t0_stop = perf_counter()
     dt0 = dt0 + (t0_stop - t0_start)
     # Print initial conditions
     if config.L_OUT:
-        print("cycle number ", ITMAX)
-        print(" diagonal elements of p:\n", pnew_gt.asnumpy()[:,:,0].diagonal()[:-1])
-        print(" diagonal elements of u:\n", unew_gt.asnumpy()[:,:,0].diagonal()[:-1])
-        print(" diagonal elements of v:\n", vnew_gt.asnumpy()[:,:,0].diagonal()[:-1])
+        print("cycle number ", config.ITMAX)
+        print(" diagonal elements of p:\n", p_gt[:,:,0].diagonal()[:-1])
+        print(" diagonal elements of u:\n", u_gt[:,:,0].diagonal()[:-1])
+        print(" diagonal elements of v:\n", v_gt[:,:,0].diagonal()[:-1])
     print("total: ",dt0)
-    print("t050: ",dt05)
     print("t100: ",dt1)
     print("t150: ",dt15)
     print("t200: ",dt2)
     print("t250: ",dt25)
     print("t300: ",dt3)
-    print("t350: ",dt35)
 
     if config.VAL:
-        utils.final_validation(u_gt.asnumpy(), v_gt.asnumpy(), p_gt.asnumpy(), ITMAX=ITMAX, M=M, N=N)
+        utils.final_validation(gts_utils.cpu_copy(u_gt), gts_utils.cpu_copy(v_gt), gts_utils.cpu_copy(p_gt), ITMAX=config.ITMAX, M=M, N=N)
 
 if __name__ == "__main__":
     main()

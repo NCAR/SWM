@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 #pragma acc enter data copyin(dt,tdt,dx,dy,a,alpha,el,pi,tpi,di,dj,pcf,tdts8,tdtsdx,tdtsdy,fsdx,fsdy,p[:SIZE],u[:SIZE], \
   v[:SIZE],pnew[:SIZE],unew[:SIZE],vnew[:SIZE])
   // Initial values of the stream function and p
-#pragma acc parallel loop independent present(p[:SIZE]) deviceptr(psi)//private(a,di,dj,pcf)
+#pragma acc parallel loop collapse(2) present(p[:SIZE]) deviceptr(psi)//private(a,di,dj,pcf)
   for (i=0;i<M_LEN;i++) {
     for (j=0;j<N_LEN;j++) {
       int idx = (i*N_LEN) + j;
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
   }
 #pragma acc update host(p[:SIZE]) async(1)   
   // Initialize velocities
-#pragma acc parallel loop  independent present(u[:SIZE],v[:SIZE]) deviceptr(psi)
+#pragma acc parallel loop collapse(2) present(u[:SIZE],v[:SIZE]) deviceptr(psi)
   for (i=0;i<M;i++) {
     for (j=0;j<N;j++) {
       int idx01 = (i*N_LEN) + j+1;
@@ -180,14 +180,14 @@ int main(int argc, char **argv) {
   }
      
   // Periodic continuation
-#pragma acc parallel loop independent present(u[:SIZE],v[:SIZE]) 
+#pragma acc parallel loop present(u[:SIZE],v[:SIZE]) 
   for (j=0;j<N;j++) {
     u[j] = u[M*N_LEN+j];
     v[M*N_LEN+j+1] = v[j + 1];
     //u[0][j] = u[M][j];
     //v[M][j + 1] = v[0][j + 1];
   }
-#pragma acc parallel loop  independent present(u[:SIZE],v[:SIZE]) 
+#pragma acc parallel loop present(u[:SIZE],v[:SIZE]) 
   for (i=0;i<M;i++) {
     u[(i + 1)*N_LEN +N] = u[(i + 1)*N_LEN];
     v[i*N_LEN] = v[(i*N_LEN)+N];
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
   v[M*N_LEN] = v[N];
 }
 #pragma acc update host(u[:SIZE],v[:SIZE]) async(2)
-#pragma acc parallel loop async(3) independent present(u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold) 
+#pragma acc parallel loop async(3) collapse(2) present(u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold) 
   for (i=0;i<M_LEN;i++) {
     for (j=0;j<N_LEN;j++) {
       int idx = i*N_LEN+j;
