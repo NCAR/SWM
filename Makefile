@@ -1,19 +1,32 @@
-CC = nvc
+# Define the compiler
+#CC = nvc
+CC = gcc
+
+# Source files for each executable
+EXEC_SRCS = shallow_swap.c shallow_swap.acc.c shallow_swap.acc.Tile.c
+
+# Common source files used by all executeables
+COMMON_SRCS = wtime.c 
+
 CFLAGS = -O2
+#CFLAGS = -Wall -g
+
 ifdef GPU
     CFLAGS += gpu=cc70 -Minfo=accel -Mnofma
 endif
-SRC = shallow_swap.acc.c wtime.c
-OBJ = $(SRC:.c=.o)
-EXEC = SWM_acc
 
-all: $(EXEC)
+# Define the executable names based on source files
+EXECS = $(basename $(EXEC_SRCS))
 
-$(EXEC): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
+# Define the libraries to link
+LDLIBS = -lm
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+# Default target
+all: $(EXECS)
 
+# Implicit rule to compile the executables
+$(EXECS): $(COMMON_SRCS)
+
+# Rule to clean the project
 clean:
-	rm -f $(OBJ) $(EXEC)
+	rm -f $(EXECS) *.o
