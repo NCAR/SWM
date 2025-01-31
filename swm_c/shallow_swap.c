@@ -31,14 +31,14 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 16
-#define N 16
+#define M 256
+#define N 256
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define SIZE ((M_LEN)*(N_LEN))
-#define ITMAX 1
+#define ITMAX 4000
 #define L_OUT TRUE
-#define VAL_OUT TRUE
+#define VAL_OUT FALSE
 
 extern double wtime(); 
 extern void dswap(double **a, double **b);

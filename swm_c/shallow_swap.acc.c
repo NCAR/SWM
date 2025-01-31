@@ -33,8 +33,8 @@
 
 #define TRUE 1
 #define FALSE 0
-#define M 64
-#define N 64
+#define M 256
+#define N 256
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define SIZE ((M_LEN)*(N_LEN))
