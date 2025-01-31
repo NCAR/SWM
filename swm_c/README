@@ -17,10 +17,11 @@ There is an optimization that avoids copies in loop 300 by swapping pointers. CO
 
 Building:
 
-bash-3.2$ gcc -O2 shallow_swap.c wtime.c
-bash-3.2$ ./a.out > results.txt
+make
 
 Validation: 
+
+TODO: Update this section. Should it point to the SEM/ref directory?
 
 Compare results.txt with the provided file results_ref.txt, particularly the last values printed, namely those below-
  diagonal elements of p
