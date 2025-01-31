@@ -15,6 +15,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: swm make
       run: |
+        cd swm_c
         mkdir build
         cd build
         cmake ..
