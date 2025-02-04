@@ -1,0 +1,3 @@
+CEXE_sources += main.cpp swm_mini_app_utils.cpp
+CEXE_headers += swm_mini_app_utils.h
+
