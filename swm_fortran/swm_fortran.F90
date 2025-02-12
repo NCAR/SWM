@@ -3,7 +3,7 @@
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define L_OUT .true.
-#define VAL_OUT .true.
+#define VAL_OUT .false.
 #define ITMAX 4000
 
 Program SWM_Fortran
@@ -248,6 +248,12 @@ Program SWM_Fortran
   call dswap(v, vnew)
   call dswap(p, pnew)
 
+  if ( VAL_OUT ) then
+    call write_to_file(pnew, 'p.bin')
+    call write_to_file(unew, 'u.bin')
+    call write_to_file(vnew, 'v.bin')
+  end if
+
   if ( L_OUT ) then
     ptime = time / 3600.
 
@@ -286,6 +292,7 @@ Program SWM_Fortran
 
 contains
 
+  ! This is a copy, not a pointer shuffle
   subroutine dswap(a, b)
 
     real, dimension(M_LEN,N_LEN), intent(inout) :: a, b
@@ -298,12 +305,21 @@ contains
 
   end subroutine dswap
 
-  ! subroutine write_to_file(array, tM, tN, filename)
-  !   real, dimension(:,:), pointer :: array
-  !   integer,           intent(in) :: tM
-  !   integer,           intent(in) :: tN
-  !   character(len=*),  intent(in) :: filename
+  subroutine write_to_file(array, filename)
+    real, dimension(M_LEN,N_LEN), intent(in) :: array
+    character(len=*),             intent(in) :: filename
 
-  ! end subroutine write_to_file
+    integer :: i, j, id
+
+    open(newunit=id, access='stream', status='replace', file=filename)
+    ! Write this out in C ordering of array
+    do i=1,N_LEN
+      do j=1,M_LEN
+        write(id) array(i,j)
+      end do
+    end do
+    close(id)
+
+  end subroutine write_to_file
 
 End Program SWM_Fortran
