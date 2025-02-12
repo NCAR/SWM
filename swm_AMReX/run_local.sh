@@ -52,7 +52,7 @@ set +e
 
 # TODO: Make the plotfile name a so it automatically finds the plotfile for the last time step
 # TODO: Do a check to see if the corresponding reference plotfile exists step
-$AMREX_HOME/Tools/Plotfile/fcompare.gnu.ex plt00000 "$SWM_AMREX_ROOT"/plt04000_reference
+$AMREX_HOME/Tools/Plotfile/fcompare.gnu.ex plt04000 "$SWM_AMREX_ROOT"/plt04000_reference
 
 if [ $? -eq 0 ]; then
     echo -e "\nSolution Verification: PASS"

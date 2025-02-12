@@ -175,6 +175,7 @@ void InitializeVariables(const amrex::Geometry & geom,
 
     // coefficient for initialization psi
     const amrex::Real a = 1000000;
+    const double pi = 4. * std::atan(1.);
 
     for (amrex::MFIter mfi(psi); mfi.isValid(); ++mfi)
     {
@@ -187,8 +188,8 @@ void InitializeVariables(const amrex::Geometry & geom,
             const amrex::Real x_cell_center = (i+0.5) * dx;
             const amrex::Real y_cell_center = (j+0.5) * dy;
 
-            const amrex::Real x_transformed = LinearMapCoordinates(x_cell_center, x_min, x_max, 0.0, 2*std::numbers::pi);
-            const amrex::Real y_transformed = LinearMapCoordinates(y_cell_center, y_min, y_max, 0.0, 2*std::numbers::pi);
+            const amrex::Real x_transformed = LinearMapCoordinates(x_cell_center, x_min, x_max, 0.0, 2*pi);
+            const amrex::Real y_transformed = LinearMapCoordinates(y_cell_center, y_min, y_max, 0.0, 2*pi);
 
             phi_array(i,j,k) = a*std::sin(x_transformed)*std::sin(y_transformed);
         });
@@ -202,7 +203,7 @@ void InitializeVariables(const amrex::Geometry & geom,
 
     // coefficient for pressure
     double el = geom.ProbLength(0);
-    amrex::Real pcf = (std::numbers::pi * std::numbers::pi * a * a)/(el * el);
+    amrex::Real pcf = (pi * pi * a * a)/(el * el);
 
     for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
     {
@@ -215,8 +216,8 @@ void InitializeVariables(const amrex::Geometry & geom,
             amrex::Real x_node = i * dx;
             amrex::Real y_node = j * dy;
             
-            const amrex::Real x_transformed = LinearMapCoordinates(x_node, x_min, x_max, 0.0, 2*std::numbers::pi);
-            const amrex::Real y_transformed = LinearMapCoordinates(y_node, y_min, y_max, 0.0, 2*std::numbers::pi);
+            const amrex::Real x_transformed = LinearMapCoordinates(x_node, x_min, x_max, 0.0, 2*pi);
+            const amrex::Real y_transformed = LinearMapCoordinates(y_node, y_min, y_max, 0.0, 2*pi);
 
             p_array(i,j,k) = pcf * (std::cos(2*x_transformed) + std::cos(2*y_transformed)) + 5000;
         });

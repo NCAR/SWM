@@ -11,7 +11,7 @@ DIM          = 2
 #USE_HDF5=TRUE
 #HDF5_HOME=/home/lalo/spack/opt/spack/linux-ubuntu24.04-skylake/gcc-13.3.0/hdf5-1.14.5-vm6rifl2savzhynhyx56ayutfhmycs3s/
 
-CXXSTD       = c++20
+#CXXSTD       = c++20
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
