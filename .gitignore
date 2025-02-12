@@ -27,6 +27,11 @@
 *.lib
 
 # Executables
-*.exe
+swm_c/shallow_swap
+swm_c/shallow_swap.acc
+swm_c/shallow_swap.acc.Tile
+swm_fortran/swm_fortran
+
+# Output
 *.out
-*.app
+results_*
