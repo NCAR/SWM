@@ -3,6 +3,7 @@
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define L_OUT .true.
+#define VAL_OUT .true.
 #define ITMAX 4000
 
 Program SWM_Fortran
@@ -10,20 +11,20 @@ Program SWM_Fortran
   implicit none
 
   ! Solution arrays
-  real, dimension(:,:), pointer :: u => NULL(), &
-                                   v => NULL(), &
-                                   p => NULL(), &
-                                   unew => NULL(), &
-                                   vnew => NULL(), &
-                                   pnew => NULL(), &
-                                   uold => NULL(), &
-                                   vold => NULL(), &
-                                   pold => NULL(), &
-                                   cu => NULL(), &
-                                   cv => NULL(), &
-                                   z => NULL(), &
-                                   h => NULL(), &
-                                   psi => NULL()
+  real, dimension(M_LEN,N_LEN), target :: u, &
+                                          v, &
+                                          p, &
+                                          unew, &
+                                          vnew, &
+                                          pnew, &
+                                          uold, &
+                                          vold, &
+                                          pold, &
+                                          cu, &
+                                          cv, &
+                                          z, &
+                                          h, &
+                                          psi
 
   real :: dt, tdt, dx, dy, a, alpha, el, pi
   real :: tpi, di, dj, pcf
@@ -38,23 +39,6 @@ Program SWM_Fortran
   real :: t100, t200, t300
   real :: tstart, ctime, tcyc, time, ptime
   real :: c1, c2
-
-  ! Allocate memory
-  allocate(u(M_LEN,N_LEN), &
-           v(M_LEN,N_LEN), &
-           p(M_LEN,N_LEN), &
-           unew(M_LEN,N_LEN), &
-           vnew(M_LEN,N_LEN), &
-           pnew(M_LEN,N_LEN), &
-           uold(M_LEN,N_LEN), &
-           vold(M_LEN,N_LEN), &
-           pold(M_LEN,N_LEN), &
-           cu(M_LEN,N_LEN), &
-           cv(M_LEN,N_LEN), &
-           z(M_LEN,N_LEN), &
-           h(M_LEN,N_LEN), &
-           psi(M_LEN,N_LEN), &
-           source=0.)
 
   ! Initialization
   dt = 90.
@@ -245,7 +229,7 @@ Program SWM_Fortran
 #endif
       call cpu_time(c2)
       t300 = t300 + (c2 - c1)
-    else
+    else ! ncycle = 1
       tdt = tdt + tdt
       do j=1,N_LEN
         do i=1,N_LEN
@@ -258,7 +242,7 @@ Program SWM_Fortran
       call dswap(v, vnew)
       call dswap(p, pnew)
     end if
-  end do
+  end do ! End of time loop
 
   call dswap(u, unew)
   call dswap(v, vnew)
@@ -300,20 +284,26 @@ Program SWM_Fortran
     write(*, "(A,F0.6,1X,F0.6)") " time and megaflops for loop 300 ", t300, mfs300
   end if
 
-  deallocate(u, v, p, unew, vnew, pnew, uold, vold, pold, cu, cv, z, h, psi)
-
 contains
 
   subroutine dswap(a, b)
 
-    real, dimension(:,:), pointer :: a, b
+    real, dimension(M_LEN,N_LEN), intent(inout) :: a, b
 
-    real, dimension(:,:), pointer :: c
+    real, dimension(M_LEN,N_LEN) :: c
 
-    c => a
-    a => b
-    b => c
+    c = a
+    a = b
+    b = c
 
   end subroutine dswap
+
+  ! subroutine write_to_file(array, tM, tN, filename)
+  !   real, dimension(:,:), pointer :: array
+  !   integer,           intent(in) :: tM
+  !   integer,           intent(in) :: tN
+  !   character(len=*),  intent(in) :: filename
+
+  ! end subroutine write_to_file
 
 End Program SWM_Fortran

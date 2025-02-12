@@ -34,4 +34,6 @@ swm_fortran/swm_fortran
 
 # Output
 *.out
+*.bin
+*.txt
 results_*
