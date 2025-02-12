@@ -5,6 +5,7 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFab.H>
+#include <AMReX_Array.H>
 
 #include "swm_mini_app_utils.h"
 
@@ -300,6 +301,9 @@ void WriteOutput(const amrex::MultiFab & psi,
     int min_digits = 5;
     const std::string& pltfile = amrex::Concatenate("plt", time_step, min_digits);
     amrex::WriteSingleLevelPlotfile(pltfile, output_values, {"psi", "p", "u", "v"}, geom, time, time_step);
+    //amrex::WriteSingleLevelPlotfileHDF5(pltfile, output_values, {"psi", "p", "u", "v"}, geom, time, time_step);
+    //amrex::WriteSingleLevelPlotfileHDF5MultiDset(pltfile, output_values, {"psi", "p", "u", "v"}, geom, time, time_step);
+
 
     return;
 }

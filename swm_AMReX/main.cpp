@@ -71,15 +71,15 @@ int main (int argc, char* argv[])
 
     InitializeVariables(geom, psi, p, u, v);
 
-    amrex::Print() << "Initial: " << std::endl;
-    amrex::Print() << "psi max: " << psi.max(0) << std::endl;
-    amrex::Print() << "psi min: " << psi.min(0) << std::endl;
-    amrex::Print() << "p max: " << p.max(0) << std::endl;
-    amrex::Print() << "p min: " << p.min(0) << std::endl;
-    amrex::Print() << "u max: " << u.max(0) << std::endl;
-    amrex::Print() << "u min: " << u.min(0) << std::endl;
-    amrex::Print() << "v max: " << v.max(0) << std::endl;
-    amrex::Print() << "v min: " << v.min(0) << std::endl;
+    //amrex::Print() << "Initial: " << std::endl;
+    //amrex::Print() << "psi max: " << psi.max(0) << std::endl;
+    //amrex::Print() << "psi min: " << psi.min(0) << std::endl;
+    //amrex::Print() << "p max: " << p.max(0) << std::endl;
+    //amrex::Print() << "p min: " << p.min(0) << std::endl;
+    //amrex::Print() << "u max: " << u.max(0) << std::endl;
+    //amrex::Print() << "u min: " << u.min(0) << std::endl;
+    //amrex::Print() << "v max: " << v.max(0) << std::endl;
+    //amrex::Print() << "v min: " << v.min(0) << std::endl;
 
     // **********************************
     // Write initial plot file
@@ -139,7 +139,7 @@ int main (int argc, char* argv[])
     double tdt = dt;
     const double alpha = 0.001; 
 
-    for (int time_step = 0; time_step < n_time_steps; ++time_step)
+    for (int time_step = 1; time_step <= n_time_steps; ++time_step)
     {
         // Sets: cu, cv, h, z
         UpdateIntermediateVariables(fsdx, fsdy, geom,
@@ -176,13 +176,13 @@ int main (int argc, char* argv[])
 
     }
 
-    amrex::Print() << "Final: " << std::endl;
-    amrex::Print() << "p max: " << p.max(0) << std::endl;
-    amrex::Print() << "p min: " << p.min(0) << std::endl;
-    amrex::Print() << "u max: " << u.max(0) << std::endl;
-    amrex::Print() << "u min: " << u.min(0) << std::endl;
-    amrex::Print() << "v max: " << v.max(0) << std::endl;
-    amrex::Print() << "v min: " << v.min(0) << std::endl;
+    //amrex::Print() << "Final: " << std::endl;
+    //amrex::Print() << "p max: " << p.max(0) << std::endl;
+    //amrex::Print() << "p min: " << p.min(0) << std::endl;
+    //amrex::Print() << "u max: " << u.max(0) << std::endl;
+    //amrex::Print() << "u min: " << u.min(0) << std::endl;
+    //amrex::Print() << "v max: " << v.max(0) << std::endl;
+    //amrex::Print() << "v min: " << v.min(0) << std::endl;
 
     }
     amrex::Finalize();
