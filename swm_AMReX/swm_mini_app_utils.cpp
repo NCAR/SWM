@@ -8,7 +8,7 @@
 #include <AMReX_Array.H>
 
 #include "swm_mini_app_utils.h"
-
+#include "swm_mini_app_kernels.h"
 
 void ParseInput(int & nx, int & ny,
                 amrex::Real & dx, amrex::Real & dy,
@@ -320,10 +320,13 @@ void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest)
     return;
 }
 
-void UpdateIntermediateVariables(amrex::Real fsdx, amrex::Real fsdy, const amrex::Geometry& geom,
+void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Geometry& geom,
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
                                  amrex::MultiFab& cu, amrex::MultiFab& cv, amrex::MultiFab& h, amrex::MultiFab& z)
 {
+    const double fsdx = 4.0/dx;
+    const double fsdy = 4.0/dy;
+
     for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
     {
         const amrex::Box& bx = mfi.validbox();
@@ -341,10 +344,9 @@ void UpdateIntermediateVariables(amrex::Real fsdx, amrex::Real fsdy, const amrex
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
         {
-            cu_array(i,j,k) = 0.5*(p_array(i,j,k) + p_array(i+1,j,k))*u_array(i,j,k);
-            cv_array(i,j,k) = 0.5*(p_array(i,j,k) + p_array(i,j+1,k))*v_array(i,j,k);
-            z_array(i,j,k) = (fsdx*(v_array(i+1,j,k)-v_array(i,j,k)) + fsdy*(u_array(i,j+1,k)-u_array(i,j,k)))/(p_array(i,j,k)+p_array(i+1,j,k)+p_array(i,j+1,k)+p_array(i+1,j+1,k));
-            h_array(i,j,k) = p_array(i,j,k) + 0.25*(u_array(i-1,j,k)*u_array(i-1,j,k) + u_array(i,j,k)*u_array(i,j,k) + v_array(i,j-1,k)*v_array(i,j-1,k) + v_array(i,j,k)*v_array(i,j,k));
+            UpdateIntermediateVariablesKernel(i, j, k, fsdx, fsdy,
+                                              p_array, u_array, v_array,
+                                              cu_array, cv_array, h_array, z_array);
         });
     }
 

@@ -3,8 +3,8 @@
 Based on the NCAR SWM mini-app found [here](https://github.com/NCAR/SWM). 
 
 ## Prerequisites
- - g++ (a version with support for c++20)
-    - Other compilers should also work fine but I have been using gcc/g++ for testing so far.
+ - A compiler for C, C++, and Fortran 
+    - Just about any compilers should work but I have been using gcc/g++/gfortran for testing so far.
  - make
  - [AMReX](https://github.com/AMReX-Codes/amrex)
  - [yt](https://yt-project.org/) (Only needed if you want to run the postprocessing script [plot_with_yt.py](plot_with_yt.py))

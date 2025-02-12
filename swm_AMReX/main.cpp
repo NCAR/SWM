@@ -133,15 +133,13 @@ int main (int argc, char* argv[])
     Copy(p, p_old);
 
     // Constants used in time stepping loop
-    const double fsdx = 4.0/dx;
-    const double fsdy = 4.0/dy;
     double tdt = dt;
     const double alpha = 0.001; 
 
     for (int time_step = 1; time_step <= n_time_steps; ++time_step)
     {
         // Sets: cu, cv, h, z
-        UpdateIntermediateVariables(fsdx, fsdy, geom,
+        UpdateIntermediateVariables(dx, dy, geom,
                                      p, u, v,
                                      cu, cv, h, z);
 
@@ -161,16 +159,16 @@ int main (int argc, char* argv[])
         // Sets: p, u, v
         UpdateVariables(geom, u_new, v_new, p_new, u, v, p);
 
-        if (time_step == 0) {
-            tdt = tdt + tdt;
-        }
-
         time = time + dt;
 
         // Write a plotfile of the current data (plot_interval was defined in the inputs file)
         if (plot_interval > 0 && time_step%plot_interval == 0)
         {
             WriteOutput(psi, p, u, v, geom, time, time_step, output_values);
+        }
+
+        if (time_step == 0) {
+            tdt = tdt + tdt;
         }
 
     }

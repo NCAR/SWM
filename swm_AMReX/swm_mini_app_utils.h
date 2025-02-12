@@ -50,7 +50,7 @@ amrex::MultiFab CreateMultiFab(const amrex::MultiFab & mf);
 
 void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest);
 
-void UpdateIntermediateVariables(amrex::Real fsdx, amrex::Real fsdy, const amrex::Geometry& geom,
+void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Geometry& geom,
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
                                  amrex::MultiFab& cu, amrex::MultiFab& cv, amrex::MultiFab& h, amrex::MultiFab& z);
 
