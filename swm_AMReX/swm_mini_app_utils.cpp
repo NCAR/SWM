@@ -430,13 +430,11 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
 
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-                amrex::Real u_old_temp = u_old_array(i,j,k);
-                amrex::Real v_old_temp = v_old_array(i,j,k);
-                amrex::Real p_old_temp = p_old_array(i,j,k);
-
-                u_old_array(i,j,k) = u_array(i,j,k) + alpha * (u_new_array(i,j,k) - 2.0*u_array(i,j,k) + u_old_temp);
-                v_old_array(i,j,k) = v_array(i,j,k) + alpha * (v_new_array(i,j,k) - 2.0*v_array(i,j,k) + v_old_temp);
-                p_old_array(i,j,k) = p_array(i,j,k) + alpha * (p_new_array(i,j,k) - 2.0*p_array(i,j,k) + p_old_temp);
+                UpdateOldVariablesKernel(i, j, k, 
+                                         alpha,
+                                         p_array, u_array, v_array,
+                                         p_new_array, u_new_array, v_new_array,
+                                         p_old_array, u_old_array, v_old_array);
             });
         }
     } else {
