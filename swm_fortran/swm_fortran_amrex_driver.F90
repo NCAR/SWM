@@ -8,32 +8,32 @@
 
 Program SWM_Fortran_Driver
 
-  use swm_fortran_kernels, only : UpdateIntermediateVariablesKernel
-  use swm_fortran_kernels, only : UpdateNewVariablesKernel
-  use swm_fortran_kernels, only : UpdateOldVariablesKernel
+  use swm_fortran_amrex_kernels, only : UpdateIntermediateVariablesAmrexKernel
+  use swm_fortran_amrex_kernels, only : UpdateNewVariablesAmrexKernel
+  use swm_fortran_amrex_kernels, only : UpdateOldVariablesAmrexKernel
 
   implicit none
 
   ! Solution arrays
-  real, dimension(M_LEN,N_LEN), target :: u1, u2, u3, &
+  real, dimension(M_LEN,N_LEN,1), target :: u1, u2, u3, &
                                           v1, v2, v3, &
                                           p1, p2, p3
 
-  real, dimension(M_LEN,N_LEN) :: cu, &
+  real, dimension(M_LEN,N_LEN,1) :: cu, &
                                   cv, &
                                   z, &
                                   h, &
                                   psi
 
-  real, dimension(:,:), pointer :: u    => NULL(), &
-                                   v    => NULL(), &
-                                   p    => NULL(), &
-                                   unew => NULL(), &
-                                   vnew => NULL(), &
-                                   pnew => NULL(), &
-                                   uold => NULL(), &
-                                   vold => NULL(), &
-                                   pold => NULL()
+  real, dimension(:,:,:), pointer :: u    => NULL(), &
+                                     v    => NULL(), &
+                                     p    => NULL(), &
+                                     unew => NULL(), &
+                                     vnew => NULL(), &
+                                     pnew => NULL(), &
+                                     uold => NULL(), &
+                                     vold => NULL(), &
+                                     pold => NULL()
 
   real :: dt, tdt, dx, dy, a, alpha, el, pi
   real :: tpi, di, dj, pcf
@@ -82,38 +82,38 @@ Program SWM_Fortran_Driver
   ! Initial values of the stream function and p
   do j=0,N_LEN-1
     do i=0,M_LEN-1
-      psi(i+1,j+1) = a * sin((i + .5) * di) * sin((j + .5) * dj)
-      p(i+1,j+1) = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.
+      psi(i+1,j+1,1) = a * sin((i + .5) * di) * sin((j + .5) * dj)
+      p(i+1,j+1,1) = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.
     end do
   end do
 
   ! Initialize velocities
   do j=1,N
     do i=1,M
-      u(i+1,j) = -(psi(i+1,j+1) - psi(i+1,j)) / dy
-      v(i,j+1) = (psi(i+1,j+1) - psi(i,j+1)) / dx
+      u(i+1,j,1) = -(psi(i+1,j+1,1) - psi(i+1,j,1)) / dy
+      v(i,j+1,1) = (psi(i+1,j+1,1) - psi(i,j+1,1)) / dx
     end do
   end do
 
   ! Periodic continuation
   do j=1,N
-    u(1,j) = u(M_LEN,j)
-    v(M_LEN,j) = v(1,j)
+    u(1,j,1) = u(M_LEN,j,1)
+    v(M_LEN,j,1) = v(1,j,1)
   end do
 
   do i=1,M
-    u(i,N_LEN) = u(i,1)
-    v(i,1) = v(i,N_LEN)
+    u(i,N_LEN,1) = u(i,1,1)
+    v(i,1,1) = v(i,N_LEN,1)
   end do
 
-  u(1,N_LEN) = u(M_LEN,1)
-  v(M_LEN,1) = v(1,N_LEN)
+  u(1,N_LEN,1) = u(M_LEN,1,1)
+  v(M_LEN,1,1) = v(1,N_LEN,1)
 
   do j=1,N_LEN
     do i=1,M_LEN
-      uold(i,j) = u(i,j)
-      vold(i,j) = v(i,j)
-      pold(i,j) = p(i,j)
+      uold(i,j,1) = u(i,j,1)
+      vold(i,j,1) = v(i,j,1)
+      pold(i,j,1) = p(i,j,1)
     end do
   end do
 
@@ -127,17 +127,17 @@ Program SWM_Fortran_Driver
 
     write(*, "(A)") " initial diagonal elements of p"
     do i=1,mnmin
-      write(*, "(F0.6, 1X)", advance="no") p(i,i)
+      write(*, "(F0.6, 1X)", advance="no") p(i,i,1)
     end do
 
     write(*, "(/,A)") " initial diagonal elements of u"
     do i=1,mnmin
-      write(*, "(F0.6, 1X)", advance="no") u(i,i)
+      write(*, "(F0.6, 1X)", advance="no") u(i,i,1)
     end do
 
     write(*, "(/,A)") " initial diagonal elements of v"
     do i=1,mnmin
-      write(*, "(F0.6, 1X)", advance="no") v(i,i)
+      write(*, "(F0.6, 1X)", advance="no") v(i,i,1)
     end do
     write(*,*)
   end if
@@ -153,29 +153,33 @@ Program SWM_Fortran_Driver
   do ncycle=1,ITMAX
 
     call cpu_time(c1)
-    call UpdateIntermediateVariablesKernel(fsdx,fsdy,p,u,v,cu,cv,h,z)
+    do j=1,N
+      do i=1,M
+        call UpdateIntermediateVariablesAmrexKernel(i,j,1,fsdx,fsdy,p,u,v,cu,cv,h,z)
+      end do
+    end do
     call cpu_time(c2)
     t100 = t100 + (c2 - c1)
 
     ! Periodic continuation
     do j=1,N
-      cu(1,j) = cu(M_LEN,j)
-      cv(M_LEN,j+1) = cv(1,j+1)
-      z(1,j+1) = z(M_LEN,j+1)
-      h(M_LEN,j) = h(1,j)
+      cu(1,j,1) = cu(M_LEN,j,1)
+      cv(M_LEN,j+1,1) = cv(1,j+1,1)
+      z(1,j+1,1) = z(M_LEN,j+1,1)
+      h(M_LEN,j,1) = h(1,j,1)
     end do
 
     do i=1,M
-      cu(i+1, N_LEN) = cu(i+1,1)
-      cv(i,1) = cv(i,N_LEN)
-      z(i+1,1) = z(i+1,N_LEN)
-      h(i,N_LEN) = h(i,1)
+      cu(i+1, N_LEN,1) = cu(i+1,1,1)
+      cv(i,1,1) = cv(i,N_LEN,1)
+      z(i+1,1,1) = z(i+1,N_LEN,1)
+      h(i,N_LEN,1) = h(i,1,1)
     end do
 
-    cu(1,N_LEN) = cu(M_LEN,1)
-    cv(M_LEN,1) = cv(1,N_LEN)
-    z(1,1) = z(M_LEN,N_LEN)
-    h(M_LEN,N_LEN) = h(1,1)
+    cu(1,N_LEN,1) = cu(M_LEN,1,1)
+    cv(M_LEN,1,1) = cv(1,N_LEN,1)
+    z(1,1,1) = z(M_LEN,N_LEN,1)
+    h(M_LEN,N_LEN,1) = h(1,1,1)
 
     ! Compute new values of u, v, and p
     tdts8 = tdt / 8.
@@ -183,38 +187,46 @@ Program SWM_Fortran_Driver
     tdtsdy = tdt / dy
 
     call cpu_time(c1)
-    call UpdateNewVariablesKernel(tdtsdx,tdtsdy,tdts8,pold,uold,vold,cu,cv,h,z,pnew,unew,vnew)
+    do j=1,N
+      do i=1,M
+        call UpdateNewVariablesAmrexKernel(i,j,1,tdtsdx,tdtsdy,tdts8,pold,uold,vold,cu,cv,h,z,pnew,unew,vnew)
+      end do
+    end do
     call cpu_time(c2)
     t200 = t200 + (c2-c1)
 
     ! Periodic continuation
     do j=1,N
-      unew(1,j) = unew(M_LEN,j)
-      vnew(M_LEN,j+1) = vnew(1,j+1)
-      pnew(M_LEN,j) = pnew(1,j)
+      unew(1,j,1) = unew(M_LEN,j,1)
+      vnew(M_LEN,j+1,1) = vnew(1,j+1,1)
+      pnew(M_LEN,j,1) = pnew(1,j,1)
     end do
 
     do i=1,M
-      unew(i+1,N_LEN) = unew(i+1,1)
-      vnew(i,1) = vnew(i,N_LEN)
-      pnew(i,N_LEN) = pnew(i,1)
+      unew(i+1,N_LEN,1) = unew(i+1,1,1)
+      vnew(i,1,1) = vnew(i,N_LEN,1)
+      pnew(i,N_LEN,1) = pnew(i,1,1)
     end do
 
-    unew(1,N_LEN) = unew(M_LEN,1)
-    vnew(M_LEN,1) = vnew(1,N_LEN)
-    pnew(M_LEN,N_LEN) = pnew(1,1)
+    unew(1,N_LEN,1) = unew(M_LEN,1,1)
+    vnew(M_LEN,1,1) = vnew(1,N_LEN,1)
+    pnew(M_LEN,N_LEN,1) = pnew(1,1,1)
 
     time = time + dt
     if (ncycle > 1) then
       call cpu_time(c1)
-      call UpdateOldVariablesKernel(alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
+      do j=1,N_LEN
+        do i=1,M_LEN
+          call UpdateOldVariablesAmrexKernel(i,j,1,alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
+        end do
+      end do
 
 #ifdef _COPY_
       do j=1,N_LEN
         do i=1,M_LEN
-          u(i,j) = unew(i,j)
-          v(i,j) = vnew(i,j)
-          p(i,j) = pnew(i,j)
+          u(i,j,1) = unew(i,j,1)
+          v(i,j,1) = vnew(i,j,1)
+          p(i,j,1) = pnew(i,j,1)
         end do
       end do
 #else
@@ -228,9 +240,9 @@ Program SWM_Fortran_Driver
       tdt = tdt + tdt
       do j=1,N_LEN
         do i=1,N_LEN
-          uold(i,j) = u(i,j)
-          vold(i,j) = v(i,j)
-          pold(i,j) = p(i,j)
+          uold(i,j,1) = u(i,j,1)
+          vold(i,j,1) = v(i,j,1)
+          pold(i,j,1) = p(i,j,1)
         end do
       end do
       call dswap(u, unew)
@@ -256,15 +268,15 @@ Program SWM_Fortran_Driver
                               " model time in hours ", ptime
     write(*, "(A)") " diagonal elements of p"
     do i=1,mnmin
-      write(*, "(F0.6,1X)", advance="no") pnew(i,i)
+      write(*, "(F0.6,1X)", advance="no") pnew(i,i,1)
     end do
     write(*, "(/,A)") " diagonal elements of u"
     do i=1,mnmin
-      write(*, "(F0.6,1X)", advance="no") unew(i,i)
+      write(*, "(F0.6,1X)", advance="no") unew(i,i,1)
     end do
     write(*, "(/,A)") " diagonal elements of v"
     do i=1,mnmin
-      write(*, "(F0.6,1X)", advance="no") vnew(i,i)
+      write(*, "(F0.6,1X)", advance="no") vnew(i,i,1)
     end do
 
     mfs100 = 0.
@@ -290,9 +302,9 @@ contains
   ! This is a copy, not a pointer shuffle
   subroutine dswap(a, b)
 
-    real, dimension(:,:), pointer :: a, b
+    real, dimension(:,:,:), pointer :: a, b
 
-    real, dimension(:,:), pointer :: c
+    real, dimension(:,:,:), pointer :: c
 
     c => a
     a => b
@@ -301,8 +313,8 @@ contains
   end subroutine dswap
 
   subroutine write_to_file(array, filename)
-    real, dimension(M_LEN,N_LEN), intent(in) :: array
-    character(len=*),             intent(in) :: filename
+    real, dimension(M_LEN,N_LEN,1), intent(in) :: array
+    character(len=*),               intent(in) :: filename
 
     integer :: i, j, id
 
@@ -310,7 +322,7 @@ contains
     ! Write this out in C ordering of array
     do i=1,N_LEN
       do j=1,M_LEN
-        write(id) array(i,j)
+        write(id) array(i,j,1)
       end do
     end do
     close(id)

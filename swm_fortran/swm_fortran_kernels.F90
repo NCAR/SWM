@@ -4,52 +4,61 @@ module SWM_Fortran_Kernels
 
 contains
 
-  subroutine UpdateIntermediateVariablesKernel(i,j,k,fsdx,fsdy,p,u,v,cu,cv,h,z)
+  subroutine UpdateIntermediateVariablesKernel(fsdx,fsdy,p,u,v,cu,cv,h,z)
 
-    integer, intent(in) :: i,j,k
     real,    intent(in) :: fsdx, fsdy
-    real, dimension(:,:,:), pointer :: p, u, v
-    real, dimension(:,:,:), intent(inout) :: cu, cv, h, z
+    real, dimension(:,:), pointer :: p, u, v
+    real, dimension(:,:), intent(inout) :: cu, cv, h, z
 
-    cu(i+1,j,k) = 0.5 * (p(i+1,j,k) + p(i,j,k)) * u(i+1,j,k)
-    cv(i,j+1,k) = 0.5 * (p(i,j+1,k) + p(i,j,k)) * v(i,j+1,k)
-    z(i+1,j+1,k) = (fsdx * (v(i+1,j+1,k) - v(i,j+1,k)) - fsdy * (u(i+1,j+1,k) - u(i+1,j,k))) / &
-                 (p(i,j,k) + p(i+1,j,k) + p(i+1,j+1,k) + p(i, j+1,k))
-    h(i,j,k) = p(i,j,k) + 0.25 * (u(i+1,j,k) * u(i+1,j,k) + u(i,j,k) * u(i,j,k) + &
-                                  v(i,j+1,k) * v(i,j+1,k) + v(i,j,k) * v(i,j,k))
+    integer :: i,j
+
+    do j=1,size(cu,2)-1
+      do i=1,size(cu,1)-1
+        cu(i+1,j) = 0.5 * (p(i+1,j) + p(i,j)) * u(i+1,j)
+        cv(i,j+1) = 0.5 * (p(i,j+1) + p(i,j)) * v(i,j+1)
+        z(i+1,j+1) = (fsdx * (v(i+1,j+1) - v(i,j+1)) - fsdy * (u(i+1,j+1) - u(i+1,j))) / &
+                     (p(i,j) + p(i+1,j) + p(i+1,j+1) + p(i, j+1))
+        h(i,j) = p(i,j) + 0.25 * (u(i+1,j) * u(i+1,j) + u(i,j) * u(i,j) + &
+                                  v(i,j+1) * v(i,j+1) + v(i,j) * v(i,j))
+      end do
+    end do
   end subroutine UpdateIntermediateVariablesKernel
 
-  subroutine UpdateNewVariablesKernel(i,j,k,tdtsdx,tdtsdy,tdts8,pold,uold,vold,cu,cv,h,z,pnew,unew,vnew)
+  subroutine UpdateNewVariablesKernel(tdtsdx,tdtsdy,tdts8,pold,uold,vold,cu,cv,h,z,pnew,unew,vnew)
 
-    integer, intent(in) :: i,j,k
     real, intent(in) :: tdtsdx,tdtsdy,tdts8
-    real, dimension(:,:,:), intent(in) :: cu, cv, z, h
-    real, dimension(:,:,:), pointer :: pold, uold, vold, pnew, unew, vnew
+    real, dimension(:,:), intent(in) :: cu, cv, z, h
+    real, dimension(:,:), pointer :: pold, uold, vold, pnew, unew, vnew
 
-    unew(i+1,j,k) = uold(i+1,j,k) + &
-                  tdts8 * (z(i+1,j+1,k) + z(i+1,j,k)) * (cv(i+1,j+1,k) + cv(i,j+1,k) + cv(i,j,k) + cv(i+1,j,k)) - &
-                  tdtsdx * (h(i+1,j,k) - h(i,j,k))
-    vnew(i,j+1,k) = vold(i,j+1,k) - &
-                  tdts8 * (z(i+1,j+1,k) + z(i,j+1,k)) * (cu(i+1,j+1,k) + cu(i,j+1,k) + cu(i,j,k) + cu(i+1,j,k)) - &
-                  tdtsdy * (h(i,j+1,k) - h(i,j,k))
-    pnew(i,j,k) = pold(i,j,k) - tdtsdx * (cu(i+1,j,k) - cu(i,j,k)) - tdtsdy * (cv(i,j+1,k) - cv(i,j,k))
+    integer :: i,j
+
+    do j=1,size(unew,2)-1
+      do i=1,size(unew,1)-1
+        unew(i+1,j) = uold(i+1,j) + &
+                      tdts8 * (z(i+1,j+1) + z(i+1,j)) * (cv(i+1,j+1) + cv(i,j+1) + cv(i,j) + cv(i+1,j)) - &
+                      tdtsdx * (h(i+1,j) - h(i,j))
+        vnew(i,j+1) = vold(i,j+1) - &
+                      tdts8 * (z(i+1,j+1) + z(i,j+1)) * (cu(i+1,j+1) + cu(i,j+1) + cu(i,j) + cu(i+1,j)) - &
+                      tdtsdy * (h(i,j+1) - h(i,j))
+        pnew(i,j) = pold(i,j) - tdtsdx * (cu(i+1,j) - cu(i,j)) - tdtsdy * (cv(i,j+1) - cv(i,j))
+      end do
+    end do
   end subroutine UpdateNewVariablesKernel
 
-  subroutine UpdateOldVariablesKernel(i,j,k,alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
+  subroutine UpdateOldVariablesKernel(alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
 
-    integer, intent(in) :: i,j,k
     real,    intent(in) :: alpha
-    real, dimension(:,:,:), pointer :: pold, uold, vold, p, u, v, pnew, unew, vnew
+    real, dimension(:,:), pointer :: pold, uold, vold, p, u, v, pnew, unew, vnew
 
-    real, dimension(size(pold,1),size(pold,2),size(pold,3)) :: pold_cpy, uold_cpy, vold_cpy
+    integer :: i,j
 
-    pold_cpy(i,j,k) = pold(i,j,k)
-    uold_cpy(i,j,k) = uold(i,j,k)
-    vold_cpy(i,j,k) = vold(i,j,k)
-
-    uold(i,j,k) = u(i,j,k) + alpha*(unew(i,j,k) - 2. * u(i,j,k) + uold_cpy(i,j,k))
-    vold(i,j,k) = v(i,j,k) + alpha*(vnew(i,j,k) - 2. * v(i,j,k) + vold_cpy(i,j,k))
-    pold(i,j,k) = p(i,j,k) + alpha*(pnew(i,j,k) - 2. * p(i,j,k) + pold_cpy(i,j,k))
+    do j=1,size(uold,2)-1
+      do i=1,size(uold,1)-1
+        uold(i,j) = u(i,j) + alpha*(unew(i,j) - 2. * u(i,j) + uold(i,j))
+        vold(i,j) = v(i,j) + alpha*(vnew(i,j) - 2. * v(i,j) + vold(i,j))
+        pold(i,j) = p(i,j) + alpha*(pnew(i,j) - 2. * p(i,j) + pold(i,j))
+      end do
+    end do
 
   end subroutine UpdateOldVariablesKernel
 
