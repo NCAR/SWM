@@ -309,15 +309,15 @@ Program SWM_Fortran
 contains
 
   ! This is a copy, not a pointer shuffle
-  subroutine dswap(a, b)
+  subroutine dswap(swp1, swp2)
 
-    real, dimension(:,:), pointer :: a, b
+    real, dimension(:,:), pointer :: swp1, swp2
 
-    real, dimension(:,:), pointer :: c
+    real, dimension(:,:), pointer :: swp_tmp
 
-    c => a
-    a => b
-    b => c
+    swp_tmp => swp1
+    swp1 => swp2
+    swp2 => swp_tmp
 
   end subroutine dswap
 
@@ -325,7 +325,7 @@ contains
     real, dimension(M_LEN,N_LEN), intent(in) :: array
     character(len=*),             intent(in) :: filename
 
-    integer :: i, j, id
+    integer :: id
 
     open(newunit=id, access='stream', status='replace', file=filename)
     ! Write this out in C ordering of array
