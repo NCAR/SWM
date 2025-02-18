@@ -11,20 +11,25 @@ Program SWM_Fortran
   implicit none
 
   ! Solution arrays
-  real, dimension(M_LEN,N_LEN), target :: u, &
-                                          v, &
-                                          p, &
-                                          unew, &
-                                          vnew, &
-                                          pnew, &
-                                          uold, &
-                                          vold, &
-                                          pold, &
-                                          cu, &
-                                          cv, &
-                                          z, &
-                                          h, &
-                                          psi
+  real, dimension(M_LEN,N_LEN), target :: u1, u2, u3, &
+                                          v1, v2, v3, &
+                                          p1, p2, p3
+
+  real, dimension(M_LEN,N_LEN) :: cu, &
+                                  cv, &
+                                  z, &
+                                  h, &
+                                  psi
+
+  real, dimension(:,:), pointer :: u    => NULL(), &
+                                   v    => NULL(), &
+                                   p    => NULL(), &
+                                   unew => NULL(), &
+                                   vnew => NULL(), &
+                                   pnew => NULL(), &
+                                   uold => NULL(), &
+                                   vold => NULL(), &
+                                   pold => NULL()
 
   real :: dt, tdt, dx, dy, a, alpha, el, pi
   real :: tpi, di, dj, pcf
@@ -39,6 +44,17 @@ Program SWM_Fortran
   real :: t100, t200, t300
   real :: tstart, ctime, tcyc, time, ptime
   real :: c1, c2
+
+  ! Set up pointers
+  u    => u1
+  v    => v1
+  p    => p1
+  unew => u2
+  vnew => v2
+  pnew => p2
+  uold => u3
+  vold => v3
+  pold => p3
 
   ! Initialization
   dt = 90.
@@ -295,13 +311,13 @@ contains
   ! This is a copy, not a pointer shuffle
   subroutine dswap(a, b)
 
-    real, dimension(M_LEN,N_LEN), intent(inout) :: a, b
+    real, dimension(:,:), pointer :: a, b
 
-    real, dimension(M_LEN,N_LEN) :: c
+    real, dimension(:,:), pointer :: c
 
-    c = a
-    a = b
-    b = c
+    c => a
+    a => b
+    b => c
 
   end subroutine dswap
 
