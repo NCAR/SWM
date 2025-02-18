@@ -31,6 +31,7 @@ swm_c/shallow_swap
 swm_c/shallow_swap.acc
 swm_c/shallow_swap.acc.Tile
 swm_fortran/swm_fortran
+swm_fortran/swm_fortran_driver
 
 # Output
 *.out

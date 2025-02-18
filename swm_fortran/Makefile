@@ -1,9 +1,6 @@
 # Define the compiler
 FC = gfortran
 
-# Source files for each executable
-EXEC_SRCS = swm_fortran.F90
-
 # Common source files used by all executables
 COMMON_SRCS =
 
@@ -14,18 +11,22 @@ ifdef GPU
     FFLAGS += gpu=cc70 -Minfo=accel -Mnofma
 endif
 
-# Define the executable names based on source files
-EXECS = $(basename $(EXEC_SRCS))
-
 # Libraries to link to
 LDLIBS = -lm
 
 # Default target
-all: $(EXECS)
+all: swm_fortran
 
 # Implicit rule to compile the executables
-$(EXECS):
-	$(FC) $(FFLAGS) -o $(EXECS) $(EXEC_SRCS)
+swm_fortran: swm_fortran.F90
+	$(FC) $(FFLAGS) -o $@ swm_fortran.F90
+
+# Implicit rule to compile the executables
+swm_fortran_driver: swm_fortran_driver.F90 swm_fortran_kernels.o
+	$(FC) $(FFLAGS) -o $@ swm_fortran_kernels.o swm_fortran_driver.F90
+
+swm_fortran_kernels.o: swm_fortran_kernels.F90
+	$(FC) $(FFLAGS) -c $@ swm_fortran_kernels.F90
 
 clean:
-	rm -f $(EXECS) *.o
+	rm -f swm_fortran swm_fortran_driver *.o
