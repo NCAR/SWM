@@ -14,6 +14,7 @@ int main (int argc, char* argv[])
 {
     amrex::Initialize(argc,argv);
     {
+    BL_PROFILE("main()");
 
     // ***********************************************************************
     // Simulation Parameters Set Via Input File
@@ -138,6 +139,8 @@ int main (int argc, char* argv[])
 
     for (int time_step = 1; time_step <= n_time_steps; ++time_step)
     {
+        BL_PROFILE("TimeSteppingLoop()");
+
         // Sets: cu, cv, h, z
         UpdateIntermediateVariables(dx, dy, geom,
                                      p, u, v,

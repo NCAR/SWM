@@ -8,6 +8,9 @@ USE_OMP      = FALSE
 COMP         = gnu
 DIM          = 2
 
+TINY_PROFILE = FALSE
+PROFILE = FALSE
+
 LIBRARIES += -lstdc++ -lm
 
 #USE_HDF5=TRUE

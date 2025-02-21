@@ -3,7 +3,7 @@ AMREX_HOME ?= PROVIDE_YOUR_OWN_PATH_TO_AMREX_HERE
 HDF5_HOME  ?= PROVIDE_YOUR_OWN_PATH_TO_HDF5_HERE
 
 DEBUG        = FALSE
-USE_MPI      = TRUE   # Dont really nedd MPI for the program but I am using an hdf5 that needs MPI
+USE_MPI      = TRUE   # Dont really need MPI for the program but I am using an hdf5 that needs MPI
 USE_OMP      = FALSE
 COMP         = gnu
 DIM          = 2
