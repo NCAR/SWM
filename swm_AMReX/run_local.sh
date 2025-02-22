@@ -12,6 +12,9 @@
 
 main_exe="$SWM_AMREX_ROOT"/main2d.gnu.ex
 
+#main_exe="$SWM_AMREX_ROOT"/main2d.gnu.TPROF.MPI.ex
+#num_procs=4 # Number of MPI ranks to run with. Only used if the executable name contains "MPI"
+
 fcompare_exe="$AMREX_HOME"/Tools/Plotfile/fcompare.gnu.ex
 
 ##############################################################################
@@ -54,7 +57,12 @@ mkdir -p "$run_dir"
 cd "$run_dir"
 
 # TODO: Make the executable name a variable so that we can run the MPI, OpenMP, and Cuda versions with the same script
-$main_exe "$SWM_AMREX_ROOT"/inputs
+# Check if the executable name contains "MPI"
+if [[ "$main_exe" == *"MPI"* ]]; then
+    mpiexec -n $num_procs "$main_exe" "$SWM_AMREX_ROOT"/inputs
+else
+    "$main_exe" "$SWM_AMREX_ROOT"/inputs
+fi
 
 ##############################################################################
 # Solution Verification
