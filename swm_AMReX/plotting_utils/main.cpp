@@ -42,6 +42,16 @@ void WriteMultiFabToHDF5(const std::string& plotfile, const std::string& hdf5fil
         H5Sclose(attr_space_id);
     }
 
+    // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
+    {
+        hid_t attr_space_id = H5Screate(H5S_SCALAR);
+        hid_t attr_id = H5Acreate(file_id, "data_layout", H5T_C_S1, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+        const char* layout = "row-major"; 
+        H5Awrite(attr_id, H5T_C_S1, layout);
+        H5Aclose(attr_id);
+        H5Sclose(attr_space_id);
+    }
+
     // Get the dimensions of the MultiFab
     hsize_t dims[2] = {static_cast<hsize_t>(minimal_box.length(0)), static_cast<hsize_t>(minimal_box.length(1))};
 
@@ -51,19 +61,26 @@ void WriteMultiFabToHDF5(const std::string& plotfile, const std::string& hdf5fil
         hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
         hid_t dataset_id = H5Dcreate(file_id, varnames[component_idx].c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-        // Write the data to the dataset
+        std::vector<double> component_data(dims[0]*dims[1]);
+
+        // Loop over all sub-boxes in the MultiFab and fill component_data
         for (amrex::MFIter mfi(mf); mfi.isValid(); ++mfi) {
             const amrex::Box& bx = mfi.validbox();
+            const amrex::Dim3 lo = amrex::lbound(bx);
+            const amrex::Dim3 hi = amrex::ubound(bx);
             const amrex::Array4<const amrex::Real> &fab = mf.array(mfi);
             std::vector<double> data(bx.numPts());
-            int idx = 0;
-            for (int j = bx.smallEnd(1); j <= bx.bigEnd(1); ++j) {
-                for (int i = bx.smallEnd(0); i <= bx.bigEnd(0); ++i) {
-                    data[idx++] = fab(i, j, 0, component_idx);
+
+            // Looping over the box in column-major order since that is how the multi-fab is stored
+            for (int j = lo.y; j <= hi.y; ++j) {
+              for (int i = lo.x; i <= hi.x; ++i) {
+                    const int idx = i*dims[1] + j;  // Writing data to hdf5 file in row-major order
+                    component_data[idx] = fab(i, j, 0, component_idx);
                 }
             }
-            H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
         }
+
+        H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, component_data.data());
 
         H5Dclose(dataset_id);
         H5Sclose(dataspace_id);
