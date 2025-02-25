@@ -39,7 +39,7 @@ mkdir -p "$run_dir"
 cd "$run_dir"
 
 # TODO: Make the executable name a variable so that we can run the MPI, OpenMP, and Cuda versions with the same script
-"$SWM_AMREX_ROOT"/main2d.gnu.ex "$SWM_AMREX_ROOT"/inputs
+"$SWM_AMREX_ROOT"/main2d.gnu.x86-milan.ex "$SWM_AMREX_ROOT"/inputs
 #"$SWM_AMREX_ROOT"/main2d.gnu.MPI.ex "$SWM_AMREX_ROOT"/inputs
 
 ##############################################################################
@@ -52,7 +52,7 @@ set +e
 
 # TODO: Make the plotfile name a so it automatically finds the plotfile for the last time step
 # TODO: Do a check to see if the corresponding reference plotfile exists step
-$AMREX_HOME/Tools/Plotfile/fcompare.gnu.ex plt04000 "$SWM_AMREX_ROOT"/plt04000_reference
+$AMREX_HOME/Tools/Plotfile/fcompare.gnu.x86-milan.ex plt04000 "$SWM_AMREX_ROOT"/plt04000_reference
 
 if [ $? -eq 0 ]; then
     echo -e "\nSolution Verification: PASS"
