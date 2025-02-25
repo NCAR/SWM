@@ -1,7 +1,25 @@
 #!/bin/bash
 
 # Prerequisite 
-#    SWM_AMREX_ROOT must be set to the top level of the AMReX version of the mini-app.
+#    AMREX_HOME = the directory where you pulled the AMReX repo.
+#    SWM_AMREX_ROOT = the directory containing the AMReX version of the SWM mini-app.
+
+##############################################################################
+# User Input
+##############################################################################
+# The exact executable name may vary depending on the compiler and build options you used.
+# You may need to change this to match what is produced by your build.
+
+main_exe="$SWM_AMREX_ROOT"/main2d.gnu.x86-milan.ex
+
+#main_exe="$SWM_AMREX_ROOT"/main2d.gnu.TPROF.MPI.ex
+#num_procs=4 # Number of MPI ranks to run with. Only used if the executable name contains "MPI"
+
+fcompare_exe="$AMREX_HOME"/Tools/Plotfile/fcompare.gnu.x86-milan.ex
+
+##############################################################################
+# Setup 
+##############################################################################
 
 set -e
 set -u
@@ -39,8 +57,13 @@ mkdir -p "$run_dir"
 cd "$run_dir"
 
 # TODO: Make the executable name a variable so that we can run the MPI, OpenMP, and Cuda versions with the same script
-"$SWM_AMREX_ROOT"/main2d.gnu.x86-milan.ex "$SWM_AMREX_ROOT"/inputs
 #"$SWM_AMREX_ROOT"/main2d.gnu.MPI.ex "$SWM_AMREX_ROOT"/inputs
+# Check if the executable name contains "MPI"
+if [[ "$main_exe" == *"MPI"* ]]; then
+    mpiexec -n $num_procs "$main_exe" "$SWM_AMREX_ROOT"/inputs
+else
+    "$main_exe" "$SWM_AMREX_ROOT"/inputs
+fi
 
 ##############################################################################
 # Solution Verification
@@ -52,7 +75,7 @@ set +e
 
 # TODO: Make the plotfile name a so it automatically finds the plotfile for the last time step
 # TODO: Do a check to see if the corresponding reference plotfile exists step
-$AMREX_HOME/Tools/Plotfile/fcompare.gnu.x86-milan.ex plt04000 "$SWM_AMREX_ROOT"/plt04000_reference
+$fcompare_exe plt04000 "$SWM_AMREX_ROOT"/plt04000_reference
 
 if [ $? -eq 0 ]; then
     echo -e "\nSolution Verification: PASS"

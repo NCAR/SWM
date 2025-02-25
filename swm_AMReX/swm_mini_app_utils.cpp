@@ -8,7 +8,7 @@
 #include <AMReX_Array.H>
 
 #include "swm_mini_app_utils.h"
-
+#include "swm_mini_app_kernels.h"
 
 void ParseInput(int & nx, int & ny,
                 amrex::Real & dx, amrex::Real & dy,
@@ -61,6 +61,10 @@ void DefineCellCenteredMultiFab(const int nx, const int ny,
 
     // assigns processor to each box in the box array
     amrex::DistributionMapping distribution_mapping(cell_box_array);
+
+    //amrex::Print() << "max_chunk_size: " << max_chunk_size << std::endl;
+    //amrex::Print() << "cell_box_array: " << cell_box_array << std::endl;
+    //amrex::Print() << "distribution mapping: " << distribution_mapping << std::endl;
 
     // number of components for each array
     int Ncomp = 1;
@@ -320,10 +324,15 @@ void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest)
     return;
 }
 
-void UpdateIntermediateVariables(amrex::Real fsdx, amrex::Real fsdy, const amrex::Geometry& geom,
+void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Geometry& geom,
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
                                  amrex::MultiFab& cu, amrex::MultiFab& cv, amrex::MultiFab& h, amrex::MultiFab& z)
 {
+    BL_PROFILE("UpdateIntermediateVariables()");
+
+    const double fsdx = 4.0/dx;
+    const double fsdy = 4.0/dy;
+
     for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
     {
         const amrex::Box& bx = mfi.validbox();
@@ -341,10 +350,9 @@ void UpdateIntermediateVariables(amrex::Real fsdx, amrex::Real fsdy, const amrex
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
         {
-            cu_array(i,j,k) = 0.5*(p_array(i,j,k) + p_array(i+1,j,k))*u_array(i,j,k);
-            cv_array(i,j,k) = 0.5*(p_array(i,j,k) + p_array(i,j+1,k))*v_array(i,j,k);
-            z_array(i,j,k) = (fsdx*(v_array(i+1,j,k)-v_array(i,j,k)) + fsdy*(u_array(i,j+1,k)-u_array(i,j,k)))/(p_array(i,j,k)+p_array(i+1,j,k)+p_array(i,j+1,k)+p_array(i+1,j+1,k));
-            h_array(i,j,k) = p_array(i,j,k) + 0.25*(u_array(i-1,j,k)*u_array(i-1,j,k) + u_array(i,j,k)*u_array(i,j,k) + v_array(i,j-1,k)*v_array(i,j-1,k) + v_array(i,j,k)*v_array(i,j,k));
+            UpdateIntermediateVariablesKernel(i, j, k, fsdx, fsdy,
+                                              p_array, u_array, v_array,
+                                              cu_array, cv_array, h_array, z_array);
         });
     }
 
@@ -361,6 +369,7 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
                         const amrex::MultiFab& cu, const amrex::MultiFab& cv, const amrex::MultiFab& h, const amrex::MultiFab& z,
                         amrex::MultiFab& p_new, amrex::MultiFab& u_new, amrex::MultiFab& v_new)
 {
+    BL_PROFILE("UpdateNewVariables()");
 
     // defined here because tdt changes after first time step
     const double tdtsdx = tdt / dx;
@@ -387,9 +396,12 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
         {
-            u_new_array(i,j,k) = u_old_array(i,j,k) + tdts8 * (z_array(i,j-1,k)+z_array(i,j,k)) * (cv_array(i,j-1,k) + cv_array(i,j,k) + cv_array(i+1,j-1,k) + cv_array(i+1,j,k)) - tdtsdx * (h_array(i+1,j,k) - h_array(i,j,k));
-            v_new_array(i,j,k) = v_old_array(i,j,k) - tdts8 * (z_array(i-1,j,k)+z_array(i,j,k)) * (cu_array(i-1,j,k) + cu_array(i-1,j+1,k) + cu_array(i,j,k) + cu_array(i,j+1,k)) - tdtsdy * (h_array(i,j+1,k) - h_array(i,j,k));
-            p_new_array(i,j,k) = p_old_array(i,j,k) - tdtsdx * (cu_array(i,j,k) - cu_array(i-1,j,k)) - tdtsdy * (cv_array(i,j,k) - cv_array(i,j-1,k));
+            UpdateNewVariablesKernel(i, j, k, 
+                                     tdtsdx, tdtsdy, tdts8,
+                                     p_old_array, u_old_array, v_old_array,
+                                     cu_array, cv_array, h_array, z_array,
+                                     p_new_array, u_new_array, v_new_array);
+
         });
     }
 
@@ -405,6 +417,7 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
                         const amrex::MultiFab& p_new, const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, 
                         amrex::MultiFab& p_old, amrex::MultiFab& u_old, amrex::MultiFab& v_old)
 {
+    BL_PROFILE("UpdateOldVariables()");
     if (time_step > 0) {
         for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
         {
@@ -425,13 +438,11 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
 
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
             {
-                amrex::Real u_old_temp = u_old_array(i,j,k);
-                amrex::Real v_old_temp = v_old_array(i,j,k);
-                amrex::Real p_old_temp = p_old_array(i,j,k);
-
-                u_old_array(i,j,k) = u_array(i,j,k) + alpha * (u_new_array(i,j,k) - 2.0*u_array(i,j,k) + u_old_temp);
-                v_old_array(i,j,k) = v_array(i,j,k) + alpha * (v_new_array(i,j,k) - 2.0*v_array(i,j,k) + v_old_temp);
-                p_old_array(i,j,k) = p_array(i,j,k) + alpha * (p_new_array(i,j,k) - 2.0*p_array(i,j,k) + p_old_temp);
+                UpdateOldVariablesKernel(i, j, k, 
+                                         alpha,
+                                         p_array, u_array, v_array,
+                                         p_new_array, u_new_array, v_new_array,
+                                         p_old_array, u_old_array, v_old_array);
             });
         }
     } else {
@@ -452,6 +463,7 @@ void UpdateVariables(const amrex::Geometry& geom,
                      const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, const amrex::MultiFab& p_new,
                      amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p)
 {
+    BL_PROFILE("UpdateVariables()");
     Copy(u_new, u);
     Copy(v_new, v);
     Copy(p_new, p);
