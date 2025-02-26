@@ -80,7 +80,7 @@ Program SWM_Fortran_Driver
   pcf = pi * pi * a * a / (el * el)
 
   ! Initial values of the stream function and p
-  !$acc enter data copyin(a,di,dj,pcf,psi,p)
+  !$acc enter data copyin(a,di,dj,pcf,psi,p,dx,dy,u,v,uold,vold,pold)
   !$acc parallel loop collapse(2) present(a,di,dj,pcf)
   do j=0,N_LEN-1
     do i=0,M_LEN-1
@@ -90,7 +90,6 @@ Program SWM_Fortran_Driver
   end do
 
   ! Initialize velocities
-  !$acc enter data copyin(dx,dy,u,v)
   !$acc parallel loop collapse(2) present(psi,dx,dy)
   do j=1,N
     do i=1,M
@@ -115,7 +114,6 @@ Program SWM_Fortran_Driver
   u(1,N_LEN) = u(M_LEN,1)
   v(M_LEN,1) = v(1,N_LEN)
 
-  !$acc enter data copyin(uold,vold,pold)
   !$acc parallel loop collapse(2) present(u,v,p)
   do j=1,N_LEN
     do i=1,M_LEN
