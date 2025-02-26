@@ -325,36 +325,54 @@ void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest)
     return;
 }
 
-void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Geometry& geom,
+void UpdateIntermediateVariables(amrex::Real  dx, amrex::Real  dy, const amrex::Geometry& geom,
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
                                  amrex::MultiFab& cu, amrex::MultiFab& cv, amrex::MultiFab& h, amrex::MultiFab& z)
 {
     BL_PROFILE("UpdateIntermediateVariables()");
 
-    const double fsdx = 4.0/dx;
-    const double fsdy = 4.0/dy;
+    amrex::Real fsdx = 4.0/dx;
+    amrex::Real fsdy = 4.0/dy;
 
     for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
     {
         const amrex::Box& bx = mfi.validbox();
 
+	UpdateIntermediateVariablesSub( BL_TO_FORTRAN_BOX(bx),
+                     BL_TO_FORTRAN_ANYD(p[mfi]),
+                     BL_TO_FORTRAN_ANYD(u[mfi]),
+                     BL_TO_FORTRAN_ANYD(v[mfi]),
+                     BL_TO_FORTRAN_ANYD(cu[mfi]),
+                     BL_TO_FORTRAN_ANYD(cv[mfi]),
+                     BL_TO_FORTRAN_ANYD(h[mfi]),
+                     BL_TO_FORTRAN_ANYD(z[mfi]),
+                     fsdx,fsdy);
+	// amrex::Print() << "cu: " << std::endl;
+	// amrex::Print() << cu[mfi] << std::endl;
+	// amrex::Print() << "cv: " << std::endl;
+	// amrex::Print() << cv[mfi] << std::endl;
+	// amrex::Print() << "h: " << std::endl;
+	// amrex::Print() << h[mfi] << std::endl;
+	// amrex::Print() << "z: " << std::endl;
+	// amrex::Print() << z[mfi] << std::endl;
+
         // Read only arrays
-        const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
-        const amrex::Array4<amrex::Real const>& u_array = u.const_array(mfi);
-        const amrex::Array4<amrex::Real const>& v_array = v.const_array(mfi);
+        // const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
+        // const amrex::Array4<amrex::Real const>& u_array = u.const_array(mfi);
+        // const amrex::Array4<amrex::Real const>& v_array = v.const_array(mfi);
 
         // Write arrays
-        const amrex::Array4<amrex::Real>& cu_array = cu.array(mfi);
-        const amrex::Array4<amrex::Real>& cv_array = cv.array(mfi);
-        const amrex::Array4<amrex::Real>& h_array = h.array(mfi);
-        const amrex::Array4<amrex::Real>& z_array = z.array(mfi);
+        // const amrex::Array4<amrex::Real>& cu_array = cu.array(mfi);
+        // const amrex::Array4<amrex::Real>& cv_array = cv.array(mfi);
+        // const amrex::Array4<amrex::Real>& h_array = h.array(mfi);
+        // const amrex::Array4<amrex::Real>& z_array = z.array(mfi);
 
-        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
-        {
-            UpdateIntermediateVariablesKernel(i, j, k, fsdx, fsdy,
-                                              p_array, u_array, v_array,
-                                              cu_array, cv_array, h_array, z_array);
-        });
+        // amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
+        // {
+        //    UpdateIntermediateVariablesKernel(i, j, k, fsdx, fsdy,
+        //                                      p_array, u_array, v_array,
+        //                                      cu_array, cv_array, h_array, z_array);
+        // });
     }
 
     cu.FillBoundary(geom.periodicity());
@@ -381,7 +399,7 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
     {
         const amrex::Box& bx = mfi.validbox();
 
-	amrex::Print() << tdtsdx << " " << tdtsdy << " " << tdts8 << std::endl;
+	// amrex::Print() << tdtsdx << " " << tdtsdy << " " << tdts8 << std::endl;
 	UpdateNewVariablesSub( BL_TO_FORTRAN_BOX(bx),
                      BL_TO_FORTRAN_ANYD(p_old[mfi]),
                      BL_TO_FORTRAN_ANYD(u_old[mfi]),
@@ -394,26 +412,26 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
                      BL_TO_FORTRAN_ANYD(u_new[mfi]),
                      BL_TO_FORTRAN_ANYD(v_new[mfi]),
                      tdtsdx,tdtsdy,tdts8);
-	amrex::Print() << "p_old: " << std::endl;
-	amrex::Print() << p_old[mfi] << std::endl;
-	amrex::Print() << "u_old: " << std::endl;
-	amrex::Print() << u_old[mfi] << std::endl;
-	amrex::Print() << "v_old: " << std::endl;
-	amrex::Print() << v_old[mfi] << std::endl;
-	amrex::Print() << "cu: " << std::endl;
-	amrex::Print() << cu[mfi] << std::endl;
-	amrex::Print() << "cv: " << std::endl;
-	amrex::Print() << cv[mfi] << std::endl;
-	amrex::Print() << "h: " << std::endl;
-	amrex::Print() << h[mfi] << std::endl;
-	amrex::Print() << "z: " << std::endl;
-	amrex::Print() << z[mfi] << std::endl;
-	amrex::Print() << "p_new: " << std::endl;
-	amrex::Print() << p_new[mfi] << std::endl;
-	amrex::Print() << "u_new: " << std::endl;
-	amrex::Print() << u_new[mfi] << std::endl;
-	amrex::Print() << "v_new: " << std::endl;
-	amrex::Print() << v_new[mfi] << std::endl;
+	//amrex::Print() << "p_old: " << std::endl;
+	//amrex::Print() << p_old[mfi] << std::endl;
+	//amrex::Print() << "u_old: " << std::endl;
+	//amrex::Print() << u_old[mfi] << std::endl;
+	//amrex::Print() << "v_old: " << std::endl;
+	//amrex::Print() << v_old[mfi] << std::endl;
+	//amrex::Print() << "cu: " << std::endl;
+	//amrex::Print() << cu[mfi] << std::endl;
+	//amrex::Print() << "cv: " << std::endl;
+	//amrex::Print() << cv[mfi] << std::endl;
+	//amrex::Print() << "h: " << std::endl;
+	//amrex::Print() << h[mfi] << std::endl;
+	//amrex::Print() << "z: " << std::endl;
+	//amrex::Print() << z[mfi] << std::endl;
+	//amrex::Print() << "p_new: " << std::endl;
+	//amrex::Print() << p_new[mfi] << std::endl;
+	//amrex::Print() << "u_new: " << std::endl;
+	//amrex::Print() << u_new[mfi] << std::endl;
+	//amrex::Print() << "v_new: " << std::endl;
+	//amrex::Print() << v_new[mfi] << std::endl;
 
         //const amrex::Array4<amrex::Real const>& p_new_array = p_new.const_array(mfi);
 	//amrex::Print() << p_old_array(0,0,0) << std::endl;
