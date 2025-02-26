@@ -17,6 +17,9 @@ LDLIBS = -lm
 # Default target
 all: swm_fortran swm_fortran_driver
 
+nvfortran:
+	make FC=nvfortran FFLAGS="-r8" swm_fortran_driver
+
 swm_fortran: swm_fortran.F90
 	$(FC) $(FFLAGS) -o $@ swm_fortran.F90
 
