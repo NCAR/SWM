@@ -31,6 +31,7 @@ contains
     real, dimension(:,:,:), intent(in) :: cu, cv, z, h
     real, dimension(:,:,:), pointer :: pold, uold, vold, pnew, unew, vnew
 
+    print *,'i,j,k: ',i,j,k
     unew(i+1,j,k) = uold(i+1,j,k) + &
                   tdts8 * (z(i+1,j+1,k) + z(i+1,j,k)) * (cv(i+1,j+1,k) + cv(i,j+1,k) + cv(i,j,k) + cv(i+1,j,k)) - &
                   tdtsdx * (h(i+1,j,k) - h(i,j,k))

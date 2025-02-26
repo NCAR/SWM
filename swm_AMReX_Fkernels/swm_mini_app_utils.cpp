@@ -376,6 +376,7 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
     const double tdtsdy = tdt / dy;
     const double tdts8  = tdt / 8.0;
 
+    amrex::Print() << tdtsdx << " " << tdtsdy << " " << tdts8 << std::endl;
     for (amrex::MFIter mfi(p_old); mfi.isValid(); ++mfi)
     {
         const amrex::Box& bx = mfi.validbox();
@@ -403,6 +404,26 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
                                      p_new_array, u_new_array, v_new_array);
 
         });
+	amrex::Print() << "p_old: " << std::endl;
+        amrex::Print() << p_old[mfi] << std::endl;
+	amrex::Print() << "u_old: " << std::endl;
+        amrex::Print() << u_old[mfi] << std::endl;
+	amrex::Print() << "v_old: " << std::endl;
+        amrex::Print() << v_old[mfi] << std::endl;
+	amrex::Print() << "cu: " << std::endl;
+        amrex::Print() << cu[mfi] << std::endl;
+	amrex::Print() << "cv: " << std::endl;
+        amrex::Print() << cv[mfi] << std::endl;
+	amrex::Print() << "h: " << std::endl;
+        amrex::Print() << h[mfi] << std::endl;
+	amrex::Print() << "z: " << std::endl;
+        amrex::Print() << z[mfi] << std::endl;
+	amrex::Print() << "p_new: " << std::endl;
+        amrex::Print() << p_new[mfi] << std::endl;
+	amrex::Print() << "u_new: " << std::endl;
+        amrex::Print() << u_new[mfi] << std::endl;
+	amrex::Print() << "v_new: " << std::endl;
+        amrex::Print() << v_new[mfi] << std::endl;
     }
 
     u_new.FillBoundary(geom.periodicity());
