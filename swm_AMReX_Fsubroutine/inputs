@@ -1,6 +1,6 @@
 # Number of cells on each direction
-nx = 3
-ny = 3
+nx = 64
+ny = 64
 
 # Cell size in each direction
 dx = 100000
@@ -10,7 +10,7 @@ dy = 100000
 max_chunk_size = 100000
 
 # Number of time steps to take
-n_time_steps = 1
+n_time_steps = 4000
 
 # Size of time step
 dt = 90

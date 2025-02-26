@@ -88,21 +88,48 @@ contains
 
   end subroutine UpdateNewVariablesSub
 
-  subroutine UpdateOldVariablesKernel(pnew,unew,vnew,p,u,v,pold,uold,vold,alpha)
+  subroutine UpdateOldVariablesSub(lo,hi, &
+                      pnew,pnew_lo,pnew_hi, &
+                      unew,unew_lo,unew_hi, &
+                      vnew,vnew_lo,vnew_hi, &
+                      p,p_lo,p_hi, &
+                      u,u_lo,u_hi, &
+                      v,v_lo,v_hi, &
+                      pold,pold_lo,pold_hi, &
+                      uold,uold_lo,uold_hi, &
+                      vold,vold_lo,vold_hi, &
+                      alpha) bind(C,name="UpdateOldVariablesSub")
 
-    real,    intent(in) :: alpha
-    real, dimension(:,:), pointer :: pold, uold, vold, p, u, v, pnew, unew, vnew
+    use amrex_fort_module, only : amrex_real
+    implicit none
+    integer, dimension(2) ::  lo, hi
+    integer, dimension(2) ::  pold_lo, pold_hi, uold_lo, uold_hi, vold_lo, vold_hi
+    integer, dimension(2) ::  pnew_lo, pnew_hi, unew_lo, unew_hi, vnew_lo, vnew_hi
+    integer, dimension(2) ::  p_lo, p_hi, u_lo, u_hi, v_lo, v_hi
+
+    real(amrex_real), intent(in) :: pnew(pnew_lo(1):pnew_hi(1),pnew_lo(2):pnew_hi(2))
+    real(amrex_real), intent(in) :: unew(unew_lo(1):unew_hi(1),unew_lo(2):unew_hi(2))
+    real(amrex_real), intent(in) :: vnew(vnew_lo(1):vnew_hi(1),vnew_lo(2):vnew_hi(2))
+
+    real(amrex_real), intent(in)    :: p(p_lo(1):p_hi(1),p_lo(2):p_hi(2))
+    real(amrex_real), intent(in)    :: u(u_lo(1):u_hi(1),u_lo(2):u_hi(2))
+    real(amrex_real), intent(in)    :: v(v_lo(1):v_hi(1),v_lo(2):v_hi(2))
+
+    real(amrex_real) :: pold(pold_lo(1):pold_hi(1),pold_lo(2):pold_hi(2))
+    real(amrex_real) :: uold(uold_lo(1):uold_hi(1),uold_lo(2):uold_hi(2))
+    real(amrex_real) :: vold(vold_lo(1):vold_hi(1),vold_lo(2):vold_hi(2))
+    real(amrex_real), intent(in) :: alpha
 
     integer :: i,j
 
-    do j=1,size(uold,2)-1
-      do i=1,size(uold,1)-1
+    do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
         uold(i,j) = u(i,j) + alpha*(unew(i,j) - 2. * u(i,j) + uold(i,j))
         vold(i,j) = v(i,j) + alpha*(vnew(i,j) - 2. * v(i,j) + vold(i,j))
         pold(i,j) = p(i,j) + alpha*(pnew(i,j) - 2. * p(i,j) + pold(i,j))
       end do
     end do
 
-  end subroutine UpdateOldVariablesKernel
+  end subroutine UpdateOldVariablesSub
 
 end module SWM_Fortran_Kernels

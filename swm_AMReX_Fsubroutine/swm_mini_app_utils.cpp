@@ -478,28 +478,39 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
         for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
         {
             const amrex::Box& bx = mfi.validbox();
+	    UpdateOldVariablesSub(BL_TO_FORTRAN_BOX(bx),
+                     BL_TO_FORTRAN_ANYD(p_new[mfi]),
+                     BL_TO_FORTRAN_ANYD(u_new[mfi]),
+                     BL_TO_FORTRAN_ANYD(v_new[mfi]),
+                     BL_TO_FORTRAN_ANYD(p[mfi]),
+                     BL_TO_FORTRAN_ANYD(u[mfi]),
+                     BL_TO_FORTRAN_ANYD(v[mfi]),
+                     BL_TO_FORTRAN_ANYD(p_old[mfi]),
+                     BL_TO_FORTRAN_ANYD(u_old[mfi]),
+                     BL_TO_FORTRAN_ANYD(v_old[mfi]),
+                     alpha);
 
             // Read only arrays
-            const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
-            const amrex::Array4<amrex::Real const>& u_array = u.const_array(mfi);
-            const amrex::Array4<amrex::Real const>& v_array = v.const_array(mfi);
-            const amrex::Array4<amrex::Real const>& p_new_array = p_new.const_array(mfi);
-            const amrex::Array4<amrex::Real const>& u_new_array = u_new.const_array(mfi);
-            const amrex::Array4<amrex::Real const>& v_new_array = v_new.const_array(mfi);
+            // const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
+            // const amrex::Array4<amrex::Real const>& u_array = u.const_array(mfi);
+            // const amrex::Array4<amrex::Real const>& v_array = v.const_array(mfi);
+            // const amrex::Array4<amrex::Real const>& p_new_array = p_new.const_array(mfi);
+            // const amrex::Array4<amrex::Real const>& u_new_array = u_new.const_array(mfi);
+            // const amrex::Array4<amrex::Real const>& v_new_array = v_new.const_array(mfi);
 
             // Write arrays
-            const amrex::Array4<amrex::Real>& p_old_array = p_old.array(mfi);
-            const amrex::Array4<amrex::Real>& u_old_array = u_old.array(mfi);
-            const amrex::Array4<amrex::Real>& v_old_array = v_old.array(mfi);
+            // const amrex::Array4<amrex::Real>& p_old_array = p_old.array(mfi);
+            // const amrex::Array4<amrex::Real>& u_old_array = u_old.array(mfi);
+            // const amrex::Array4<amrex::Real>& v_old_array = v_old.array(mfi);
 
-            amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
-            {
-                UpdateOldVariablesKernel(i, j, k, 
-                                         alpha,
-                                         p_array, u_array, v_array,
-                                         p_new_array, u_new_array, v_new_array,
-                                         p_old_array, u_old_array, v_old_array);
-            });
+            // amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
+            //{
+            //    UpdateOldVariablesKernel(i, j, k, 
+            //                             alpha,
+            //                             p_array, u_array, v_array,
+            //                             p_new_array, u_new_array, v_new_array,
+            //                             p_old_array, u_old_array, v_old_array);
+            // });
         }
     } else {
 
