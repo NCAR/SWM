@@ -1,0 +1,7 @@
+# C++ sources and headers
+CEXE_sources += main.cpp swm_mini_app_utils.cpp
+CEXE_headers += swm_mini_app_utils.h
+
+# Fortran sources and headers
+F90EXE_sources += swm_fortran_kernels.F90
+
