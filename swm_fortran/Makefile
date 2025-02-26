@@ -18,7 +18,7 @@ LDLIBS = -lm
 all: swm_fortran swm_fortran_driver
 
 nvfortran:
-	make FC=nvfortran FFLAGS="-r8" swm_fortran_driver
+	make FC=nvfortran FFLAGS="-r8 -acc=gpu" swm_fortran_driver
 
 swm_fortran: swm_fortran.F90
 	$(FC) $(FFLAGS) -o $@ swm_fortran.F90
@@ -37,4 +37,4 @@ swm_fortran_amrex_kernels.o: swm_fortran_amrex_kernels.F90
 	$(FC) $(FFLAGS) -c $@ swm_fortran_amrex_kernels.F90
 
 clean:
-	rm -f swm_fortran swm_fortran_driver swm_fortran_amrex_driver *.o
+	rm -f swm_fortran swm_fortran_driver swm_fortran_amrex_driver *.o *.mod
