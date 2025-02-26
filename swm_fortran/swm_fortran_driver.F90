@@ -80,6 +80,8 @@ Program SWM_Fortran_Driver
   pcf = pi * pi * a * a / (el * el)
 
   ! Initial values of the stream function and p
+  !$acc enter data copyin(a,di,dj,pcf,psi,p)
+  !$acc parallel loop collapse(2) present(a,di,dj,pcf)
   do j=0,N_LEN-1
     do i=0,M_LEN-1
       psi(i+1,j+1) = a * sin((i + .5) * di) * sin((j + .5) * dj)
@@ -88,6 +90,8 @@ Program SWM_Fortran_Driver
   end do
 
   ! Initialize velocities
+  !$acc enter data copyin(dx,dy,u,v)
+  !$acc parallel loop collapse(2) present(psi,dx,dy)
   do j=1,N
     do i=1,M
       u(i+1,j) = -(psi(i+1,j+1) - psi(i+1,j)) / dy
@@ -96,11 +100,13 @@ Program SWM_Fortran_Driver
   end do
 
   ! Periodic continuation
+  !$acc parallel loop present(u,v)
   do j=1,N
     u(1,j) = u(M_LEN,j)
     v(M_LEN,j) = v(1,j)
   end do
 
+  !$acc parallel loop present(u,v)
   do i=1,M
     u(i,N_LEN) = u(i,1)
     v(i,1) = v(i,N_LEN)
@@ -109,6 +115,8 @@ Program SWM_Fortran_Driver
   u(1,N_LEN) = u(M_LEN,1)
   v(M_LEN,1) = v(1,N_LEN)
 
+  !$acc enter data copyin(uold,vold,pold)
+  !$acc parallel loop collapse(2) present(u,v,p)
   do j=1,N_LEN
     do i=1,M_LEN
       uold(i,j) = u(i,j)
@@ -116,6 +124,7 @@ Program SWM_Fortran_Driver
       pold(i,j) = p(i,j)
     end do
   end do
+  !$acc exit data copyout(uold,vold,pold,u,v,p,psi)
 
   if ( L_OUT ) then
     write(*,"(A,I0)") " number of points in the x direction ", N
