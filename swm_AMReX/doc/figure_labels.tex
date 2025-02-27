@@ -71,7 +71,7 @@
 	\color{x_face_color}{ 
 		$$ v_{i,j} $$ 
 		$$ v_{i+1,j} $$ 
-		$$ v_{i,j-} $$ 
+		$$ v_{i,j-1} $$ 
 				
 		$$ cv $$
 	}
@@ -116,7 +116,7 @@ $$  \textcolor{x_face_color}{ \frac{\partial v}{\partial t} } = -\eta P u - \fra
 
 $$ \nodecolor{ \frac{\partial P}{\partial t} } = -\frac{\partial}{\partial x}\left(Pu\right) - \frac{\partial}{\partial y} (Pv) $$
 
-$$ \textcolor{cell_centered_color}{\eta} = \frac{ \frac{\partial v}{\partial x} + \frac{\partial u}{\partial y} }{P} $$
+$$ \textcolor{cell_centered_color}{\eta} = \frac{ \frac{\partial v}{\partial x} - \frac{\partial u}{\partial y} }{P} $$
 
 $$ \textcolor{node_color}{h_{i,j}} = \textcolor{node_color}{P_{i,j}} + \frac{1}{2} \left( \frac{\textcolor{y_face_color}{u_{i-1,j}}^2 + \textcolor{y_face_color}{u_{i,j}}^2}{2} + \frac{\textcolor{x_face_color}{v_{i,j-1}}^2 + \textcolor{x_face_color}{v_{i,j}}^2}{2} \right) $$
 
@@ -126,7 +126,7 @@ $$ \textcolor{y_face_color}{[Pu]_{i,j}}  = \frac{ \textcolor{node_color}{P_{i,j}
 
 $$ \textcolor{x_face_color}{[Pv]_{i,j}} = \frac{\textcolor{node_color}{P_{i,j}} + \textcolor{node_color}{P_{i,j+1}}}{2} \textcolor{x_face_color}{v_{i,j}}$$
 
-$$ \textcolor{cell_centered_color}{\eta_{i,j}} = \frac{ \frac{ \textcolor{x_face_color}{v_{i+1,j}} - \textcolor{x_face_color}{v_{i,j}}}{dx} + \frac{ \textcolor{y_face_color}{u_{i,j+1}} - \textcolor{y_face_color}{u_{i,j}} }{dy} }{\frac{ \textcolor{node_color}{P_{i,j}} + \textcolor{node_color}{P_{i+1,j}} + \textcolor{node_color}{P_{i,j+1}} + \textcolor{node_color}{P_{i+1,j+1}} }{4} } $$
+$$ \textcolor{cell_centered_color}{\eta_{i,j}} = \frac{ \frac{ \textcolor{x_face_color}{v_{i+1,j}} - \textcolor{x_face_color}{v_{i,j}}}{dx} - \frac{ \textcolor{y_face_color}{u_{i,j+1}} - \textcolor{y_face_color}{u_{i,j}} }{dy} }{\frac{ \textcolor{node_color}{P_{i,j}} + \textcolor{node_color}{P_{i+1,j}} + \textcolor{node_color}{P_{i,j+1}} + \textcolor{node_color}{P_{i+1,j+1}} }{4} } $$
 
 $$ \frac{\partial \yfacecolor{u_{i,j}}}{\partial t} = \left( \frac{ \cellcolor{\eta_{i,j-1}} + \cellcolor{\eta_{i,j}} }{2} \right) \left( \frac{ \xfacecolor{[P v]_{i,j-1}} + \xfacecolor{[P v]_{i,j}} + \xfacecolor{[P v]_{i+1,j-1}} + \xfacecolor{[P v]_{i+1,j}} }{4} \right) - \left(\frac{ \nodecolor{ h_{i+1,j} } -  \nodecolor{ h_{i,j} } }{dx} \right)  $$
 

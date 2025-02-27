@@ -7,7 +7,7 @@
 ###############################################################################
 # User Input
 ###############################################################################
-plotfile2hdf5_exe="$SWM_AMREX_ROOT"/plotting_utils/main2d.gnu.MPI.ex
+plotfile2hdf5_exe="$SWM_AMREX_ROOT"/plotting_utils/plotfile_2_hdf52d.gnu.MPI.ex
 
 ###############################################################################
 # Command Line Input
@@ -30,6 +30,7 @@ input_directory="${input_directory%/}"
 
 set -u
 set -e
+#set -x
 
 # Convenience function to print 80 character wide banners with centered text
 print_banner() {
@@ -46,30 +47,48 @@ print_banner() {
 
 
 ###############################################################################
-# Convert to HDF5 and Plot to create PNG files
+# Convert AMReX Plotfiles to HDF5 files
 ###############################################################################
 
+# The directory where the HDF5 files will be saved... just use the same directory that contains the plotfiles
+hdf5_output_dir="$input_directory"
+
+# Initialize an array to store the HDF5 filenames
+hdf5_files=()
+
 # Loop over all files that start with plt_ followed by a series of numbers in the specified directory
-for infile in "$input_directory"/plt[0-9]*; do
+for plt_file in "$input_directory"/plt[0-9]*; do
 
     # Skip files that contain .old or .h5
-    if [[ "$infile" == *".old"* || "$infile" == *".h5"* ]]; then
+    if [[ "$plt_file" == *".old"* || "$plt_file" == *".h5"* ]]; then
         continue
     fi
 
-    print_banner "Converting $infile to HDF5 and Plotting"
+    print_banner "Converting $plt_file to HDF5 and Plotting"
 
-    # Plotfiles are actually directories. Check that infile is a directory
-    if [[ -d "$infile" ]]; then
-        # Set the outfile name to the same as infile but with .h5 extension
-        hdf5_file="${infile}.h5"
+    # Plotfiles are actually directories. Check that plt_file is a directory
+    if [[ -d "$plt_file" ]]; then
+        # Set the outfile name to the same as plt_file but with .h5 extension
+        hdf5_file="${hdf5_output_dir}/$(basename "${plt_file}").h5"
         
-        # Run the program with the infile and outfile arguments
-        "$plotfile2hdf5_exe" infile="$infile" outfile="$hdf5_file"
+        "$plotfile2hdf5_exe" infile="$plt_file" outfile="$hdf5_file"
+        
+        # Add the HDF5 filename to the array
+        hdf5_files+=("$hdf5_file")
     fi
 
-    python "$SWM_AMREX_ROOT"/plotting_utils/plot_hdf5.py "$hdf5_file" --output_dir "$input_directory"
+done
 
+##############################################################################
+# Loop over each HDF5 files and plot. Creates a series of PNG files.
+##############################################################################
+print_banner "Processing each HDF5 file"
+
+# The directory where the png files will be saved... just use the same directory that contains the plotfiles
+png_output_dir="$input_directory"
+
+for hdf5_file in "${hdf5_files[@]}"; do
+    python "$SWM_AMREX_ROOT"/plotting_utils/plot_hdf5.py "$hdf5_file" --output_dir "$png_output_dir"
 done
 
 ##############################################################################
@@ -84,7 +103,10 @@ then
     exit 1
 fi
 
+# The directory where the mp4 files will be saved... just use the same directory that contains the plotfiles
+mp4_output_dir="$input_directory"
+
 # Create the MP4 movie from PNG files
 for prefix in u v p; do
-    ffmpeg -y -framerate 4 -pattern_type glob -i "${prefix}_*.png" -c:v libx264 -pix_fmt yuv420p "${prefix}.mp4"
+    ffmpeg -y -framerate 4 -pattern_type glob -i "${png_output_dir}/${prefix}_*.png" -c:v libx264 -pix_fmt yuv420p "${mp4_output_dir}/${prefix}.mp4"
 done
