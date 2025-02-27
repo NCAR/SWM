@@ -268,22 +268,22 @@ int main(int argc, char **argv) {
     t100 = t100 + (c2 - c1); 
 
     // Periodic continuation
-#pragma acc parallel loop independent deviceptr(cu,cv,z,h)
+#pragma acc parallel deviceptr(cu,cv,z,h)
+{
+    #pragma acc loop
     for (j=0;j<N;j++) {
       cu[j] = cu[M*N_LEN + j];
       cv[M*N_LEN + j + 1] = cv[j + 1];
       z[j + 1] = z[M*N_LEN + j + 1];
       h[M*N_LEN +j] = h[j];
     }
-#pragma acc parallel loop independent deviceptr(cu,cv,z,h)
+    #pragma acc loop
     for (i=0;i<M;i++) {
       cu[(i + 1)*N_LEN +N] = cu[(i + 1)*N_LEN];
       cv[i*N_LEN] = cv[i*N_LEN + N];
       z[(i + 1)*N_LEN] = z[i*N_LEN + N];
       h[i*N_LEN + N] = h[i*N_LEN];
     }
-#pragma acc serial present(tdts8,tdt,tdtsdx,tdtsdy,dx,dy) deviceptr(cu,cv,z,h)
-{
     cu[N] = cu[M*N_LEN];
     cv[M*N_LEN] = cv[N];
     z[0] = z[M*N_LEN+N];
@@ -313,15 +313,16 @@ int main(int argc, char **argv) {
     t200 = t200 + (c2 - c1); 
 
     // Periodic continuation
-#pragma acc parallel loop independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
+#pragma acc parallel
+{ 
+    #pragma acc loop
     for (j=0;j<N;j++) {
-//#pragma acc cache(unew[M*N_LEN:N_LEN],vnew[:N_LEN],pnew[:N_LEN])
       //printf("N loop unew %d -> %d, vnew %d -> %d , pnew %d -> %d\n",M*N_LEN+j,j,j+1,M*N_LEN +j + 1,j,M*N_LEN +j);
       unew[j] = unew[M*N_LEN+j];
       vnew[M*N_LEN +j + 1] = vnew[j + 1];
       pnew[M*N_LEN +j] = pnew[j];
     }
-#pragma acc parallel loop independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
+    #pragma acc loop
     for (i=0;i<M;i++) {
       //printf("M loop unew %d -> %d, vnew %d -> %d , pnew %d -> %d\n",(i + 1)*N_LEN,(i + 1)*N_LEN+N,i*N_LEN+N,i*N_LEN,i*N_LEN,i*N_LEN+N);
       unew[(i + 1)*N_LEN+N] = unew[(i + 1)*N_LEN];
@@ -329,8 +330,8 @@ int main(int argc, char **argv) {
       pnew[i*N_LEN+N] = pnew[i*N_LEN];
     }
 
-#pragma acc serial present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
-{
+//#pragma acc serial present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
+//{
     unew[N] = unew[M*N_LEN];
     vnew[M*N_LEN] = vnew[N];
     pnew[M*N_LEN+N] = pnew[0];

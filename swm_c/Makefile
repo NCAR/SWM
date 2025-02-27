@@ -1,6 +1,6 @@
 # Define the compiler
-#CC = nvc
-CC = gcc
+CC = nvc
+#CC = gcc
 
 # Source files for each executable
 EXEC_SRCS = shallow_swap.c shallow_swap.acc.c shallow_swap.acc.Tile.c
