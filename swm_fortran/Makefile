@@ -20,6 +20,9 @@ all: swm_fortran swm_fortran_driver
 nvfortran:
 	make FC=nvfortran FFLAGS="-r8 -acc=gpu" swm_fortran swm_fortran_driver
 
+nvfortran_noacc:
+	make FC=nvfortran FFLAGS="-r8 -noacc" swm_fortran swm_fortran_driver
+
 swm_fortran: swm_fortran.F90
 	$(FC) $(FFLAGS) -o $@ swm_fortran.F90
 

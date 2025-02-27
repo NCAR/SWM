@@ -3,6 +3,7 @@
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define L_OUT .true.
+#define _COPY_ .false.
 #define VAL_OUT .false.
 #define ITMAX 4000
 
@@ -80,8 +81,6 @@ Program SWM_Fortran_Driver
   pcf = pi * pi * a * a / (el * el)
 
   ! Initial values of the stream function and p
-  !$acc enter data copyin(a,di,dj,pcf,psi,p,dx,dy,u,v,uold,vold,pold)
-  !$acc parallel loop collapse(2) present(a,di,dj,pcf)
   do j=0,N_LEN-1
     do i=0,M_LEN-1
       psi(i+1,j+1) = a * sin((i + .5) * di) * sin((j + .5) * dj)
@@ -90,7 +89,8 @@ Program SWM_Fortran_Driver
   end do
 
   ! Initialize velocities
-  !$acc parallel loop collapse(2) present(psi,dx,dy)
+  !$acc enter data copyin(uold,vold,pold,u,v,p,psi)
+  !$acc parallel loop collapse(2) present(psi)
   do j=1,N
     do i=1,M
       u(i+1,j) = -(psi(i+1,j+1) - psi(i+1,j)) / dy
@@ -111,8 +111,10 @@ Program SWM_Fortran_Driver
     v(i,1) = v(i,N_LEN)
   end do
 
+  !$acc parallel
   u(1,N_LEN) = u(M_LEN,1)
   v(M_LEN,1) = v(1,N_LEN)
+  !$acc end parallel
 
   !$acc parallel loop collapse(2) present(u,v,p)
   do j=1,N_LEN
@@ -122,7 +124,7 @@ Program SWM_Fortran_Driver
       pold(i,j) = p(i,j)
     end do
   end do
-  !$acc exit data copyout(uold,vold,pold,u,v,p,psi)
+  !$acc exit data copyout(uold,vold,pold,u,v)
 
   if ( L_OUT ) then
     write(*,"(A,I0)") " number of points in the x direction ", N
@@ -160,11 +162,13 @@ Program SWM_Fortran_Driver
   do ncycle=1,ITMAX
 
     call cpu_time(c1)
+    !$acc enter data copyin(p,u,v,fsdx,fsdy,cu,cv,h,z)
     call UpdateIntermediateVariablesKernel(fsdx,fsdy,p,u,v,cu,cv,h,z)
     call cpu_time(c2)
     t100 = t100 + (c2 - c1)
 
     ! Periodic continuation
+    !$acc parallel loop
     do j=1,N
       cu(1,j) = cu(M_LEN,j)
       cv(M_LEN,j+1) = cv(1,j+1)
@@ -172,6 +176,7 @@ Program SWM_Fortran_Driver
       h(M_LEN,j) = h(1,j)
     end do
 
+    !$acc parallel loop
     do i=1,M
       cu(i+1, N_LEN) = cu(i+1,1)
       cv(i,1) = cv(i,N_LEN)
@@ -179,10 +184,13 @@ Program SWM_Fortran_Driver
       h(i,N_LEN) = h(i,1)
     end do
 
+    !$acc parallel
     cu(1,N_LEN) = cu(M_LEN,1)
     cv(M_LEN,1) = cv(1,N_LEN)
     z(1,1) = z(M_LEN,N_LEN)
     h(M_LEN,N_LEN) = h(1,1)
+    !$acc end parallel
+    !$acc exit data copyout(cu,cv,z,h)
 
     ! Compute new values of u, v, and p
     tdts8 = tdt / 8.
@@ -190,33 +198,41 @@ Program SWM_Fortran_Driver
     tdtsdy = tdt / dy
 
     call cpu_time(c1)
+    !$acc enter data copyin(tdtsdx,tdtsdy,tdts8,cu,cv,z,h,pold,uold,vold,pnew,unew,vnew)
     call UpdateNewVariablesKernel(tdtsdx,tdtsdy,tdts8,pold,uold,vold,cu,cv,h,z,pnew,unew,vnew)
     call cpu_time(c2)
     t200 = t200 + (c2-c1)
 
     ! Periodic continuation
+    !$acc parallel loop
     do j=1,N
       unew(1,j) = unew(M_LEN,j)
       vnew(M_LEN,j+1) = vnew(1,j+1)
       pnew(M_LEN,j) = pnew(1,j)
     end do
 
+    !$acc parallel loop
     do i=1,M
       unew(i+1,N_LEN) = unew(i+1,1)
       vnew(i,1) = vnew(i,N_LEN)
       pnew(i,N_LEN) = pnew(i,1)
     end do
 
+    !$acc parallel
     unew(1,N_LEN) = unew(M_LEN,1)
     vnew(M_LEN,1) = vnew(1,N_LEN)
     pnew(M_LEN,N_LEN) = pnew(1,1)
+    !$acc end parallel
+    !$acc exit data copyout(unew,vnew,pnew)
 
     time = time + dt
     if (ncycle > 1) then
       call cpu_time(c1)
+      !$acc enter data copyin(alpha,pold,uold,vold,p,u,v,pnew,unew,vnew)
       call UpdateOldVariablesKernel(alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
 
 #ifdef _COPY_
+      !$acc parallel loop collapse(2) present(unew,vnew,pnew)
       do j=1,N_LEN
         do i=1,M_LEN
           u(i,j) = unew(i,j)
@@ -224,7 +240,9 @@ Program SWM_Fortran_Driver
           p(i,j) = pnew(i,j)
         end do
       end do
+      !$acc exit data copyout(uold,vold,pold,u,v,p)
 #else
+      !$acc exit data copyout(uold,vold,pold)
       call dswap(u, unew)
       call dswap(v, vnew)
       call dswap(p, pnew)
@@ -233,6 +251,8 @@ Program SWM_Fortran_Driver
       t300 = t300 + (c2 - c1)
     else ! ncycle = 1
       tdt = tdt + tdt
+      !$acc enter data copyin(pold,uold,vold,p,u,v,pnew,unew,vnew)
+      !$acc parallel loop collapse(2)
       do j=1,N_LEN
         do i=1,N_LEN
           uold(i,j) = u(i,j)
@@ -240,9 +260,22 @@ Program SWM_Fortran_Driver
           pold(i,j) = p(i,j)
         end do
       end do
+#ifdef _COPY_
+      !$acc parallel loop collapse(2)
+      do j=1,N_LEN
+        do i=1,N_LEN
+          u(i,j) = unew(i,j)
+          v(i,j) = vnew(i,j)
+          p(i,j) = pnew(i,j)
+        end do
+      end do
+      !$acc exit data copyout(uold,vold,pold,u,v,p)
+#else
+      !$acc exit data copyout(uold,vold,pold)
       call dswap(u, unew)
       call dswap(v, vnew)
       call dswap(p, pnew)
+#endif
     end if
   end do ! End of time loop
 
