@@ -12,6 +12,7 @@ contains
 
     integer :: i,j
 
+    !$acc parallel loop collapse(2) present(p,u,v,fsdx,fsdy)
     do j=1,size(cu,2)-1
       do i=1,size(cu,1)-1
         cu(i+1,j) = 0.5 * (p(i+1,j) + p(i,j)) * u(i+1,j)
@@ -22,6 +23,7 @@ contains
                                   v(i,j+1) * v(i,j+1) + v(i,j) * v(i,j))
       end do
     end do
+
   end subroutine UpdateIntermediateVariablesKernel
 
   subroutine UpdateNewVariablesKernel(tdtsdx,tdtsdy,tdts8,pold,uold,vold,cu,cv,h,z,pnew,unew,vnew)
@@ -32,6 +34,7 @@ contains
 
     integer :: i,j
 
+    !$acc parallel loop collapse(2) present(tdtsdx,tdtsdy,tdts8,cu,cv,z,h,pold,uold,vold)
     do j=1,size(unew,2)-1
       do i=1,size(unew,1)-1
         unew(i+1,j) = uold(i+1,j) + &
@@ -43,6 +46,7 @@ contains
         pnew(i,j) = pold(i,j) - tdtsdx * (cu(i+1,j) - cu(i,j)) - tdtsdy * (cv(i,j+1) - cv(i,j))
       end do
     end do
+
   end subroutine UpdateNewVariablesKernel
 
   subroutine UpdateOldVariablesKernel(alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
@@ -52,8 +56,9 @@ contains
 
     integer :: i,j
 
-    do j=1,size(uold,2)-1
-      do i=1,size(uold,1)-1
+    !$acc parallel loop collapse(2) present(alpha,p,u,v,pnew,unew,vnew)
+    do j=1,size(uold,2)
+      do i=1,size(uold,1)
         uold(i,j) = u(i,j) + alpha*(unew(i,j) - 2. * u(i,j) + uold(i,j))
         vold(i,j) = v(i,j) + alpha*(vnew(i,j) - 2. * v(i,j) + vold(i,j))
         pold(i,j) = p(i,j) + alpha*(pnew(i,j) - 2. * p(i,j) + pold(i,j))
