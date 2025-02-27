@@ -12,7 +12,8 @@ contains
 
     integer :: i,j
 
-    !$acc parallel loop collapse(2) present(p,u,v,fsdx,fsdy)
+    !$acc parallel default(present) 
+    !$acc loop collapse(2)
     do j=1,size(cu,2)-1
       do i=1,size(cu,1)-1
         cu(i+1,j) = 0.5 * (p(i+1,j) + p(i,j)) * u(i+1,j)
@@ -23,6 +24,7 @@ contains
                                   v(i,j+1) * v(i,j+1) + v(i,j) * v(i,j))
       end do
     end do
+    !$acc end parallel
 
   end subroutine UpdateIntermediateVariablesKernel
 
@@ -34,7 +36,7 @@ contains
 
     integer :: i,j
 
-    !$acc parallel loop collapse(2) present(tdtsdx,tdtsdy,tdts8,cu,cv,z,h,pold,uold,vold)
+    !$acc parallel loop collapse(2) default(present)
     do j=1,size(unew,2)-1
       do i=1,size(unew,1)-1
         unew(i+1,j) = uold(i+1,j) + &
@@ -56,7 +58,7 @@ contains
 
     integer :: i,j
 
-    !$acc parallel loop collapse(2) present(alpha,p,u,v,pnew,unew,vnew)
+    !$acc parallel loop collapse(2) default(present)
     do j=1,size(uold,2)
       do i=1,size(uold,1)
         uold(i,j) = u(i,j) + alpha*(unew(i,j) - 2. * u(i,j) + uold(i,j))
