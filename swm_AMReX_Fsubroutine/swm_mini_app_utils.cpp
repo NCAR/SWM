@@ -8,7 +8,6 @@
 #include <AMReX_Array.H>
 
 #include "swm_mini_app_utils.h"
-#include "swm_mini_app_kernels.h"
 #include "funcF.H"
 
 void ParseInput(int & nx, int & ny,
