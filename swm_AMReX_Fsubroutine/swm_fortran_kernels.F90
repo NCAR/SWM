@@ -5,15 +5,12 @@ module SWM_Fortran_Kernels
 contains
 
   subroutine UpdateIntermediateVariablesSub(lo,hi, &
-                p,p_lo,p_hi, &
-                u,u_lo,u_hi, &
-                v,v_lo,v_hi, &
-                cu,cu_lo,cu_hi, &
-                cv,cv_lo,cv_hi, &
-                h,h_lo,h_hi, &
-                z,z_lo,z_hi, &
-                fsdx,fsdy) bind(C,name="UpdateIntermediateVariablesSub")
+               p,   p_lo,  p_hi,  u,  u_lo,  u_hi, v, v_lo, v_hi, &
+               cu, cu_lo, cu_hi, cv, cv_lo, cv_hi, h, h_lo, h_hi, &
+               z,   z_lo,  z_hi, fsdx, fsdy) bind(C,name="UpdateIntermediateVariablesSub")
+
     use amrex_fort_module, only : amrex_real
+    implicit none
 
     integer, dimension(2) ::  lo, hi
     integer, dimension(2) ::  p_lo, p_hi, u_lo, u_hi, v_lo, v_hi
@@ -42,17 +39,11 @@ contains
   end subroutine UpdateIntermediateVariablesSub
 
   subroutine UpdateNewVariablesSub(lo,hi, &
-                      pold,pold_lo,pold_hi, &
-                      uold,uold_lo,uold_hi, &
-                      vold,vold_lo,vold_hi, &
-                      cu,cu_lo,cu_hi, &
-                      cv,cv_lo,cv_hi, &
-                      h,h_lo,h_hi, &
-                      z,z_lo,z_hi, &
-                      pnew,pnew_lo,pnew_hi, &
-                      unew,unew_lo,unew_hi, &
-                      vnew,vnew_lo,vnew_hi, &
-                      tdtsdx,tdtsdy,tdts8) bind(C,name="UpdateNewVariablesSub")
+               pold, pold_lo, pold_hi, uold, uold_lo, uold_hi, vold, vold_lo, vold_hi, &
+                 cu,   cu_lo,   cu_hi,   cv,   cv_lo,   cv_hi,    h,    h_lo,    h_hi, &
+                  z,    z_lo,    z_hi, pnew, pnew_lo, pnew_hi, unew, unew_lo,  unew_hi, &
+               vnew, vnew_lo,  vnew_hi, tdtsdx,tdtsdy,tdts8) bind(C,name="UpdateNewVariablesSub")
+
     use amrex_fort_module, only : amrex_real
     implicit none
 
@@ -89,19 +80,14 @@ contains
   end subroutine UpdateNewVariablesSub
 
   subroutine UpdateOldVariablesSub(lo,hi, &
-                      pnew,pnew_lo,pnew_hi, &
-                      unew,unew_lo,unew_hi, &
-                      vnew,vnew_lo,vnew_hi, &
-                      p,p_lo,p_hi, &
-                      u,u_lo,u_hi, &
-                      v,v_lo,v_hi, &
-                      pold,pold_lo,pold_hi, &
-                      uold,uold_lo,uold_hi, &
-                      vold,vold_lo,vold_hi, &
-                      alpha) bind(C,name="UpdateOldVariablesSub")
+               pnew, pnew_lo, pnew_hi, unew, unew_lo, unew_hi, vnew, vnew_lo, vnew_hi, &
+                  p,    p_lo,    p_hi,    u,    u_lo,    u_hi,    v,    v_lo,    v_hi, &
+               pold, pold_lo, pold_hi, uold, uold_lo, uold_hi, vold, vold_lo, vold_hi, &
+               alpha) bind(C,name="UpdateOldVariablesSub")
 
     use amrex_fort_module, only : amrex_real
     implicit none
+
     integer, dimension(2) ::  lo, hi
     integer, dimension(2) ::  pold_lo, pold_hi, uold_lo, uold_hi, vold_lo, vold_hi
     integer, dimension(2) ::  pnew_lo, pnew_hi, unew_lo, unew_hi, vnew_lo, vnew_hi
