@@ -4,10 +4,9 @@
 # and then plot the hdf5 files using matplotlib. The script will also create an MP4 movie from the
 # PNG files created by the plotting script.
 
-###############################################################################
-# User Input
-###############################################################################
-plotfile2hdf5_exe="$SWM_AMREX_ROOT"/plotting_utils/plotfile_2_hdf52d.gnu.MPI.ex
+set -u
+set -e
+#set -x
 
 ###############################################################################
 # Command Line Input
@@ -28,10 +27,6 @@ input_directory="${input_directory%/}"
 # Setup
 ###############################################################################
 
-set -u
-set -e
-#set -x
-
 # Convenience function to print 80 character wide banners with centered text
 print_banner() {
     local message="$1"
@@ -45,6 +40,25 @@ print_banner() {
     echo -e "$border\n"
 }
 
+###############################################################################
+# Build Plotfile to HDF5 Conversion Executable
+###############################################################################
+
+print_banner "Build Plotfile to HDF5 Conversion Executable"
+
+plotting_utils_dir="${SWM_AMREX_ROOT}"/plotting_utils
+
+cd "${plotting_utils_dir}"
+
+# Run make and capture the output
+make_output=$(mktemp) # Create a temporary file to store the output of make
+make | tee "$make_output"
+
+# Parse the output to find the executable name
+plotfile_2_hdf5_exe_base=$(grep "executable is" "$make_output" | awk '{print $3}')
+rm "$make_output" # Remove the temporary file used to store the output of make
+
+plotfile_2_hdf5_exe="${plotting_utils_dir}/${plotfile_2_hdf5_exe_base}"
 
 ###############################################################################
 # Convert AMReX Plotfiles to HDF5 files
@@ -64,14 +78,14 @@ for plt_file in "$input_directory"/plt[0-9]*; do
         continue
     fi
 
-    print_banner "Converting $plt_file to HDF5 and Plotting"
+    print_banner "Converting $plt_file to HDF5"
 
     # Plotfiles are actually directories. Check that plt_file is a directory
     if [[ -d "$plt_file" ]]; then
         # Set the outfile name to the same as plt_file but with .h5 extension
         hdf5_file="${hdf5_output_dir}/$(basename "${plt_file}").h5"
         
-        "$plotfile2hdf5_exe" infile="$plt_file" outfile="$hdf5_file"
+        "$plotfile_2_hdf5_exe" infile="$plt_file" outfile="$hdf5_file"
         
         # Add the HDF5 filename to the array
         hdf5_files+=("$hdf5_file")
@@ -82,7 +96,7 @@ done
 ##############################################################################
 # Loop over each HDF5 files and plot. Creates a series of PNG files.
 ##############################################################################
-print_banner "Processing each HDF5 file"
+print_banner "Plotting HDF5 files"
 
 # The directory where the png files will be saved... just use the same directory that contains the plotfiles
 png_output_dir="$input_directory"
