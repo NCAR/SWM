@@ -3,6 +3,7 @@
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define L_OUT .true.
+#define _COPY_ .false.
 #define VAL_OUT .false.
 #define ITMAX 4000
 
@@ -142,13 +143,16 @@ Program SWM_Fortran_Driver
     write(*,*)
   end if
 
+  !$acc enter data &
+  !$acc   copyin(fsdx,fsdy,alpha,p,u,v,pold,uold,vold) &
+  !$acc   create(cu,cv,h,z,pnew,unew,vnew, &
+  !$acc          tdts8,tdtsdx,tdtsdy)
   ! Start timer
   call cpu_time(tstart)
   time = 0.
   t100 = 0.
   t200 = 0.
   t300 = 0.
-
   ! Start of time loop
   do ncycle=1,ITMAX
 
@@ -157,7 +161,9 @@ Program SWM_Fortran_Driver
     call cpu_time(c2)
     t100 = t100 + (c2 - c1)
 
+    !$acc parallel
     ! Periodic continuation
+    !$acc loop
     do j=1,N
       cu(1,j) = cu(M_LEN,j)
       cv(M_LEN,j+1) = cv(1,j+1)
@@ -165,6 +171,7 @@ Program SWM_Fortran_Driver
       h(M_LEN,j) = h(1,j)
     end do
 
+    !$acc loop
     do i=1,M
       cu(i+1, N_LEN) = cu(i+1,1)
       cv(i,1) = cv(i,N_LEN)
@@ -176,6 +183,7 @@ Program SWM_Fortran_Driver
     cv(M_LEN,1) = cv(1,N_LEN)
     z(1,1) = z(M_LEN,N_LEN)
     h(M_LEN,N_LEN) = h(1,1)
+    !$acc end parallel
 
     ! Compute new values of u, v, and p
     tdts8 = tdt / 8.
@@ -187,13 +195,16 @@ Program SWM_Fortran_Driver
     call cpu_time(c2)
     t200 = t200 + (c2-c1)
 
+    !$acc parallel
     ! Periodic continuation
+    !$acc loop
     do j=1,N
       unew(1,j) = unew(M_LEN,j)
       vnew(M_LEN,j+1) = vnew(1,j+1)
       pnew(M_LEN,j) = pnew(1,j)
     end do
 
+    !$acc loop
     do i=1,M
       unew(i+1,N_LEN) = unew(i+1,1)
       vnew(i,1) = vnew(i,N_LEN)
@@ -203,6 +214,7 @@ Program SWM_Fortran_Driver
     unew(1,N_LEN) = unew(M_LEN,1)
     vnew(M_LEN,1) = vnew(1,N_LEN)
     pnew(M_LEN,N_LEN) = pnew(1,1)
+    !$acc end parallel
 
     time = time + dt
     if (ncycle > 1) then
@@ -210,6 +222,7 @@ Program SWM_Fortran_Driver
       call UpdateOldVariablesKernel(alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
 
 #ifdef _COPY_
+      !$acc parallel loop collapse(2)
       do j=1,N_LEN
         do i=1,M_LEN
           u(i,j) = unew(i,j)
@@ -226,6 +239,7 @@ Program SWM_Fortran_Driver
       t300 = t300 + (c2 - c1)
     else ! ncycle = 1
       tdt = tdt + tdt
+      !$acc parallel loop collapse(2)
       do j=1,N_LEN
         do i=1,N_LEN
           uold(i,j) = u(i,j)
@@ -233,20 +247,33 @@ Program SWM_Fortran_Driver
           pold(i,j) = p(i,j)
         end do
       end do
+#ifdef _COPY_
+      !$acc parallel loop collapse(2)
+      do j=1,N_LEN
+        do i=1,N_LEN
+          u(i,j) = unew(i,j)
+          v(i,j) = vnew(i,j)
+          p(i,j) = pnew(i,j)
+        end do
+      end do
+#else
       call dswap(u, unew)
       call dswap(v, vnew)
       call dswap(p, pnew)
+#endif
     end if
   end do ! End of time loop
 
-  call dswap(u, unew)
-  call dswap(v, vnew)
-  call dswap(p, pnew)
+  call cpu_time(c2)
+  ctime = c2 - tstart
+  tcyc = ctime / real(ITMAX)
+  !$acc exit data copyout(cu,cv,h,z,pnew,unew,vnew,p,u,v,uold,vold,pold)
+
 
   if ( VAL_OUT ) then
-    call write_to_file(pnew, 'p.bin')
-    call write_to_file(unew, 'u.bin')
-    call write_to_file(vnew, 'v.bin')
+    call write_to_file(p, 'p.bin')
+    call write_to_file(u, 'u.bin')
+    call write_to_file(v, 'v.bin')
   end if
 
   if ( L_OUT ) then
@@ -256,15 +283,15 @@ Program SWM_Fortran_Driver
                               " model time in hours ", ptime
     write(*, "(A)") " diagonal elements of p"
     do i=1,mnmin
-      write(*, "(F0.6,1X)", advance="no") pnew(i,i)
+      write(*, "(F0.6,1X)", advance="no") p(i,i)
     end do
     write(*, "(/,A)") " diagonal elements of u"
     do i=1,mnmin
-      write(*, "(F0.6,1X)", advance="no") unew(i,i)
+      write(*, "(F0.6,1X)", advance="no") u(i,i)
     end do
     write(*, "(/,A)") " diagonal elements of v"
     do i=1,mnmin
-      write(*, "(F0.6,1X)", advance="no") vnew(i,i)
+      write(*, "(F0.6,1X)", advance="no") v(i,i)
     end do
 
     mfs100 = 0.
@@ -275,9 +302,6 @@ Program SWM_Fortran_Driver
     if ( t200 .gt. 0 ) mfs200 = real(ITMAX) * 26. * real(M*N) / t200 / 1000000.
     if ( t300 .gt. 0 ) mfs300 = real(ITMAX) * 15. * real(M*N) / t300 / 1000000.
 
-    call cpu_time(c2)
-    ctime = c2 - tstart
-    tcyc = ctime / real(ITMAX)
 
     write(*, "(/,A,I0,A,F0.6,A,F0.6)") " cycle number ", ITMAX, " total computer time ", ctime, " time per cycle ", tcyc
     write(*, "(A,F0.6,1X,F0.6)") " time and megaflops for loop 100 ", t100, mfs100
