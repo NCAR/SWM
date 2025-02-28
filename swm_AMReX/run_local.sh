@@ -18,7 +18,7 @@ num_procs=2
 
 #solution_verification_method="none"       # Do not perform solution verification
 solution_verification_method="hdf5"       # If you use the hdf5 option you must have the HDF5_HOME environment variable set.
-#solution_verification_method="plotfile"  # If you want to use the plotfile option you must first build the fcomprare executable in the AMREX_HOME/Tools/Plotfile directory.
+#solution_verification_method="plotfile"   # If you want to use the plotfile option you must first build the fcomprare executable in the AMREX_HOME/Tools/Plotfile directory.
 
 ##############################################################################
 # Setup 
@@ -28,18 +28,8 @@ set -e
 set -u
 #set -x
 
-# Convenience function to print 80 character wide banners with centered text
-print_banner() {
-    local message="$1"
-    local border_char="#"
-    local width=80
-    local padding=$(( (width - ${#message} - 2) / 2 ))
-    local border=$(printf "%-${width}s" | tr ' ' "$border_char")
-
-    echo -e "\n$border"
-    printf "%*s %s %*s\n" $padding "" "$message" $padding ""
-    echo -e "$border\n"
-}
+# Source common functions
+source "$SWM_AMREX_ROOT"/common_functions.sh
 
 ##############################################################################
 # Build
