@@ -17,4 +17,4 @@ dt = 90
 
 # How often to write a plotfile
 # Optional. If left out no plot files will be written.
-plot_interval = 100
+plot_interval = 4000

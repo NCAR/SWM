@@ -1,14 +1,7 @@
-#define M 256
-#define N 256
-#define M_LEN (M + 1)
-#define N_LEN (N + 1)
-#define L_OUT .true.
-#define _COPY_ .false.
-#define VAL_OUT .false.
-#define ITMAX 4000
 
 Program SWM_Fortran_Driver
 
+  use params
   use swm_fortran_kernels, only : UpdateIntermediateVariablesKernel
   use swm_fortran_kernels, only : UpdateNewVariablesKernel
   use swm_fortran_kernels, only : UpdateOldVariablesKernel
