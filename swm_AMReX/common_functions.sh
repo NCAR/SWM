@@ -13,25 +13,30 @@ print_banner() {
     echo -e "$border\n"
 }
 
-## Function to build Plotfile to HDF5 Conversion Executable.
-## Sets the variable plotfile_2_hdf5_exe to the path of the executable.
-#build_plotfile_to_hdf5_exe() {
-#
-#    local plotting_utils_dir="${SWM_AMREX_ROOT}"/plotting_utils
-#
-#    cd "${plotting_utils_dir}"
-#
-#    # Run make and capture the output
-#    local make_output=$(mktemp) # Create a temporary file to store the output of make
-#    #make | tee "$make_output"
-#    #make > "$make_output" 2>&1
-#    make > "$make_output" 
-#
-#    # Parse the output to find the executable name
-#    local plotfile_2_hdf5_exe_base=$(grep "executable is" "$make_output" | awk '{print $3}')
-#    rm "$make_output" # Remove the temporary file used to store the output of make
-#
-#    local plotfile_2_hdf5_exe="${plotting_utils_dir}/${plotfile_2_hdf5_exe_base}"
-#
-#    echo "$plotfile_2_hdf5_exe"
-#}
+# Function to build Plotfile to HDF5 Conversion Executable.
+#     Sets the variable plotfile_2_hdf5_exe to the path of the executable.
+build_plotfile_to_hdf5_exe() {
+
+    local plotting_utils_dir="${SWM_AMREX_ROOT}"/plotting_utils
+
+    cd "${plotting_utils_dir}"
+
+    # Run make and capture the output
+    local make_output=$(mktemp) # Create a temporary file to store the output of make
+    make | tee "$make_output"
+    #make > "$make_output" 2>&1
+    #make > "$make_output" 
+
+    # Parse the output to find the executable name
+    local plotfile_2_hdf5_exe_base=$(grep "executable is" "$make_output" | awk '{print $3}')
+    rm "$make_output" # Remove the temporary file used to store the output of make
+
+    # This variable is the output of the function
+    plotfile_2_hdf5_exe="${plotting_utils_dir}/${plotfile_2_hdf5_exe_base}"
+
+    # Make sure that plotfile_2_hdf5_exe is an executable
+    if [ ! -x "$plotfile_2_hdf5_exe" ]; then
+        echo "Error: $plotfile_2_hdf5_exe is not an executable file."
+        exit 1
+    fi
+}

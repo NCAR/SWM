@@ -40,22 +40,23 @@ source "$SWM_AMREX_ROOT"/common_functions.sh
 
 print_banner "Build Plotfile to HDF5 Conversion Executable"
 
-plotting_utils_dir="${SWM_AMREX_ROOT}"/plotting_utils
+#plotting_utils_dir="${SWM_AMREX_ROOT}"/plotting_utils
 
-cd "${plotting_utils_dir}"
+#cd "${plotting_utils_dir}"
 
-# Run make and capture the output
-make_output=$(mktemp) # Create a temporary file to store the output of make
-make | tee "$make_output"
+## Run make and capture the output
+#make_output=$(mktemp) # Create a temporary file to store the output of make
+#make | tee "$make_output"
 
-# Parse the output to find the executable name
-plotfile_2_hdf5_exe_base=$(grep "executable is" "$make_output" | awk '{print $3}')
-rm "$make_output" # Remove the temporary file used to store the output of make
+## Parse the output to find the executable name
+#plotfile_2_hdf5_exe_base=$(grep "executable is" "$make_output" | awk '{print $3}')
+#rm "$make_output" # Remove the temporary file used to store the output of make
 
-plotfile_2_hdf5_exe="${plotting_utils_dir}/${plotfile_2_hdf5_exe_base}"
+#plotfile_2_hdf5_exe="${plotting_utils_dir}/${plotfile_2_hdf5_exe_base}"
 
 ## Call the function and get the path to the executable
-#plotfile_2_hdf5_exe=$(build_plotfile_to_hdf5_exe)
+#      This function sets the variable plotfile_2_hdf5_exe to the path of the executable.
+build_plotfile_to_hdf5_exe
 
 # Make sure that plotfile_2_hdf5_exe is an executable
 if [ ! -x "$plotfile_2_hdf5_exe" ]; then

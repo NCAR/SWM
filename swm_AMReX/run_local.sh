@@ -15,10 +15,20 @@ num_procs=2
 # Set the solution verification method: "none", "hdf5", or "plotfile"
 # Note: 
 #    You should also change the reference_file and file_to_compare variables in corresponding the Solution Verification section below.
-
 #solution_verification_method="none"       # Do not perform solution verification
 solution_verification_method="hdf5"       # If you use the hdf5 option you must have the HDF5_HOME environment variable set.
 #solution_verification_method="plotfile"   # If you want to use the plotfile option you must first build the fcomprare executable in the AMREX_HOME/Tools/Plotfile directory.
+
+# Convert all plotfiles to HDF5 format: "true" or "false"
+convert_all_plotfiles_to_hdf5="false"
+
+# Plot all results using python and matplotlib: "true" or "false"
+#     If this option is set to "true" then the convert_all_plotfiles_to_hdf5 option will also be treated as "true". Since we need the hdf5 files to make the plots.
+create_plots="false"
+
+# Create an MP4 movie from the PNG files created by the plotting script: "true" or "false"
+#     If this option is set to "true" then the create_plots option will also be treated as "true". Since we need the PNG plot files to make the movie.
+create_movie="false"
 
 ##############################################################################
 # Setup 
@@ -94,16 +104,33 @@ if [ "$solution_verification_method" != "none" ]; then
         file_to_compare="$run_dir"/plt00100
   
     elif [ "$solution_verification_method" == "hdf5" ]; then
-  
-        # First we need to convert the plotfile to hdf5 
-        $SWM_AMREX_ROOT/plotting_utils/convert_to_hdf5_and_plot.sh "$run_dir"
-  
+
         compare_exe="h5diff" # exact comparison
         #compare_exe="h5diff --use-system-epsilon" # compare to machine epsilon
         #compare_exe="h5diff --relative=1.0e-2" # compare to 1% relative error
   
         reference_file="$SWM_AMREX_ROOT"/plt00100_reference.h5
-        file_to_compare="$run_dir"/plt00100.h5
+  
+        ## First we need to convert the plotfile to hdf5 
+        #$SWM_AMREX_ROOT/plotting_utils/convert_to_hdf5_and_plot.sh "$run_dir"
+
+        #file_to_compare="$run_dir"/plt00100.h5
+
+        ## Call the function and get the path to the executable
+        #      This function sets the variable plotfile_2_hdf5_exe to the path of the executable.
+        build_plotfile_to_hdf5_exe
+        
+        # Make sure that plotfile_2_hdf5_exe is an executable
+        if [ ! -x "$plotfile_2_hdf5_exe" ]; then
+            echo "Error: $plotfile_2_hdf5_exe is not an executable file."
+            exit 1
+        fi
+
+        plt_file="$run_dir"/plt00100
+        hdf5_file="$run_dir"/plt00100.h5
+        "${plotfile_2_hdf5_exe}" infile="$plt_file" outfile="$hdf5_file"
+
+        file_to_compare="$hdf5_file"
   
     else
         echo "Unknown solution verification method: $solution_verification_method"
@@ -112,6 +139,9 @@ if [ "$solution_verification_method" != "none" ]; then
     fi
   
     print_banner "Solution Verification"
+    echo " "
+    echo "Comparing $reference_file to $file_to_compare"
+    echo " "
   
     # Turn off exit on error for this one command since we want to check the return value
     set +e 
@@ -131,7 +161,19 @@ if [ "$solution_verification_method" != "none" ]; then
 fi
 
 ##############################################################################
+# Convert all AMReX plotfiles to HDF5 
+##############################################################################
+
+if [ "$convert_all_plotfiles_to_hdf5" == "true" ] || [ "$create_plots" == "true" ] || [ "$create_movie" == "true" ]; then
+    # For now this does all three steps: convert to hdf5, plot, and create movie
+    # TODO break this up into separate functions to do each step
+    $SWM_AMREX_ROOT/plotting_utils/convert_to_hdf5_and_plot.sh "$run_dir"
+fi
+
+##############################################################################
 # Plotting 
 ##############################################################################
-#print_banner "Plotting"
-#python "$SWM_AMREX_ROOT"/plot_with_yt.py
+
+##############################################################################
+# Create Movie 
+##############################################################################
