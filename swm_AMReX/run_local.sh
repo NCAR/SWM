@@ -76,6 +76,10 @@ fi
 # Solution Verification
 ##############################################################################
 if [ "$solution_verification_method" != "none" ]; then
+
+    print_banner "Solution Verification"
+    echo " "
+
     if [ "$solution_verification_method" == "plotfile" ]; then
         
         # Look for files that match the pattern fcompare*.ex in the directory $AMREX_HOME/Tools/Plotfile/
@@ -109,13 +113,9 @@ if [ "$solution_verification_method" != "none" ]; then
         #compare_exe="h5diff --use-system-epsilon" # compare to machine epsilon
         #compare_exe="h5diff --relative=1.0e-2" # compare to 1% relative error
   
-        reference_file="$SWM_AMREX_ROOT"/plt00100_reference.h5
+        reference_file="$SWM_AMREX_ROOT"/plt00100_64_reference.h5
+        #reference_file="$SWM_AMREX_ROOT"/plt00100_4096_reference.h5
   
-        ## First we need to convert the plotfile to hdf5 
-        #$SWM_AMREX_ROOT/plotting_utils/convert_to_hdf5_and_plot.sh "$run_dir"
-
-        #file_to_compare="$run_dir"/plt00100.h5
-
         ## Call the function and get the path to the executable
         #      This function sets the variable plotfile_2_hdf5_exe to the path of the executable.
         build_plotfile_to_hdf5_exe
@@ -127,8 +127,10 @@ if [ "$solution_verification_method" != "none" ]; then
         fi
 
         plt_file="$run_dir"/plt00100
-        hdf5_file="$run_dir"/plt00100.h5
+        hdf5_file=${plt_file}.h5 # put the hdf5 file in the same directory as the plotfile and have the same base name as the plotfile, just append the .h5 extension
         "${plotfile_2_hdf5_exe}" infile="$plt_file" outfile="$hdf5_file"
+
+        echo "Converted $plt_file to $hdf5_file"
 
         file_to_compare="$hdf5_file"
   
@@ -138,15 +140,12 @@ if [ "$solution_verification_method" != "none" ]; then
         exit 1
     fi
   
-    print_banner "Solution Verification"
-    echo " "
     echo "Comparing $reference_file to $file_to_compare"
-    echo " "
   
     # Turn off exit on error for this one command since we want to check the return value
     set +e 
   
-    $compare_exe "$reference_file" "$file_to_compare"
+    $compare_exe $reference_file $file_to_compare
   
     if [ $? -eq 0 ]; then
         echo -e "\nSolution Verification: PASS"
