@@ -22,10 +22,14 @@ build_plotfile_to_hdf5_exe() {
     cd "${plotting_utils_dir}"
 
     # Run make and capture the output
-    local make_output=$(mktemp) # Create a temporary file to store the output of make
+    make_output=$(mktemp) # Create a temporary file to store the output of make
     make | tee "$make_output"
-    #make > "$make_output" 2>&1
-    #make > "$make_output" 
+    make_exit_status=${PIPESTATUS[0]} # Capture the exit status of make
+    
+    if [ $make_exit_status -ne 0 ]; then
+        echo "Make failed with exit status $make_exit_status"
+        exit $make_exit_status
+    fi
 
     # Parse the output to find the executable name
     local plotfile_2_hdf5_exe_base=$(grep "executable is" "$make_output" | awk '{print $3}')
@@ -40,3 +44,4 @@ build_plotfile_to_hdf5_exe() {
         exit 1
     fi
 }
+

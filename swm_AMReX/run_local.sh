@@ -10,7 +10,7 @@
 ##############################################################################
 
 # Number of MPI ranks to run with. Only used if the executable name contains "MPI"
-num_procs=2
+num_procs=1
 
 # Set the solution verification method: "none", "hdf5", or "plotfile"
 # Note: 
@@ -51,6 +51,12 @@ cd "$SWM_AMREX_ROOT"
 # Run make and capture the output
 make_output=$(mktemp) # Create a temporary file to store the output of make
 make | tee "$make_output"
+make_exit_status=${PIPESTATUS[0]} # Capture the exit status of make
+
+if [ $make_exit_status -ne 0 ]; then
+    echo "Make failed with exit status $make_exit_status"
+    exit $make_exit_status
+fi
 
 # Parse the output to find the executable name
 main_exe="${SWM_AMREX_ROOT}"/$(grep "executable is" "$make_output" | awk '{print $3}')
@@ -113,8 +119,8 @@ if [ "$solution_verification_method" != "none" ]; then
         #compare_exe="h5diff --use-system-epsilon" # compare to machine epsilon
         #compare_exe="h5diff --relative=1.0e-2" # compare to 1% relative error
   
-        reference_file="$SWM_AMREX_ROOT"/plt00100_64_reference.h5
-        #reference_file="$SWM_AMREX_ROOT"/plt00100_4096_reference.h5
+        #reference_file="$SWM_AMREX_ROOT"/plt00100_64_reference.h5
+        reference_file="$SWM_AMREX_ROOT"/plt00100_4096_reference.h5
   
         ## Call the function and get the path to the executable
         #      This function sets the variable plotfile_2_hdf5_exe to the path of the executable.
