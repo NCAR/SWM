@@ -1,14 +1,7 @@
-#define M 256
-#define N 256
-#define M_LEN (M + 1)
-#define N_LEN (N + 1)
-#define L_OUT .true.
-#define _COPY_ .false.
-#define VAL_OUT .false.
-#define ITMAX 4000
 
 Program SWM_Fortran_Driver
 
+  use params
   use swm_fortran_kernels, only : UpdateIntermediateVariablesKernel
   use swm_fortran_kernels, only : UpdateNewVariablesKernel
   use swm_fortran_kernels, only : UpdateOldVariablesKernel
@@ -221,7 +214,7 @@ Program SWM_Fortran_Driver
       call cpu_time(c1)
       call UpdateOldVariablesKernel(alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
 
-#ifdef _COPY_
+#ifdef COPY
       !$acc parallel loop collapse(2)
       do j=1,N_LEN
         do i=1,M_LEN
@@ -247,7 +240,7 @@ Program SWM_Fortran_Driver
           pold(i,j) = p(i,j)
         end do
       end do
-#ifdef _COPY_
+#ifdef COPY
       !$acc parallel loop collapse(2)
       do j=1,N_LEN
         do i=1,N_LEN

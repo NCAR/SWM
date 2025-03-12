@@ -151,6 +151,7 @@ void InitializeGeometry(const int nx, const int ny,
   return;
 }
 
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real LinearMapCoordinates(const amrex::Real x, 
                                  const amrex::Real x_min, const amrex::Real x_max,
                                  const amrex::Real xi_min, const amrex::Real xi_max)
@@ -328,7 +329,6 @@ void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Ge
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
                                  amrex::MultiFab& cu, amrex::MultiFab& cv, amrex::MultiFab& h, amrex::MultiFab& z)
 {
-    BL_PROFILE("UpdateIntermediateVariables()");
 
     const double fsdx = 4.0/dx;
     const double fsdy = 4.0/dy;
@@ -370,7 +370,6 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
                         const amrex::MultiFab& cu, const amrex::MultiFab& cv, const amrex::MultiFab& h, const amrex::MultiFab& z,
                         amrex::MultiFab& p_new, amrex::MultiFab& u_new, amrex::MultiFab& v_new)
 {
-    BL_PROFILE("UpdateNewVariables()");
 
     // defined here because tdt changes after first time step
     const double tdtsdx = tdt / dx;
@@ -418,7 +417,6 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
                         const amrex::MultiFab& p_new, const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, 
                         amrex::MultiFab& p_old, amrex::MultiFab& u_old, amrex::MultiFab& v_old)
 {
-    BL_PROFILE("UpdateOldVariables()");
     if (time_step > 0) {
         for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
         {
@@ -464,7 +462,6 @@ void UpdateVariables(const amrex::Geometry& geom,
                      const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, const amrex::MultiFab& p_new,
                      amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p)
 {
-    BL_PROFILE("UpdateVariables()");
     Copy(u_new, u);
     Copy(v_new, v);
     Copy(p_new, p);

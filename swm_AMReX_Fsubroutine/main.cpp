@@ -136,23 +136,32 @@ int main (int argc, char* argv[])
     // Constants used in time stepping loop
     double tdt = dt;
     const double alpha = 0.001; 
+    BL_PROFILE_VAR_NS("SWM:Loop 100",loop100);
+    BL_PROFILE_VAR_NS("SWM:Loop 200",loop200);
+    BL_PROFILE_VAR_NS("SWM:Loop 300",loop300);
+    BL_PROFILE_VAR_NS("SWM:Total",total);
 
+
+    BL_PROFILE_VAR_START(total);
     for (int time_step = 1; time_step <= n_time_steps; ++time_step)
     {
-        BL_PROFILE("TimeSteppingLoop()");
-
         // Sets: cu, cv, h, z
+	BL_PROFILE_VAR_START(loop100);
         UpdateIntermediateVariables(dx, dy, geom,
                                      p, u, v,
                                      cu, cv, h, z);
+	BL_PROFILE_VAR_STOP(loop100);
 
 
+	BL_PROFILE_VAR_START(loop200);
         // Sets: p_new, u_new, v_new
         UpdateNewVariables(dx, dy, tdt, geom,
                            p_old, u_old, v_old, cu, cv, h, z,
                            p_new, u_new, v_new);
+	BL_PROFILE_VAR_STOP(loop200);
 
 
+	BL_PROFILE_VAR_START(loop300);
         // Sets: p_old, u_old, v_old
         UpdateOldVariables(alpha, time_step, geom,
                            p, u, v,
@@ -161,6 +170,7 @@ int main (int argc, char* argv[])
 
         // Sets: p, u, v
         UpdateVariables(geom, u_new, v_new, p_new, u, v, p);
+	BL_PROFILE_VAR_STOP(loop300);
 
         time = time + dt;
 
@@ -175,6 +185,7 @@ int main (int argc, char* argv[])
         }
 
     }
+    BL_PROFILE_VAR_STOP(total);
 
     //amrex::Print() << "Final: " << std::endl;
     //amrex::Print() << "p max: " << p.max(0) << std::endl;
