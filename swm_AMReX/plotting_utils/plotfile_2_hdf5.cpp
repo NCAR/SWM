@@ -8,58 +8,98 @@
 
 void WriteMultiFabToHDF5(const std::string& plotfile, const std::string& hdf5file) {
 
-    amrex::PlotFileData plotfile_data(plotfile);
-    amrex::Vector<std::string> varnames = plotfile_data.varNames();
-    double time = plotfile_data.time();
-    int time_step = plotfile_data.levelStep(0);
+    const amrex::PlotFileData plotfile_data(plotfile);
+    const amrex::Vector<std::string> varnames = plotfile_data.varNames();
+    const double time = plotfile_data.time();
+    const int level = 0; // Assume there is only one level, we are reading from level 0
+    const int time_step = plotfile_data.levelStep(level);
+    const double dx = plotfile_data.cellSize(level)[0];
+    const double dy = plotfile_data.cellSize(level)[1];
 
     amrex::MultiFab mf;
 
     amrex::VisMF::Read(mf, plotfile+"/Level_0/Cell");
 
-    amrex::BoxArray ba = mf.boxArray();
+    const amrex::BoxArray ba = mf.boxArray();
 
+    // Get the dimensions of the entire MultiFab
     // Expecting a cell centered box with low and high index bounds {0,0} to {nx-1,ny-1}
-    amrex::Box minimal_box = ba.minimalBox();
+    const amrex::Box minimal_box = ba.minimalBox();
     AMREX_ASSERT(minimal_box.smallEnd(0) == 0);
     AMREX_ASSERT(minimal_box.smallEnd(1) == 0);
+    const int nx = minimal_box.length(0);
+    const int ny = minimal_box.length(1);
 
-    hid_t file_id = H5Fcreate(hdf5file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    const hid_t file_id = H5Fcreate(hdf5file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     {
-      hid_t attr_space_id = H5Screate(H5S_SCALAR);
-      hid_t attr_id = H5Acreate(file_id, "time", H5T_NATIVE_DOUBLE, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+      const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+      const hid_t attr_id = H5Acreate(file_id, "time", H5T_NATIVE_DOUBLE, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
       H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &time);
       H5Aclose(attr_id);
       H5Sclose(attr_space_id);
     }
 
     {
-        hid_t attr_space_id = H5Screate(H5S_SCALAR);
-        hid_t attr_id = H5Acreate(file_id, "time_step", H5T_NATIVE_INT, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+        const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+        const hid_t attr_id = H5Acreate(file_id, "time_step", H5T_NATIVE_INT, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
         H5Awrite(attr_id, H5T_NATIVE_INT, &time_step);
+        H5Aclose(attr_id);
+        H5Sclose(attr_space_id);
+    }
+
+    {
+      const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+      const hid_t attr_id = H5Acreate(file_id, "dx", H5T_NATIVE_DOUBLE, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+      H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &dx);
+      H5Aclose(attr_id);
+      H5Sclose(attr_space_id);
+    }
+
+    {
+      const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+      const hid_t attr_id = H5Acreate(file_id, "dy", H5T_NATIVE_DOUBLE, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+      H5Awrite(attr_id, H5T_NATIVE_DOUBLE, &dy);
+      H5Aclose(attr_id);
+      H5Sclose(attr_space_id);
+    }
+
+    {
+        const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+        const hid_t attr_id = H5Acreate(file_id, "nx", H5T_NATIVE_INT, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+        H5Awrite(attr_id, H5T_NATIVE_INT, &nx);
+        H5Aclose(attr_id);
+        H5Sclose(attr_space_id);
+    }
+
+    {
+        const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+        const hid_t attr_id = H5Acreate(file_id, "ny", H5T_NATIVE_INT, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+        H5Awrite(attr_id, H5T_NATIVE_INT, &ny);
         H5Aclose(attr_id);
         H5Sclose(attr_space_id);
     }
 
     // Add an attribute to specify the data layout of the following datasets (row-major or column-major)
     {
-        hid_t attr_space_id = H5Screate(H5S_SCALAR);
-        hid_t attr_id = H5Acreate(file_id, "data_layout", H5T_C_S1, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
-        const char* layout = "row-major"; 
-        H5Awrite(attr_id, H5T_C_S1, layout);
+        const char* layout = "row-major";
+        const hid_t str_type = H5Tcopy(H5T_C_S1);
+        H5Tset_size(str_type, strlen(layout) + 1); // +1 for the null terminator
+    
+        const hid_t attr_space_id = H5Screate(H5S_SCALAR);
+        const hid_t attr_id = H5Acreate(file_id, "data_layout", str_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+        H5Awrite(attr_id, str_type, layout);
         H5Aclose(attr_id);
         H5Sclose(attr_space_id);
+        H5Tclose(str_type);        
     }
-
-    // Get the dimensions of the MultiFab
-    hsize_t dims[2] = {static_cast<hsize_t>(minimal_box.length(0)), static_cast<hsize_t>(minimal_box.length(1))};
 
     // Iterate over the components of the MultiFab
     for (int component_idx = 0; component_idx < mf.nComp(); ++component_idx) {
         // Create a dataset for this component
-        hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
-        hid_t dataset_id = H5Dcreate(file_id, varnames[component_idx].c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        const hsize_t dims[2] = {static_cast<hsize_t>(nx), static_cast<hsize_t>(ny)};
+        const hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
+        const hid_t dataset_id = H5Dcreate(file_id, varnames[component_idx].c_str(), H5T_NATIVE_DOUBLE, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
         std::vector<double> component_data(dims[0]*dims[1]);
 
