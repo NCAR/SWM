@@ -334,9 +334,12 @@ void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Ge
     const double fsdx = 4.0/dx;
     const double fsdy = 4.0/dy;
 
-    for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (amrex::MFIter mfi(p, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const amrex::Box& bx = mfi.validbox();
+        const amrex::Box& bx = mfi.tilebox();
 
         // Read only arrays
         const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
@@ -377,9 +380,12 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
     const double tdtsdy = tdt / dy;
     const double tdts8  = tdt / 8.0;
 
-    for (amrex::MFIter mfi(p_old); mfi.isValid(); ++mfi)
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (amrex::MFIter mfi(p_old, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const amrex::Box& bx = mfi.validbox();
+        const amrex::Box& bx = mfi.tilebox();
 
         // Read only arrays
         const amrex::Array4<amrex::Real const>& p_old_array = p_old.const_array(mfi);
@@ -406,9 +412,10 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
         });
     }
 
-    u_new.FillBoundary(geom.periodicity());
-    v_new.FillBoundary(geom.periodicity());
-    p_new.FillBoundary(geom.periodicity());
+    // Testing if removing this gives the same answer
+    //u_new.FillBoundary(geom.periodicity());
+    //v_new.FillBoundary(geom.periodicity());
+    //p_new.FillBoundary(geom.periodicity());
 
     return;
 }
@@ -420,9 +427,13 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
 {
     BL_PROFILE("UpdateOldVariables()");
     if (time_step > 0) {
-        for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(p, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
-            const amrex::Box& bx = mfi.validbox();
+            const amrex::Box& bx = mfi.tilebox();
 
             // Read only arrays
             const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
@@ -453,9 +464,10 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
         Copy(p, p_old);
     }
 
-    u_old.FillBoundary(geom.periodicity());
-    v_old.FillBoundary(geom.periodicity());
-    p_old.FillBoundary(geom.periodicity());
+    // Testing if this does not change the answer
+    //u_old.FillBoundary(geom.periodicity());
+    //v_old.FillBoundary(geom.periodicity());
+    //p_old.FillBoundary(geom.periodicity());
 
     return;
 }

@@ -3,20 +3,22 @@
 # Prerequisites:
 #    AMREX_HOME = the directory where you pulled the AMReX repo.
 #    SWM_AMREX_ROOT = the directory containing the AMReX version of the SWM mini-app.
-#    HDF5_HOME = the directory where you installed HDF5. Only need if you are running with the "hdf5" solution verification method.
+#    HDF5_HOME = the directory where you installed HDF5. Only need if you are running with the "hdf5" solution verification method, or set create_plot="true" or create_movie="true".
 
 ##############################################################################
 # User Input
 ##############################################################################
 
 # Number of MPI ranks to run with. Only used if the executable name contains "MPI"
-num_procs=1
+n_mpi_ranks=16
+# Number of MPI ranks to run with. Only used if the executable name contains "OMP"
+# Note that this script ignores the value of OMP_NUM_THREADS in the users environment and uses this hard coded value instead. Maybe not the best choice but just doing it fow now to know for sure how many threads I am asking for.
+n_omp_threads=8
 
 # Set the solution verification method: "none", "hdf5", or "plotfile"
-# Note: 
 #    You should also change the reference_file and file_to_compare variables in corresponding the Solution Verification section below.
-#solution_verification_method="none"       # Do not perform solution verification
-solution_verification_method="hdf5"       # If you use the hdf5 option you must have the HDF5_HOME environment variable set.
+solution_verification_method="none"       # Do not perform solution verification
+#solution_verification_method="hdf5"       # If you use the hdf5 option you must have the HDF5_HOME environment variable set.
 #solution_verification_method="plotfile"   # If you want to use the plotfile option you must first build the fcomprare executable in the AMREX_HOME/Tools/Plotfile directory.
 
 # Convert all plotfiles to HDF5 format: "true" or "false"
@@ -27,7 +29,7 @@ convert_all_plotfiles_to_hdf5="false"
 create_plots="false"
 
 # Create an MP4 movie from the PNG files created by the plotting script: "true" or "false"
-#     If this option is set to "true" then the create_plots option will also be treated as "true". Since we need the PNG plot files to make the movie.
+#     If this option is set to "true" then the create_plots option will also be treated as "true". Since we need the PNG files of the plots to make the movie.
 create_movie="false"
 
 ##############################################################################
@@ -71,12 +73,21 @@ run_dir="$SWM_AMREX_ROOT"/run_dir
 mkdir -p "$run_dir"
 cd "$run_dir"
 
-# Check if the executable name contains "MPI"
-if [[ "$main_exe" == *"MPI"* ]]; then
-    mpiexec -n $num_procs "${main_exe}" "$SWM_AMREX_ROOT"/inputs
-else
-    "${main_exe}" "$SWM_AMREX_ROOT"/inputs
+launch_prefix=""
+
+if [[ "$main_exe" == *"OMP"* ]]; then
+    launch_prefix+=" OMP_NUM_THREADS=$n_omp_threads "
+
+    # This is an alternative way to set the number of threads but it is not nice to change the user's environment
+    #export OMP_NUM_THREADS=$n_omp_threads 
 fi
+
+if [[ "$main_exe" == *"MPI"* ]]; then
+    launch_prefix+=" mpiexec -n $n_mpi_ranks "
+fi
+
+swe_amrex_command="$launch_prefix $main_exe ${SWM_AMREX_ROOT}/inputs"
+eval $swe_amrex_command
 
 ##############################################################################
 # Solution Verification

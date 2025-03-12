@@ -142,21 +142,25 @@ int main (int argc, char* argv[])
     };
 
     // Store the MultiFab objects and their names in a vector of pairs. This will allow us to iterate over them and call the lambda function.
+    //std::vector<std::pair<std::string, const amrex::MultiFab&>> multiFabs = {
+    //    {"psi", psi},
+    //    {"u", u},
+    //    {"v", v},
+    //    {"p", p},
+    //    {"cu", cu},
+    //    {"cv", cv},
+    //    {"h", h},
+    //    {"z", z},
+    //    {"u_new", u_new},
+    //    {"v_new", v_new},
+    //    {"p_new", p_new},
+    //    {"u_old", u_old},
+    //    {"v_old", v_old},
+    //    {"p_old", p_old}
+    //};
+
     std::vector<std::pair<std::string, const amrex::MultiFab&>> multiFabs = {
-        {"psi", psi},
-        {"u", u},
-        {"v", v},
-        {"p", p},
-        {"cu", cu},
-        {"cv", cv},
-        {"h", h},
-        {"z", z},
-        {"u_new", u_new},
-        {"v_new", v_new},
-        {"p_new", p_new},
-        {"u_old", u_old},
-        {"v_old", v_old},
-        {"p_old", p_old}
+        {"psi", psi}
     };
 
     // Iterate over the arrays and call the lambda function
