@@ -15,10 +15,10 @@ contains
     integer, dimension(2) ::  lo, hi
     integer, dimension(2) ::  p_lo, p_hi, u_lo, u_hi, v_lo, v_hi
     integer, dimension(2) ::  cu_lo, cu_hi, cv_lo,cv_hi, h_lo, h_hi, z_lo, z_hi
-    real(amrex_real), intent(out) :: cu(cu_lo(1):cu_hi(1),cu_lo(2):cu_hi(2))
-    real(amrex_real), intent(out) :: cv(cv_lo(1):cv_hi(1),cv_lo(2):cv_hi(2))
-    real(amrex_real), intent(out) :: z(z_lo(1):z_hi(1),z_lo(2):z_hi(2))
-    real(amrex_real), intent(out) :: h(h_lo(1):h_hi(1),h_lo(2):h_hi(2))
+    real(amrex_real), intent(inout) :: cu(cu_lo(1):cu_hi(1),cu_lo(2):cu_hi(2))
+    real(amrex_real), intent(inout) :: cv(cv_lo(1):cv_hi(1),cv_lo(2):cv_hi(2))
+    real(amrex_real), intent(inout) :: z(z_lo(1):z_hi(1),z_lo(2):z_hi(2))
+    real(amrex_real), intent(inout) :: h(h_lo(1):h_hi(1),h_lo(2):h_hi(2))
     real(amrex_real), intent(in) :: p(p_lo(1):p_hi(1),p_lo(2):p_hi(2))
     real(amrex_real), intent(in) :: u(u_lo(1):u_hi(1),u_lo(2):u_hi(2))
     real(amrex_real), intent(in) :: v(v_lo(1):v_hi(1),v_lo(2):v_hi(2))
@@ -26,6 +26,8 @@ contains
 
     integer :: i,j
 
+    !$omp target teams is_device_ptr(p,u,v,cu,cv,h,z)
+    !$omp distribute parallel do collapse(2) schedule(static,1)
     do j=lo(2),hi(2)
       do i=lo(1),hi(1)
         cu(i,j) = 0.5 * (p(i,j) + p(i+1,j)) * u(i,j)
@@ -36,6 +38,8 @@ contains
                                   v(i,j-1) * v(i,j-1) + v(i,j) * v(i,j))
       end do
     end do
+    !$omp end target teams 
+
   end subroutine UpdateIntermediateVariablesSub
 
   subroutine UpdateNewVariablesSub(lo,hi, &
@@ -65,6 +69,7 @@ contains
 
     integer :: i,j
 
+    !$omp target teams distribute parallel do collapse(2) schedule(static,1) is_device_ptr(pnew,unew,vnew,pold,uold,vold,z,h,cu,cv)
     do j=lo(2),hi(2)
       do i=lo(1),hi(1)
         unew(i,j) = uold(i,j) + &
@@ -108,6 +113,7 @@ contains
 
     integer :: i,j
 
+    !$omp target teams distribute parallel do collapse(2) is_device_ptr(p,u,v,pnew,unew,vnew,pold,uold,vold)
     do j=lo(2),hi(2)
       do i=lo(1),hi(1)
         uold(i,j) = u(i,j) + alpha*(unew(i,j) - 2. * u(i,j) + uold(i,j))

@@ -24,6 +24,10 @@ nvfortran:
 	touch swm_fortran.F90
 	make FC=nvfortran FFLAGS="-O2 -r8 -noacc" swm_fortran_cpu
 
+gfortran_gpu:
+	touch swm_fortran.F90
+	make FC=gfortran FFLAGS="-O2 -fdefault-real-8 -fopenacc -foffload=default" swm_fortran_gpu
+
 swm_fortran_cpu: swm_fortran.F90 params.o
 	$(FC) $(FFLAGS) -o $@ params.o swm_fortran.F90
 

@@ -214,7 +214,7 @@ Program SWM_Fortran_Driver
       call cpu_time(c1)
       call UpdateOldVariablesKernel(alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
 
-#ifdef _COPY_
+#ifdef COPY
       !$acc parallel loop collapse(2)
       do j=1,N_LEN
         do i=1,M_LEN
@@ -240,7 +240,7 @@ Program SWM_Fortran_Driver
           pold(i,j) = p(i,j)
         end do
       end do
-#ifdef _COPY_
+#ifdef COPY
       !$acc parallel loop collapse(2)
       do j=1,N_LEN
         do i=1,N_LEN

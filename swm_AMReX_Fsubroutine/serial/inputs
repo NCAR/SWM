@@ -1,0 +1,20 @@
+# Number of cells on each direction
+nx = 64
+ny = 64
+
+# Cell size in each direction
+dx = 100000
+dy = 100000
+
+# Mesh will be broken into chunks of up to max_chunk_size in each direction
+max_chunk_size = 100000
+
+# Number of time steps to take
+n_time_steps = 4000
+
+# Size of time step
+dt = 90
+
+# How often to write a plotfile
+# Optional. If left out no plot files will be written.
+plot_interval = 4000
