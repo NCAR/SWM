@@ -71,16 +71,6 @@ int main (int argc, char* argv[])
 
     InitializeVariables(geom, psi, p, u, v);
 
-    //amrex::Print() << "Initial: " << std::endl;
-    //amrex::Print() << "psi max: " << psi.max(0) << std::endl;
-    //amrex::Print() << "psi min: " << psi.min(0) << std::endl;
-    //amrex::Print() << "p max: " << p.max(0) << std::endl;
-    //amrex::Print() << "p min: " << p.min(0) << std::endl;
-    //amrex::Print() << "u max: " << u.max(0) << std::endl;
-    //amrex::Print() << "u min: " << u.min(0) << std::endl;
-    //amrex::Print() << "v max: " << v.max(0) << std::endl;
-    //amrex::Print() << "v min: " << v.min(0) << std::endl;
-
     // **********************************
     // Write initial plot file
     // **********************************
@@ -169,34 +159,35 @@ int main (int argc, char* argv[])
         printMultiFabInfo(multiFab);
     }
 
+
     // Constants used in time stepping loop
     double tdt = dt;
     const double alpha = 0.001; 
-    BL_PROFILE_VAR_NS("SWM:Loop 100",loop100);
-    BL_PROFILE_VAR_NS("SWM:Loop 200",loop200);
-    BL_PROFILE_VAR_NS("SWM:Loop 300",loop300);
-    BL_PROFILE_VAR_NS("SWM:Total",total);
+//    BL_PROFILE_VAR_NS("SWM:Loop 100",loop100);
+//    BL_PROFILE_VAR_NS("SWM:Loop 200",loop200);
+//    BL_PROFILE_VAR_NS("SWM:Loop 300",loop300);
+//    BL_PROFILE_VAR_NS("SWM:Total",total);
 
-    BL_PROFILE_VAR_START(total);
+//    BL_PROFILE_VAR_START(total);
     for (int time_step = 1; time_step <= n_time_steps; ++time_step)
     {
-	BL_PROFILE_VAR_START(loop100);
+//	BL_PROFILE_VAR_START(loop100);
         // Sets: cu, cv, h, z
         UpdateIntermediateVariables(dx, dy, geom,
                                      p, u, v,
                                      cu, cv, h, z);
-	BL_PROFILE_VAR_STOP(loop100);
+//	BL_PROFILE_VAR_STOP(loop100);
 
 
         // Sets: p_new, u_new, v_new
-	BL_PROFILE_VAR_START(loop200);
+//	BL_PROFILE_VAR_START(loop200);
         UpdateNewVariables(dx, dy, tdt, geom,
                            p_old, u_old, v_old, cu, cv, h, z,
                            p_new, u_new, v_new);
-	BL_PROFILE_VAR_STOP(loop200);
+//	BL_PROFILE_VAR_STOP(loop200);
 
 
-	BL_PROFILE_VAR_START(loop300);
+//	BL_PROFILE_VAR_START(loop300);
         // Sets: p_old, u_old, v_old
         UpdateOldVariables(alpha, time_step, geom,
                            p, u, v,
@@ -205,7 +196,7 @@ int main (int argc, char* argv[])
 
         // Sets: p, u, v
         UpdateVariables(geom, u_new, v_new, p_new, u, v, p);
-	BL_PROFILE_VAR_STOP(loop300);
+//	BL_PROFILE_VAR_STOP(loop300);
 
         time = time + dt;
 
@@ -221,14 +212,7 @@ int main (int argc, char* argv[])
 
     }
 
-    //amrex::Print() << "Final: " << std::endl;
-    //amrex::Print() << "p max: " << p.max(0) << std::endl;
-    //amrex::Print() << "p min: " << p.min(0) << std::endl;
-    //amrex::Print() << "u max: " << u.max(0) << std::endl;
-    //amrex::Print() << "u min: " << u.min(0) << std::endl;
-    //amrex::Print() << "v max: " << v.max(0) << std::endl;
-    //amrex::Print() << "v min: " << v.min(0) << std::endl;
-    BL_PROFILE_VAR_STOP(total);
+//    BL_PROFILE_VAR_STOP(total);
 
     }
 
