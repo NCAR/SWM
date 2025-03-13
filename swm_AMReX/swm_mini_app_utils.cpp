@@ -321,7 +321,21 @@ amrex::MultiFab CreateMultiFab(const amrex::MultiFab & mf)
 
 void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest)
 {
-    amrex::MultiFab::Copy(dest, src, 0, 0, src.nComp(), src.nGrow());
+    // TODO: Error check that the number of components and ghost cells are the same. Maybe also all the other properties of the multifab
+
+    const int src_starting_component_index = 0;
+    const int dest_starting_component_index = 0;
+    amrex::MultiFab::Copy(dest, src, src_starting_component_index, dest_starting_component_index, src.nComp(), src.nGrow());
+    return;
+}
+
+void Swap(amrex::MultiFab & src, amrex::MultiFab & dest)
+{
+    // TODO: Error check that the number of components and ghost cells are the same. Maybe also all the other properties of the multifab 
+
+    const int src_starting_component_index = 0;
+    const int dest_starting_component_index = 0;
+    amrex::MultiFab::Swap(dest, src, src_starting_component_index, dest_starting_component_index, src.nComp(), src.nGrow());
     return;
 }
 
@@ -412,11 +426,6 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
         });
     }
 
-    // Testing if removing this gives the same answer
-    //u_new.FillBoundary(geom.periodicity());
-    //v_new.FillBoundary(geom.periodicity());
-    //p_new.FillBoundary(geom.periodicity());
-
     return;
 }
 
@@ -464,22 +473,22 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
         Copy(p, p_old);
     }
 
-    // Testing if this does not change the answer
-    //u_old.FillBoundary(geom.periodicity());
-    //v_old.FillBoundary(geom.periodicity());
-    //p_old.FillBoundary(geom.periodicity());
-
     return;
 }
 
 void UpdateVariables(const amrex::Geometry& geom, 
-                     const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, const amrex::MultiFab& p_new,
+                     amrex::MultiFab& u_new, amrex::MultiFab& v_new, amrex::MultiFab& p_new,
                      amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p)
 {
     BL_PROFILE("UpdateVariables()");
-    Copy(u_new, u);
-    Copy(v_new, v);
-    Copy(p_new, p);
+
+    //Copy(u_new, u);
+    //Copy(v_new, v);
+    //Copy(p_new, p);
+
+    Swap(u_new, u);
+    Swap(v_new, v);
+    Swap(p_new, p);
 
     u.FillBoundary(geom.periodicity());
     v.FillBoundary(geom.periodicity());

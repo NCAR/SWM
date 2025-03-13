@@ -171,6 +171,8 @@ int main (int argc, char* argv[])
 //    BL_PROFILE_VAR_START(total);
     for (int time_step = 1; time_step <= n_time_steps; ++time_step)
     {
+        BL_PROFILE("time_stepping_loop()");
+
 //	BL_PROFILE_VAR_START(loop100);
         // Sets: cu, cv, h, z
         UpdateIntermediateVariables(dx, dy, geom,
