@@ -355,6 +355,21 @@ void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Ge
     {
         const amrex::Box& bx = mfi.tilebox();
 
+        // Debugging Output
+//        int myproc = amrex::ParallelDescriptor::MyProc();  // Return the rank
+//        int nprocs = amrex::ParallelDescriptor::NProcs();  // Return the number of processes
+//        amrex::PrintToFile("log",myproc) << "In UpdateIntermediateVariables on proc " << myproc << " of " << nprocs << std::endl;
+//        amrex::PrintToFile("log",myproc) << "Proc id " << myproc << std::endl;
+//        amrex::PrintToFile("log",myproc) << "N procs " << nprocs << std::endl;
+//        amrex::PrintToFile("log",myproc) << "mfi.index " << mfi.index() << std::endl;
+//        amrex::PrintToFile("log",myproc) << "mfi.length " << mfi.length() << std::endl;
+//        amrex::PrintToFile("log",myproc) << "mfi.LocalIndex " << mfi.LocalIndex() << std::endl;
+//        amrex::PrintToFile("log",myproc) << "mfi.tileIndex " << mfi.tileIndex() << std::endl;
+//        amrex::PrintToFile("log",myproc) << "mfi.LocalTileIndex " << mfi.LocalTileIndex() << std::endl;
+//        amrex::PrintToFile("log",myproc) << "mfi.numLocalTiles " << mfi.numLocalTiles() << std::endl;
+//        amrex::PrintToFile("log",myproc) << "Box has a has a size of " << bx.size() << "\n" << std::endl;
+        //amrex::PrintToFile("log",myproc) << "I am working on box " << mfi.index() << " of " << mfi.length() <<  " which has a size of " << bx.size() << "\n" << std::endl;
+
         // Read only arrays
         const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
         const amrex::Array4<amrex::Real const>& u_array = u.const_array(mfi);
@@ -371,6 +386,9 @@ void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Ge
             UpdateIntermediateVariablesKernel(i, j, k, fsdx, fsdy,
                                               p_array, u_array, v_array,
                                               cu_array, cv_array, h_array, z_array);
+            
+            // Debugging Performance - Tying this without to the kernel function for one of the variables. 
+            //  h_array(i,j,k) = p_array(i,j,k) + 0.25*(u_array(i-1,j,k)*u_array(i-1,j,k) + u_array(i,j,k)*u_array(i,j,k) + v_array(i,j-1,k)*v_array(i,j-1,k) + v_array(i,j,k)*v_array(i,j,k));
         });
     }
 
@@ -400,6 +418,13 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
     for (amrex::MFIter mfi(p_old, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box& bx = mfi.tilebox();
+
+//        // Debugging Output
+//        int myproc = amrex::ParallelDescriptor::MyProc();  // Return the rank
+//        int nprocs = amrex::ParallelDescriptor::NProcs();  // Return the number of processes
+//        amrex::PrintToFile("log",myproc) << "In UpdateNewVariables on proc " << myproc << " of " << nprocs << std::endl;
+//        amrex::PrintToFile("log",myproc) << "I have a box " <<  " of size " << bx.size() << " to work on." << std::endl;
+//        amrex::PrintToFile("log",myproc) << "I am working on box " << mfi.index() << " of " << mfi.length() <<  " which has a size of " << bx.size() << "\n" << std::endl;
 
         // Read only arrays
         const amrex::Array4<amrex::Real const>& p_old_array = p_old.const_array(mfi);
@@ -443,6 +468,13 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
         for (amrex::MFIter mfi(p, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
             const amrex::Box& bx = mfi.tilebox();
+
+//            // Debugging Output
+//            int myproc = amrex::ParallelDescriptor::MyProc();  // Return the rank
+//            int nprocs = amrex::ParallelDescriptor::NProcs();  // Return the number of processes
+//            amrex::PrintToFile("log",myproc) << "In UpdateOldVariables on proc " << myproc << " of " << nprocs << std::endl;
+//            amrex::PrintToFile("log",myproc) << "I have a box " <<  " of size " << bx.size() << " to work on." << std::endl;
+//            amrex::PrintToFile("log",myproc) << "I am working on box " << mfi.index() << " of " << mfi.length() <<  " which has a size of " << bx.size() << "\n" << std::endl;
 
             // Read only arrays
             const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
