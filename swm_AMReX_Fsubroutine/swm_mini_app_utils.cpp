@@ -321,10 +321,21 @@ amrex::MultiFab CreateMultiFab(const amrex::MultiFab & mf)
 
 void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest)
 {
-    amrex::MultiFab::Copy(dest, src, 0, 0, src.nComp(), src.nGrow());
+    const int src_starting_component_index = 0;
+    const int dest_starting_component_index = 0;
+    amrex::MultiFab::Copy(dest, src, src_starting_component_index, dest_starting_component_index, src.nComp(), src.nGrow());
     return;
 }
 
+void Swap(amrex::MultiFab & src, amrex::MultiFab & dest)
+{
+    // TODO: Error check that the number of components and ghost cells are the same. Maybe also all the other properties of the multifab
+
+    const int src_starting_component_index = 0;
+    const int dest_starting_component_index = 0;
+    amrex::MultiFab::Swap(dest, src, src_starting_component_index, dest_starting_component_index, src.nComp(), src.nGrow());
+    return;
+}
 
 void UpdateIntermediateVariables(amrex::Real  dx, amrex::Real  dy, const amrex::Geometry& geom,
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
@@ -334,9 +345,12 @@ void UpdateIntermediateVariables(amrex::Real  dx, amrex::Real  dy, const amrex::
     amrex::Real fsdx = 4.0/dx;
     amrex::Real fsdy = 4.0/dy;
 
-    for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (amrex::MFIter mfi(p, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const amrex::Box& bx = mfi.validbox();
+        const amrex::Box& bx = mfi.tilebox();
 
 	UpdateIntermediateVariablesSub( BL_TO_FORTRAN_BOX(bx),
                      BL_TO_FORTRAN_ANYD(p[mfi]),
@@ -368,9 +382,12 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
     const double tdtsdy = tdt / dy;
     const double tdts8  = tdt / 8.0;
 
-    for (amrex::MFIter mfi(p_old); mfi.isValid(); ++mfi)
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (amrex::MFIter mfi(p_old, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const amrex::Box& bx = mfi.validbox();
+        const amrex::Box& bx = mfi.tilebox();
 
 	UpdateNewVariablesSub( BL_TO_FORTRAN_BOX(bx),
                      BL_TO_FORTRAN_ANYD(p_old[mfi]),
@@ -386,10 +403,6 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
                      tdtsdx,tdtsdy,tdts8);
     }
 
-    u_new.FillBoundary(geom.periodicity());
-    v_new.FillBoundary(geom.periodicity());
-    p_new.FillBoundary(geom.periodicity());
-
     return;
 }
 
@@ -399,9 +412,12 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
                         amrex::MultiFab& p_old, amrex::MultiFab& u_old, amrex::MultiFab& v_old)
 {
     if (time_step > 0) {
-        for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+	for (amrex::MFIter mfi(p, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
-            const amrex::Box& bx = mfi.validbox();
+            const amrex::Box& bx = mfi.tilebox();
 	    UpdateOldVariablesSub(BL_TO_FORTRAN_BOX(bx),
                      BL_TO_FORTRAN_ANYD(p_new[mfi]),
                      BL_TO_FORTRAN_ANYD(u_new[mfi]),
@@ -421,20 +437,16 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
         Copy(p, p_old);
     }
 
-    u_old.FillBoundary(geom.periodicity());
-    v_old.FillBoundary(geom.periodicity());
-    p_old.FillBoundary(geom.periodicity());
-
     return;
 }
 
 void UpdateVariables(const amrex::Geometry& geom, 
-                     const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, const amrex::MultiFab& p_new,
+                     amrex::MultiFab& u_new, amrex::MultiFab& v_new, amrex::MultiFab& p_new,
                      amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p)
 {
-    Copy(u_new, u);
-    Copy(v_new, v);
-    Copy(p_new, p);
+    Swap(u_new, u);
+    Swap(v_new, v);
+    Swap(p_new, p);
 
     u.FillBoundary(geom.periodicity());
     v.FillBoundary(geom.periodicity());

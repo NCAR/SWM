@@ -144,7 +144,7 @@ void InitializeGeometry(const int nx, const int ny,
 
   // This defines a Geometry object
   geom.define(cell_centered_box, real_box, coordinate_system, is_periodic);
- // geom.define(cell_centered_box, real_box, amrex::CoordSys::cartesian, is_periodic);
+ // geom.define(cell_centered_box, real_box, amrex::CoordSys::cartesian, is_periodic); // Could use an amrex defined enum instead of an int to specify the coordinate system
 
   //amrex::Print() << "geom " << geom << std::endl;
 
@@ -321,7 +321,21 @@ amrex::MultiFab CreateMultiFab(const amrex::MultiFab & mf)
 
 void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest)
 {
-    amrex::MultiFab::Copy(dest, src, 0, 0, src.nComp(), src.nGrow());
+    // TODO: Error check that the number of components and ghost cells are the same. Maybe also all the other properties of the multifab
+
+    const int src_starting_component_index = 0;
+    const int dest_starting_component_index = 0;
+    amrex::MultiFab::Copy(dest, src, src_starting_component_index, dest_starting_component_index, src.nComp(), src.nGrow());
+    return;
+}
+
+void Swap(amrex::MultiFab & src, amrex::MultiFab & dest)
+{
+    // TODO: Error check that the number of components and ghost cells are the same. Maybe also all the other properties of the multifab 
+
+    const int src_starting_component_index = 0;
+    const int dest_starting_component_index = 0;
+    amrex::MultiFab::Swap(dest, src, src_starting_component_index, dest_starting_component_index, src.nComp(), src.nGrow());
     return;
 }
 
@@ -329,13 +343,17 @@ void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Ge
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
                                  amrex::MultiFab& cu, amrex::MultiFab& cv, amrex::MultiFab& h, amrex::MultiFab& z)
 {
+    BL_PROFILE("UpdateIntermediateVariables()");
 
     const double fsdx = 4.0/dx;
     const double fsdy = 4.0/dy;
 
-    for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (amrex::MFIter mfi(p, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const amrex::Box& bx = mfi.validbox();
+        const amrex::Box& bx = mfi.tilebox();
 
         // Read only arrays
         const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
@@ -354,7 +372,6 @@ void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Ge
                                               p_array, u_array, v_array,
                                               cu_array, cv_array, h_array, z_array);
         });
-
     }
 
     cu.FillBoundary(geom.periodicity());
@@ -370,15 +387,19 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
                         const amrex::MultiFab& cu, const amrex::MultiFab& cv, const amrex::MultiFab& h, const amrex::MultiFab& z,
                         amrex::MultiFab& p_new, amrex::MultiFab& u_new, amrex::MultiFab& v_new)
 {
+    BL_PROFILE("UpdateNewVariables()");
 
     // defined here because tdt changes after first time step
     const double tdtsdx = tdt / dx;
     const double tdtsdy = tdt / dy;
     const double tdts8  = tdt / 8.0;
 
-    for (amrex::MFIter mfi(p_old); mfi.isValid(); ++mfi)
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (amrex::MFIter mfi(p_old, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const amrex::Box& bx = mfi.validbox();
+        const amrex::Box& bx = mfi.tilebox();
 
         // Read only arrays
         const amrex::Array4<amrex::Real const>& p_old_array = p_old.const_array(mfi);
@@ -405,10 +426,6 @@ void UpdateNewVariables(const double dx, const double dy, const double tdt, cons
         });
     }
 
-    u_new.FillBoundary(geom.periodicity());
-    v_new.FillBoundary(geom.periodicity());
-    p_new.FillBoundary(geom.periodicity());
-
     return;
 }
 
@@ -417,10 +434,15 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
                         const amrex::MultiFab& p_new, const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, 
                         amrex::MultiFab& p_old, amrex::MultiFab& u_old, amrex::MultiFab& v_old)
 {
+    BL_PROFILE("UpdateOldVariables()");
     if (time_step > 0) {
-        for (amrex::MFIter mfi(p); mfi.isValid(); ++mfi)
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+        for (amrex::MFIter mfi(p, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
-            const amrex::Box& bx = mfi.validbox();
+            const amrex::Box& bx = mfi.tilebox();
 
             // Read only arrays
             const amrex::Array4<amrex::Real const>& p_array = p.const_array(mfi);
@@ -451,20 +473,18 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
         Copy(p, p_old);
     }
 
-    u_old.FillBoundary(geom.periodicity());
-    v_old.FillBoundary(geom.periodicity());
-    p_old.FillBoundary(geom.periodicity());
-
     return;
 }
 
 void UpdateVariables(const amrex::Geometry& geom, 
-                     const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, const amrex::MultiFab& p_new,
+                     amrex::MultiFab& u_new, amrex::MultiFab& v_new, amrex::MultiFab& p_new,
                      amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p)
 {
-    Copy(u_new, u);
-    Copy(v_new, v);
-    Copy(p_new, p);
+    BL_PROFILE("UpdateVariables()");
+
+    Swap(u_new, u);
+    Swap(v_new, v);
+    Swap(p_new, p);
 
     u.FillBoundary(geom.periodicity());
     v.FillBoundary(geom.periodicity());

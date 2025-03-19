@@ -14,6 +14,7 @@ void InitializeGeometry(const int nx, const int ny,
                         const amrex::Real dx, const amrex::Real dy,
                         amrex::Geometry & geom);
 
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real LinearMapCoordinates(const amrex::Real x, 
                                  const amrex::Real x_min,  const amrex::Real x_max,
                                  const amrex::Real xi_min, const amrex::Real xi_max);
@@ -50,6 +51,8 @@ amrex::MultiFab CreateMultiFab(const amrex::MultiFab & mf);
 
 void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest);
 
+void Swap(amrex::MultiFab & src, amrex::MultiFab & dest);
+
 void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Geometry& geom,
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
                                  amrex::MultiFab& cu, amrex::MultiFab& cv, amrex::MultiFab& h, amrex::MultiFab& z);
@@ -66,6 +69,10 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
 
 void UpdateVariables(const amrex::Geometry& geom,
                      const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, const amrex::MultiFab& p_new,
+                     amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p);
+
+void UpdateVariables(const amrex::Geometry& geom,
+                     amrex::MultiFab& u_new, amrex::MultiFab& v_new, amrex::MultiFab& p_new,
                      amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p);
 
 #endif // SWM_MINI_APP_UTILS_H_

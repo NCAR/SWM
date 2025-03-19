@@ -133,6 +133,24 @@ int main (int argc, char* argv[])
     Copy(v, v_old);
     Copy(p, p_old);
 
+    auto printMultiFabInfo = [](const amrex::MultiFab& multiFab_to_print) {
+        for (int i = 0; i < multiFab_to_print.boxArray().size(); ++i) {
+            amrex::Print() << "box " << std::to_string(i) << " size " << multiFab_to_print.boxArray()[i].size() << std::endl;
+        }
+        amrex::Print() << "distribution map " << multiFab_to_print.DistributionMap() << std::endl;
+    };
+
+    std::vector<std::pair<std::string, const amrex::MultiFab&>> multiFabs = {
+        {"psi", psi}
+    };
+
+    // Iterate over the arrays and call the lambda function
+    for (const auto& [name, multiFab] : multiFabs) {
+        amrex::Print() << name << ": " << std::endl;
+        printMultiFabInfo(multiFab);
+    }
+
+
     // Constants used in time stepping loop
     double tdt = dt;
     const double alpha = 0.001; 

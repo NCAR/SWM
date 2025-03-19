@@ -8,7 +8,7 @@ USE_OMP      = FALSE
 USE_CUDA     = FALSE
 USE_ACC         = FALSE
 USE_OMP_OFFLOAD = FALSE
-COMP         = nvhpc
+COMP         = gnu
 DIM          = 2
 
 TINY_PROFILE = TRUE

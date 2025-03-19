@@ -71,16 +71,6 @@ int main (int argc, char* argv[])
 
     InitializeVariables(geom, psi, p, u, v);
 
-    //amrex::Print() << "Initial: " << std::endl;
-    //amrex::Print() << "psi max: " << psi.max(0) << std::endl;
-    //amrex::Print() << "psi min: " << psi.min(0) << std::endl;
-    //amrex::Print() << "p max: " << p.max(0) << std::endl;
-    //amrex::Print() << "p min: " << p.min(0) << std::endl;
-    //amrex::Print() << "u max: " << u.max(0) << std::endl;
-    //amrex::Print() << "u min: " << u.min(0) << std::endl;
-    //amrex::Print() << "v max: " << v.max(0) << std::endl;
-    //amrex::Print() << "v min: " << v.min(0) << std::endl;
-
     // **********************************
     // Write initial plot file
     // **********************************
@@ -133,6 +123,43 @@ int main (int argc, char* argv[])
     Copy(v, v_old);
     Copy(p, p_old);
 
+
+    auto printMultiFabInfo = [](const amrex::MultiFab& multiFab_to_print) {
+        for (int i = 0; i < multiFab_to_print.boxArray().size(); ++i) {
+            amrex::Print() << "box " << std::to_string(i) << " size " << multiFab_to_print.boxArray()[i].size() << std::endl;
+        }
+        amrex::Print() << "distribution map " << multiFab_to_print.DistributionMap() << std::endl;
+    };
+
+    // Store the MultiFab objects and their names in a vector of pairs. This will allow us to iterate over them and call the lambda function.
+    //std::vector<std::pair<std::string, const amrex::MultiFab&>> multiFabs = {
+    //    {"psi", psi},
+    //    {"u", u},
+    //    {"v", v},
+    //    {"p", p},
+    //    {"cu", cu},
+    //    {"cv", cv},
+    //    {"h", h},
+    //    {"z", z},
+    //    {"u_new", u_new},
+    //    {"v_new", v_new},
+    //    {"p_new", p_new},
+    //    {"u_old", u_old},
+    //    {"v_old", v_old},
+    //    {"p_old", p_old}
+    //};
+
+    std::vector<std::pair<std::string, const amrex::MultiFab&>> multiFabs = {
+        {"psi", psi}
+    };
+
+    // Iterate over the arrays and call the lambda function
+    for (const auto& [name, multiFab] : multiFabs) {
+        amrex::Print() << name << ": " << std::endl;
+        printMultiFabInfo(multiFab);
+    }
+
+
     // Constants used in time stepping loop
     double tdt = dt;
     const double alpha = 0.001; 
@@ -144,6 +171,7 @@ int main (int argc, char* argv[])
     BL_PROFILE_VAR_START(total);
     for (int time_step = 1; time_step <= n_time_steps; ++time_step)
     {
+
 	BL_PROFILE_VAR_START(loop100);
         // Sets: cu, cv, h, z
         UpdateIntermediateVariables(dx, dy, geom,
@@ -185,13 +213,6 @@ int main (int argc, char* argv[])
 
     }
 
-    //amrex::Print() << "Final: " << std::endl;
-    //amrex::Print() << "p max: " << p.max(0) << std::endl;
-    //amrex::Print() << "p min: " << p.min(0) << std::endl;
-    //amrex::Print() << "u max: " << u.max(0) << std::endl;
-    //amrex::Print() << "u min: " << u.min(0) << std::endl;
-    //amrex::Print() << "v max: " << v.max(0) << std::endl;
-    //amrex::Print() << "v min: " << v.min(0) << std::endl;
     BL_PROFILE_VAR_STOP(total);
 
     }

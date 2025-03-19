@@ -6,6 +6,7 @@ DEBUG        = FALSE
 USE_MPI      = FALSE
 USE_OMP      = FALSE
 COMP         = gnu
+USE_CUDA     = FALSE
 DIM          = 2
 
 TINY_PROFILE = FALSE

@@ -28,8 +28,8 @@ contains
 
     !print *,'lo(2),hi(2): ',lo(2),hi(2)
     !print *,'lo(1),hi(1): ',lo(1),hi(1)
-    !$acc parallel vector_length(128) deviceptr(p,u,v,cu,cv,h,z)
-    !$acc loop gang collapse(2)
+    !$acc parallel deviceptr(p,u,v,cu,cv,h,z)
+    !$acc loop gang vector collapse(2)
     do j=lo(2),hi(2)
       do i=lo(1),hi(1)
         cu(i,j) = 0.5 * (p(i,j) + p(i+1,j)) * u(i,j)
@@ -71,7 +71,7 @@ contains
 
     integer :: i,j
 
-    !$acc parallel vector_length(128) deviceptr(pnew,unew,vnew,pold,uold,vold,z,h,cu,cv)
+    !$acc parallel deviceptr(pnew,unew,vnew,pold,uold,vold,z,h,cu,cv)
     !$acc loop gang vector collapse(2)
     do j=lo(2),hi(2)
       do i=lo(1),hi(1)
@@ -117,7 +117,7 @@ contains
 
     integer :: i,j
 
-    !$acc parallel vector_length(128) deviceptr(p,u,v,pnew,unew,vnew,pold,uold,vold)
+    !$acc parallel deviceptr(p,u,v,pnew,unew,vnew,pold,uold,vold)
     !$acc loop gang vector collapse(2)
     do j=lo(2),hi(2)
       do i=lo(1),hi(1)
