@@ -10,11 +10,17 @@
 
 #n_processors=(1 2)
 #n_processors=(1 2 4 8 16)
-n_processors=($(seq 1 16))
+#n_processors=(1 2 4 8 16 32 64 128)
+n_processors=(16 32 64 128)
+#n_processors=(1 2 4 8 16 32 64 128 256)
+#n_processors=(32 64 128 256)
+#n_processors=($(seq 1 16))
 
 n_samples_per_case=5
 
-main_exe="${SWM_AMREX_ROOT}"/main2d.gnu.TPROF.MPI.ex
+#main_exe="${SWM_AMREX_ROOT}"/main2d.gnu.TPROF.MPI.ex
+main_exe="${SWM_AMREX_ROOT}"/main2d.gnu.x86-milan.TPROF.MPI.ex
+#main_exe="${SWM_AMREX_ROOT}"/main2d.intel-llvm.x86-milan.TPROF.MPI.ex
 
 inputs_file="${SWM_AMREX_ROOT}"/inputs
 
@@ -31,6 +37,10 @@ set -u
 #set -x
 
 mkdir -p "${output_dir}"
+
+# Save a copy of the inputs file we are using can be usefull for reference later when you copy this whole folder to look at the scaling output.
+cd "${output_dir}"
+cp $inputs_file inputs.txt
 
 # Print headers - Note this overwrites the file if it already exists
 echo "n_proc, run_idx, runtime_min [s], runtime_avg [s], runtime_max [s]" > "${output_dir}/total_runtime.txt"
@@ -57,7 +67,9 @@ for n_proc in "${n_processors[@]}"; do
         mkdir -p "${run_dir}"
         cd "${run_dir}"
 
-        if ! mpiexec -n ${n_proc} ${main_exe} ${inputs_file} > output.txt 2>&1; then
+        #if ! mpiexec -n ${n_proc} ${main_exe} ${inputs_file} > output.txt 2>&1; then
+        #if ! mpiexec -n ${n_proc} --cpu-bind none --mem-bind none ${main_exe} ${inputs_file} > output.txt 2>&1; then
+	if ! map --profile --report=txt,summary mpiexec -n ${n_proc} -ppn ${n_proc} --cpu-bind none -env OMP_NUM_THREADS=1 ${main_exe} ${inputs_file} > output.txt 2>&1; then
             echo "Error: mpiexec failed for n_proc=${n_proc}, run_idx=${run_idx}"
             echo "Output Saved Saved to file: ${run_dir}"
             cat output.txt
@@ -92,6 +104,8 @@ for n_proc in "${n_processors[@]}"; do
                 runtime_avg=$(awk '/^'"${timer_name}"'/ {print $4}' table.txt)
                 runtime_max=$(awk '/^'"${timer_name}"'/ {print $5}' table.txt)
                 percent_max=$(awk '/^'"${timer_name}"'/ {print $6}' table.txt | sed 's/%//') # Remove the percent sign
+
+		rm table.txt
 
                 echo "${n_proc}, ${run_idx}, ${runtime_min}, ${runtime_avg}, ${runtime_max}, ${percent_max}" >> "${output_dir}/${timer_type}_runtime_${timer_name}.txt"
 
