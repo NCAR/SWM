@@ -1,160 +1,200 @@
 import numpy as np
-import os
 import matplotlib.pyplot as plt
+import pandas as pd
+import os
 
-# SWM_AMREX_ROOT environment variable must be set
-swm_amrex_root = os.getenv('SWM_AMREX_ROOT')
-if swm_amrex_root is None:
-    raise EnvironmentError("SWM_AMREX_ROOT environment variable is not set")
+def get_min_runtime_vs_n_proc(df):
+    # Return Values of n_proc, fastest runtime for each n_proc, and run_idx for the fastest runtime for each n_proc
+    n_proc_values = sorted(df['n_proc'].unique().tolist())
+    t_min = []
+    run_idx = []
+    
+    for n_proc in n_proc_values:
+        np_mask = (df['n_proc'] == n_proc)
+    
+        fastest_t_for_this_np = df[np_mask]['runtime_max'].min()
+        run_idx_of_fastest_t_for_this_np = int(df[np_mask & (df['runtime_max'] == fastest_t_for_this_np)]['run_idx'].values[0])
+    
+        t_min.append(fastest_t_for_this_np)    
+        run_idx.append(run_idx_of_fastest_t_for_this_np)
+    
+    return n_proc_values, t_min, run_idx
 
+def get_max_runtime_vs_n_proc(df):
+    # Return Values of n_proc, slowest runtime for each n_proc, and run_idx for the fastest runtime for each n_proc
+    n_proc_values = sorted(df['n_proc'].unique().tolist())
+    t_min = []
+    run_idx = []
+    
+    for n_proc in n_proc_values:
+        np_mask = (df['n_proc'] == n_proc)
+    
+        slowest_t_for_this_np = df[np_mask]['runtime_max'].max()
+        run_idx_of_slowest_t_for_this_np = int(df[np_mask & (df['runtime_max'] == slowest_t_for_this_np)]['run_idx'].values[0])
+    
+        t_min.append(slowest_t_for_this_np)    
+        run_idx.append(run_idx_of_slowest_t_for_this_np)
+    
+    return n_proc_values, t_min, run_idx
 
-###############################################################################
-# User Input
-###############################################################################
+def speedup(t_serial, t_parallel):
+    return t_serial/np.array(t_parallel)
 
-strong_scaling_results_dir = os.path.join(swm_amrex_root, 'strong_scaling_runs')
-if not os.path.isdir(strong_scaling_results_dir):
-    raise NotADirectoryError(f"Directory not found: {strong_scaling_results_dir}")
-
-# Controls how the plot looks
-label_font_size=18
-figure_size=(8,8)
-
-
-###############################################################################
-# Plot total runtime vs N_proc
-###############################################################################
-
-file_path = os.path.join(strong_scaling_results_dir, 'total_runtime.txt')
-if not os.path.isfile(file_path):
-    raise FileNotFoundError(f"File not found: {file_path}")
-
-
-# Read the CSV file into numpy arrays
-data = np.genfromtxt(file_path, delimiter=',', dtype=None, encoding=None, names=True)
-
-#for key in data.dtype.names:
-#    print(key)
-#    print(data[key])
-
-# Extract individual columns into separate numpy arrays
-n_proc_values = data['n_proc']
-run_idx_values = data['run_idx']
-runtime_min_values = data['runtime_min_s']
-runtime_avg_values = data['runtime_avg_s']
-runtime_max_values = data['runtime_max_s']
-
-# Print the arrays to verify
-#print("n_proc:", n_proc_values)
-#print("run_idx:", run_idx_values)
-#print("runtime_min:", runtime_min_values)
-#print("runtime_avg:", runtime_avg_values)
-#print("runtime_max:", runtime_max_values)
-
-###############################################################################
-# Runtime Plot
-###############################################################################
-plt.figure(figsize=figure_size)
-
-np_to_plot = []
-t_max_to_plot_best = []
-t_max_to_plot_worst = []
-
-np_to_best_run_idx  = {}
-
-# Could use this to get the most unloadbalanced run... would find the largest spread between min and max for a given run per each N_proc
-#t_min_to_plot = []
-
-for n_proc in np.unique(n_proc_values):
-
-    # Get the data for this specific value of N_proc
-    np_mask = (n_proc_values == n_proc)
-    run_idx_values_for_np = run_idx_values[np_mask]
-    runtime_min_values_for_np = runtime_min_values[np_mask]
-    runtime_avg_values_for_np = runtime_avg_values[np_mask]
-    runtime_max_values_for_np = runtime_max_values[np_mask]
-
-    # Will be used as x axis
-    np_to_plot.append(n_proc)
-
-    # Get the fastest and slowest runtimes for this N_proc
-    # Will be used as y axis
-    t_max_best = min(runtime_max_values_for_np)
-    t_max_worst = max(runtime_max_values_for_np)
-
-    t_max_to_plot_best.append(t_max_best)
-    t_max_to_plot_worst.append(t_max_worst)
-
-    # keep track of run_idx for the best run
-    np_to_best_run_idx[n_proc] = np.argmin(runtime_max_values_for_np)
+def efficiency(t_serial, t_parallel, n_proc):
+    return speedup(t_serial, t_parallel)/np.array(n_proc)
 
 
-print(np_to_best_run_idx)
+def plot_multiple_timers_runtime(strong_scaling_results_dir, n_proc_values, run_index_values, fig):
+    file_basenames = ['exclusive_runtime_UpdateIntermediateVariables',
+                      'exclusive_runtime_UpdateNewVariables',
+                      'exclusive_runtime_UpdateOldVariables',
+                      'inclusive_runtime_FabArray::FillBoundary'
+                     ]
+    files = []
+    for file_basename in file_basenames:
+        file_path = os.path.join(strong_scaling_results_dir, file_basename+'.csv')
+        if not os.path.isfile(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+        files.append(file_path)
 
-base_filename = os.path.splitext(os.path.basename(file_path))[0]
-plt.plot(np_to_plot, t_max_to_plot_best, label = base_filename)
+    plt.figure(fig.number) 
 
-#plt.fill_between(np_to_plot, t_max_to_plot_best, t_max_to_plot_worst, alpha=0.2)
+    for file_path in files:
 
-plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
-plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
-#plt.legend()
-plt.tight_layout()
+      column_names = ['n_proc', 'run_idx', 'runtime_min', 'runtime_avg', 'runtime_max', 'max_percent']
+      df = pd.read_csv(file_path, sep=',', header=0, names=column_names, index_col=False, skiprows=0, engine='python')
 
-###############################################################################
-# Plot runtime vs N_proc for specific timers
-###############################################################################
+      time = []
+      
+      for (n_proc_value, fastest_run_idx_value) in zip(n_proc_values, run_index_values):
+          # Get the data for the fastest running case for this specific value of n_proc
+          mask = (df['n_proc'] == n_proc_value) & (df['run_idx'] == fastest_run_idx_value)
+        
+          time.append(float(df[mask]['runtime_max'].values[0]))
+        
+      # Will be used as x axis
+      plt.plot(n_proc_values, time, label=os.path.basename(file_path))
 
+def main():
+    ###############################################################################
+    # User Input
+    ###############################################################################
+    strong_scaling_results_dir = '/home/lalo/SWM/swm_AMReX/scaling_output_test'
+    
+    # Controls how the plots looks
+    label_font_size=18
+    figure_size=(8,8)
+    
+    ############################################################################
+    # 
+    ############################################################################
 
-file_basenames = ['exclusive_runtime_UpdateIntermediateVariables',
-                   'exclusive_runtime_UpdateNewVariables',
-                   'exclusive_runtime_UpdateOldVariables',
-                   'inclusive_runtime_FabArray::FillBoundary'
-                   ]
-files = []
-for file_basename in file_basenames:
-    files.append(os.path.join(strong_scaling_results_dir, file_basename+'.txt'))
+    if not os.path.isdir(strong_scaling_results_dir):
+        raise NotADirectoryError(f"Directory not found: {strong_scaling_results_dir}")
+    
+    column_names = ['n_proc', 'run_idx', 'runtime_min', 'runtime_avg', 'runtime_max']
+    df = pd.read_csv(os.path.join(strong_scaling_results_dir, 'total_runtime.csv'), sep=',', header=0, names=column_names, index_col=False, skiprows=0, engine='python')
+    
+    #print(df.to_string())
+    
+    all_runtimes_figure = plt.figure(figsize=figure_size)
+    runtime_figure = plt.figure(figsize=figure_size)
+    runtime_multi_timer_figure = plt.figure(figsize=figure_size)
+    speedup_figure = plt.figure(figsize=figure_size)
+    efficiency_figure = plt.figure(figsize=figure_size)
+    
+    ############################################################################
+    # 
+    ############################################################################
+    
+    plt.figure(all_runtimes_figure.number)
+    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
+    #plt.legend()
+    plt.tight_layout()
+    
+    # Fastest run for each n_proc
+    n_proc, t_min, fastest_run_idx = get_min_runtime_vs_n_proc(df)
+    plt.plot(n_proc, t_min, label='Fastest Run')
+    
+    for (n_proc_value, t_min_value, fastest_run_idx_value) in zip(n_proc, t_min, fastest_run_idx):
+      print(f"Fastest run for n_proc {n_proc_value} was {t_min_value} [s] at run number {fastest_run_idx_value}")
+    
+    # Slowest run for each n_proc
+    n_proc, t_max, slowest_run_idx = get_max_runtime_vs_n_proc(df)
+    plt.plot(n_proc, t_max, label='Slowest Run')
+    
+    # Fill between the fastest and slowest run for each n_proc
+    plt.fill_between(n_proc, t_min, t_max, alpha=0.2)
+    
+    # Plot x for all runs
+    plt.plot(df['n_proc'].to_list(), df['runtime_max'].tolist(), 'xk', label='All Runs')
+    
+    plt.legend()
+    
+    ############################################################################
+    # Runtime for fastest run only for each n_proc
+    ############################################################################
+    
+    plt.figure(runtime_figure.number)
+    
+    plt.figure(runtime_figure.number)
+    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
+    plt.tight_layout()
+    
+    plt.plot(n_proc, t_min)
 
-for file_path in files:
+    ############################################################################
+    # Runtime for fastest run only for each n_proc.... but show multiple timers
+    ############################################################################
+    plt.figure(runtime_multi_timer_figure.number)
+    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
+    plt.tight_layout()
 
-  if not os.path.isfile(file_path):
-      raise FileNotFoundError(f"File not found: {file_path}")
+    # Fastest run for each n_proc
+    #plt.plot(n_proc, t_min, label='toal runtime')
+    #plot_multiple_timers_runtime(strong_scaling_results_dir, n_proc, fastest_run_idx, runtime_multi_timer_figure)
 
-  data = np.genfromtxt(file_path, delimiter=',', dtype=None, encoding=None, names=True)
-  
-  # Extract individual columns into separate numpy arrays
-  n_proc_values = data['n_proc']
-  run_idx_values = data['run_idx']
-  runtime_min_values = data['runtime_min_s']
-  runtime_avg_values = data['runtime_avg_s']
-  runtime_max_values = data['runtime_max_s']
-  max_percent_values = data['max_percent']
-  
-  np_to_plot = []
-  t_max_to_plot = []
-  
-  for n_proc in np.unique(n_proc_values):
-  
-    # Get the runtimes for this N_proc
-    np_mask = (n_proc_values == n_proc)
-    runtime_min_values_for_np = runtime_min_values[np_mask]
-    runtime_avg_values_for_np = runtime_avg_values[np_mask]
-    runtime_max_values_for_np = runtime_max_values[np_mask]
-    max_percent_values_for_np = max_percent_values[np_mask]
-  
-    # Will be used as x axis
-    np_to_plot.append(n_proc)
-  
-    # Will be used as y axis
-    idx = np_to_best_run_idx[n_proc]
-    t_max_to_plot.append(runtime_max_values_for_np[idx])
-  
-  base_filename = os.path.splitext(os.path.basename(file_path))[0]
-  plt.plot(np_to_plot, t_max_to_plot, label = base_filename)
-  
-plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
-plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
-plt.legend()
-plt.tight_layout()
+    # Slowest run for each n_proc
+    plt.plot(n_proc, t_max, label='toal runtime')
+    plot_multiple_timers_runtime(strong_scaling_results_dir, n_proc, slowest_run_idx, runtime_multi_timer_figure)
 
-plt.show()
+    plt.legend()
+
+    ############################################################################
+    # Speedup
+    ############################################################################
+    
+    plt.figure(speedup_figure.number)
+    plt.plot([1,np.max(n_proc)], [1,np.max(n_proc)], '--k', label='Ideal') # Ideal speedup for reference
+    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.ylabel(r'Speedup $= \frac{t_{\mathrm{serial}}}{t_\mathrm{parallel}}$',fontsize=label_font_size)
+    plt.legend()
+    plt.gca().set_aspect('equal')
+    plt.tight_layout()
+    
+    plt.plot(n_proc, speedup(t_min[0], t_min))
+    
+    ############################################################################
+    # Efficiency
+    ############################################################################
+    
+    plt.figure(efficiency_figure.number)
+    plt.plot([1,np.max(n_proc)], [1,1], '--k', label='Ideal') # Ideal efficiency for reference
+    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.ylabel(r'Efficiency $= \frac{\mathrm{Speedup}}{N_{\mathrm{proc}}} =  \frac{t_{\mathrm{serial}}}{N_{\mathrm{proc}}t_{\mathrm{parallel}}}$',fontsize=label_font_size)
+    plt.legend()
+    plt.tight_layout()
+    
+    plt.plot(n_proc, efficiency(t_min[0], t_min, n_proc))
+    
+    ############################################################################
+    # Cleanup 
+    ############################################################################
+    
+    plt.show()
+
+if __name__ == "__main__":
+    main()
