@@ -143,7 +143,7 @@ def main():
     plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
     plt.tight_layout()
     
-    plt.plot(n_proc, t_min)
+    plt.plot(n_proc, t_min, '-o', label='Actual')
 
     ############################################################################
     # Runtime for fastest run only for each n_proc.... but show multiple timers
@@ -154,12 +154,12 @@ def main():
     plt.tight_layout()
 
     # Fastest run for each n_proc
-    #plt.plot(n_proc, t_min, label='toal runtime')
-    #plot_multiple_timers_runtime(strong_scaling_results_dir, n_proc, fastest_run_idx, runtime_multi_timer_figure)
+    plt.plot(n_proc, t_min, label='toal runtime')
+    plot_multiple_timers_runtime(strong_scaling_results_dir, n_proc, fastest_run_idx, runtime_multi_timer_figure)
 
     # Slowest run for each n_proc
-    plt.plot(n_proc, t_max, label='toal runtime')
-    plot_multiple_timers_runtime(strong_scaling_results_dir, n_proc, slowest_run_idx, runtime_multi_timer_figure)
+    #plt.plot(n_proc, t_max, label='toal runtime')
+    #plot_multiple_timers_runtime(strong_scaling_results_dir, n_proc, slowest_run_idx, runtime_multi_timer_figure)
 
     plt.legend()
 
@@ -175,7 +175,7 @@ def main():
     plt.gca().set_aspect('equal')
     plt.tight_layout()
     
-    plt.plot(n_proc, speedup(t_min[0], t_min))
+    plt.plot(n_proc, speedup(t_min[0], t_min), '-o', label='Actual')
     
     ############################################################################
     # Efficiency
@@ -188,7 +188,7 @@ def main():
     plt.legend()
     plt.tight_layout()
     
-    plt.plot(n_proc, efficiency(t_min[0], t_min, n_proc))
+    plt.plot(n_proc, efficiency(t_min[0], t_min, n_proc), '-o', label='Actual')
     
     ############################################################################
     # Cleanup 
