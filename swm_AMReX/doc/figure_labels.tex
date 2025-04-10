@@ -1,6 +1,9 @@
 \documentclass{article}
 
 \usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx}
+\usepackage{amsmath}
+
 
 \begin{document}
 
@@ -133,5 +136,212 @@ $$ \frac{\partial \yfacecolor{u_{i,j}}}{\partial t} = \left( \frac{ \cellcolor{\
 $$ \frac{\partial \xfacecolor{v_{i,j}}}{\partial t} = \left( \frac{ \textcolor{cell_centered_color}{\eta_{i-1,j}} +  \textcolor{cell_centered_color}{\eta_{i,j}} }{2} \right) \left( \frac{ \yfacecolor{[P u]_{i-1,j}} + \yfacecolor{[P u]_{i-1,j+1}} + \yfacecolor{[P u]_{i,j}} + \yfacecolor{[P u]_{i,j+1}} }{4} \right) - \left( \frac{ \nodecolor{h_{i,j+1}} - \nodecolor{h_{i,j}} }{dy} \right)  $$
 
 $$ \frac{\partial \nodecolor{P_{i,j}}}{\partial t} = - \left( \frac{ \yfacecolor{[Pu]_{i,j}} - \yfacecolor{[Pu]_{i-1,j}} }{dx} \right) - \left(  \frac{ \xfacecolor{[Pv]_{i,j}} - \xfacecolor{[Pu]_{i,j-1}}}{dy} \right) $$
+
+\section{Governing Equations to Reduce the Memory Footprint}
+
+Plug the potential vorticity into the governing equations for momentum.
+
+$$ \textcolor{y_face_color}{ \frac{\partial u}{\partial t} }= \left( \frac{\partial v}{\partial x} - \frac{\partial u}{\partial y} \right) v - \frac{\partial}{\partial x} \left( P + \frac{1}{2} (u^2 + v^2) \right)$$
+
+
+$$  \textcolor{x_face_color}{ \frac{\partial v}{\partial t} } = \left( \frac{\partial v}{\partial x} - \frac{\partial u}{\partial y} \right) u - \frac{\partial}{\partial y} \left( P + \frac{1}{2} (u^2 + v^2) \right)$$
+
+
+$$ \nodecolor{ \frac{\partial P}{\partial t} } = -\frac{\partial}{\partial x}\left(Pu\right) - \frac{\partial}{\partial y} (Pv) $$
+
+
+\subsection{Equations for interpolating from one location to another}
+
+X\_face to node
+%$$ \nodecolor{\phi_{i,j}} = \frac{\xfacecolor{\phi_{i,j-1}} + \xfacecolor{\phi_{i,j}} } {2} $$
+%\includegraphics[width=0.5\textwidth]{./figures/interpolate/Interpolate_X_Face_to_Node.jpg}
+
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\Large
+		\begin{equation*}
+			\nodecolor{\phi_{i,j}} = \frac{\xfacecolor{\phi_{i,j-1}} + \xfacecolor{\phi_{i,j}} }{2}
+		\end{equation*}
+	\end{minipage}
+	\hfill % Horizontal space between the two minipages
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_X_Face_to_Node.jpg} % Replace 'example-image' with your image file
+	\end{minipage}
+\end{center}
+
+
+X\_face to Y\_face
+%$$ \yfacecolor{\phi_{i,j}} = \frac{\xfacecolor{\phi_{i,j-1}} + \xfacecolor{\phi_{i+1,j-1}} + \xfacecolor{\phi_{i,j}} + \xfacecolor{\phi_{i+1,j}} } {4} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\begin{equation*}
+			\yfacecolor{\phi_{i,j}} = \frac{\xfacecolor{\phi_{i,j-1}} + \xfacecolor{\phi_{i+1,j-1}} + \xfacecolor{\phi_{i,j}} + \xfacecolor{\phi_{i+1,j}} } {4}
+		\end{equation*}
+	\end{minipage}
+	\hfill % Horizontal space between the two minipages
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_X_Face_to_Y_Face.jpg} % Replace 'example-image' with your image file
+	\end{minipage}
+\end{center}
+
+X\_face to cell center
+%$$ \cellcolor{\phi_{i,j}} = \frac{\xfacecolor{\phi_{i,j}} + \xfacecolor{\phi_{i+1,j}} } {2} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\Large
+		\begin{equation*}
+			\cellcolor{\phi_{i,j}} = \frac{\xfacecolor{\phi_{i,j}} + \xfacecolor{\phi_{i+1,j}} } {2}
+		\end{equation*}
+	\end{minipage}
+	\hfill % Horizontal space between the two minipages
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_X_Face_to_Cell_Center.jpg} % Replace 'example-image' with your image file
+	\end{minipage}
+\end{center}
+
+Y\_face to node
+%$$ \nodecolor{\phi_{i,j}} = \frac{\yfacecolor{\phi_{i-1,j}} + \yfacecolor{\phi_{i,j}} } {2} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\Large
+		\begin{equation*}
+			\nodecolor{\phi_{i,j}} = \frac{\yfacecolor{\phi_{i-1,j}} + \yfacecolor{\phi_{i,j}} } {2}
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Y_Face_to_Node.jpg}
+	\end{minipage}
+\end{center}
+
+Y\_face to X\_face
+%$$ \xfacecolor{\phi_{i,j}} = \frac{\yfacecolor{\phi_{i-1,j}} + \yfacecolor{\phi_{i,j}} + \yfacecolor{\phi_{i-1,j+1}} + \yfacecolor{\phi_{i,j+1}} } {4} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\begin{equation*}
+			\xfacecolor{\phi_{i,j}} = \frac{\yfacecolor{\phi_{i-1,j}} + \yfacecolor{\phi_{i,j}} + \yfacecolor{\phi_{i-1,j+1}} + \yfacecolor{\phi_{i,j+1}} } {4}
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Y_Face_to_X_Face.jpg}
+	\end{minipage}
+\end{center}
+
+Y\_face to cell center
+%$$ \cellcolor{\phi_{i,j}} = \frac{\yfacecolor{\phi_{i,j}} + \yfacecolor{\phi_{i,j+1}} } {2} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\Large
+		\begin{equation*}
+			\cellcolor{\phi_{i,j}} = \frac{\yfacecolor{\phi_{i,j}} + \yfacecolor{\phi_{i,j+1}} } {2}
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Y_Face_to_Cell_Center.jpg}
+	\end{minipage}
+\end{center}
+
+Node to X\_face
+%$$ \xfacecolor{\phi_{i,j}} = \frac{ \nodecolor{\phi_{i,j}} + \nodecolor{\phi_{i,j+1}} } {2} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\Large
+		\begin{equation*}
+			\xfacecolor{\phi_{i,j}} = \frac{ \nodecolor{\phi_{i,j}} + \nodecolor{\phi_{i,j+1}} } {2}
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Node_to_X_Face.jpg}
+	\end{minipage}
+\end{center}
+
+Node to Y\_face
+%$$ \yfacecolor{\phi_{i,j}} = \frac{ \nodecolor{\phi_{i,j}} + \nodecolor{\phi_{i+1,j}} } {2} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\Large
+		\begin{equation*}
+			\yfacecolor{\phi_{i,j}} = \frac{ \nodecolor{\phi_{i,j}} + \nodecolor{\phi_{i+1,j}} } {2} 
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Node_to_Y_Face.jpg}
+	\end{minipage}
+\end{center}
+
+Node to cell center
+%$$ \cellcolor{\phi_{i,j}} = \frac{ \nodecolor{\phi_{i,j}} + \nodecolor{\phi_{i+1,j}} + \nodecolor{\phi_{i,j+1}} + \nodecolor{\phi_{i+1,j+1}} } {4} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\begin{equation*}
+			\cellcolor{\phi_{i,j}} = \frac{ \nodecolor{\phi_{i,j}} + \nodecolor{\phi_{i+1,j}} + \nodecolor{\phi_{i,j+1}} + \nodecolor{\phi_{i+1,j+1}} } {4}
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Node_to_Cell_Center.jpg}
+	\end{minipage}
+\end{center}
+
+
+Cell Center to X\_Face
+%$$ \xfacecolor{\phi_{i,j}} = \frac{ \cellcolor{\phi_{i-1,j}} + \cellcolor{\phi_{i,j}} }{2} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\Large
+		\begin{equation*}
+			\xfacecolor{\phi_{i,j}} = \frac{ \cellcolor{\phi_{i-1,j}} + \cellcolor{\phi_{i,j}} }{2}
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Cell_Center_to_X_Face.jpg}
+	\end{minipage}
+\end{center}
+
+Cell Center to Y\_Face
+%$$ \yfacecolor{\phi_{i,j}} = \frac{ \cellcolor{\phi_{i,j-1}} + \cellcolor{\phi_{i,j}} }{2} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\Large
+		\begin{equation*}
+			\yfacecolor{\phi_{i,j}} = \frac{ \cellcolor{\phi_{i,j-1}} + \cellcolor{\phi_{i,j}} }{2}
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Cell_Center_to_Y_Face.jpg}
+	\end{minipage}
+\end{center}
+
+Cell Center to Node
+%$$ \nodecolor{\phi_{i,j}} = \frac{ \cellcolor{\phi_{i-1,j-1}} + \cellcolor{\phi_{i-1,j}} + \cellcolor{\phi_{i,j-1}} + \cellcolor{\phi_{i,j}} }{4} $$
+
+\begin{center}
+	\begin{minipage}[c]{0.45\textwidth} % 45% of the page width
+		\begin{equation*}
+			\nodecolor{\phi_{i,j}} = \frac{ \cellcolor{\phi_{i-1,j-1}} + \cellcolor{\phi_{i-1,j}} + \cellcolor{\phi_{i,j-1}} + \cellcolor{\phi_{i,j}} }{4}
+		\end{equation*}
+	\end{minipage}
+	\hfill 
+	\begin{minipage}[c]{0.45\textwidth} 
+		\includegraphics[width=\textwidth]{./figures/interpolate/Interpolate_Cell_Center_to_Node.jpg}
+	\end{minipage}
+\end{center}
 
 \end{document}
