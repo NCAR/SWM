@@ -75,4 +75,53 @@ void UpdateVariables(const amrex::Geometry& geom,
                      amrex::MultiFab& u_new, amrex::MultiFab& v_new, amrex::MultiFab& p_new,
                      amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p);
 
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateXFaceToNode(const amrex::Array4<amrex::Real const>& phi_x_face, 
+                                   const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateXFaceToYFace(const amrex::Array4<amrex::Real const>& phi_x_face, 
+                                    const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateXFaceToCellCenter(const amrex::Array4<amrex::Real const>& phi_x_face, 
+                                         const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateYFaceToNode(const amrex::Array4<amrex::Real const>& phi_y_face, 
+                                   const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateYFaceToXFace(const amrex::Array4<amrex::Real const>& phi_y_face, 
+                                    const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateYFaceToCellCenter(const amrex::Array4<amrex::Real const>& phi_y_face, 
+                                         const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateNodeToXFace(const amrex::Array4<amrex::Real const>& phi_node, 
+                                   const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateNodeToYFace(const amrex::Array4<amrex::Real const>& phi_node, 
+                                   const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateNodeToCellCenter(const amrex::Array4<amrex::Real const>& phi_node, 
+                                        const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateCellCenterToNode(const amrex::Array4<amrex::Real const>& phi_cell_center, 
+                                        const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateCellCenterToXFace(const amrex::Array4<amrex::Real const>& phi_cell_center, 
+                                        const int i, const int j, const int k);
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateCellCenterToYFace(const amrex::Array4<amrex::Real const>& phi_cell_center, 
+                                        const int i, const int j, const int k);
+
+
 #endif // SWM_MINI_APP_UTILS_H_

@@ -487,3 +487,137 @@ void UpdateVariables(const amrex::Geometry& geom,
 
     return;
 }
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateXFaceToNode(const amrex::Array4<amrex::Real const>& phi_x_face, 
+                                   const int i, const int j, const int k)
+{
+    amrex::Real phi_node = 0.5*(phi_x_face(i,j-1,k) + phi_x_face(i,j,k));
+    return phi_node;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateXFaceToYFace(const amrex::Array4<amrex::Real const>& phi_x_face, 
+                                    const int i, const int j, const int k)
+{
+    amrex::Real phi_y_face = 0.25*(phi_x_face(i,j-1,k) + phi_x_face(i+1,j-1,k) + phi_x_face(i,j,k) + phi_x_face(i+1,j,k) );
+    return phi_y_face;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateXFaceToCellCenter(const amrex::Array4<amrex::Real const>& phi_x_face, 
+                                         const int i, const int j, const int k)
+{
+    amrex::Real phi_cell_center = 0.5*(phi_x_face(i,j,k) + phi_x_face(i+1,j,k) );
+    return phi_cell_center;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateYFaceToNode(const amrex::Array4<amrex::Real const>& phi_y_face, 
+                                   const int i, const int j, const int k)
+{
+    amrex::Real phi_node = 0.5*(phi_y_face(i-1,j,k) + phi_y_face(i,j,k));
+    return phi_node;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateYFaceToXFace(const amrex::Array4<amrex::Real const>& phi_y_face, 
+                                    const int i, const int j, const int k)
+{
+    amrex::Real phi_x_face = 0.25*(phi_y_face(i-1,j,k) + phi_y_face(i,j,k) + phi_y_face(i-1,j+1,k) + phi_y_face(i,j+1,k) );
+    return phi_x_face;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateYFaceToCellCenter(const amrex::Array4<amrex::Real const>& phi_y_face, 
+                                         const int i, const int j, const int k)
+{
+    amrex::Real phi_cell_center = 0.5*(phi_y_face(i,j,k) + phi_y_face(i,j+1,k));
+    return phi_cell_center;
+}
+
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateNodeToXFace(const amrex::Array4<amrex::Real const>& phi_node, 
+                                   const int i, const int j, const int k)
+{
+    amrex::Real phi_x_face = 0.5*(phi_node(i,j,k) + phi_node(i,j+1,k));
+    return phi_x_face;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateNodeToYFace(const amrex::Array4<amrex::Real const>& phi_node, 
+                                   const int i, const int j, const int k)
+{
+    amrex::Real phi_y_face = 0.5*(phi_node(i,j,k) + phi_node(i+1,j,k));
+    return phi_y_face;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateNodeToCellCenter(const amrex::Array4<amrex::Real const>& phi_node, 
+                                        const int i, const int j, const int k)
+{
+    amrex::Real phi_cell_center = 0.25*(phi_node(i,j,k) + phi_node(i+1,j,k) + phi_node(i,j+1,k) + phi_node(i+1,j+1,k));
+    return phi_cell_center;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateCellCenterToNode(const amrex::Array4<amrex::Real const>& phi_cell_center, 
+                                        const int i, const int j, const int k)
+{
+    amrex::Real phi_node = 0.25*(phi_cell_center(i-1,j-1,k) + phi_cell_center(i,j-1,k) + phi_cell_center(i-1,j,k) + phi_cell_center(i,j,k));
+    return phi_node;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateCellCenterToXFace(const amrex::Array4<amrex::Real const>& phi_cell_center, 
+                                        const int i, const int j, const int k)
+{
+    amrex::Real phi_x_face = 0.5*(phi_cell_center(i-1,j,k) + phi_cell_center(i,j,k));
+    return phi_x_face;
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+amrex::Real InterpolateCellCenterToYFace(const amrex::Array4<amrex::Real const>& phi_cell_center, 
+                                        const int i, const int j, const int k)
+{
+    amrex::Real phi_y_face = 0.5*(phi_cell_center(i,j-1,k) + phi_cell_center(i,j,k));
+    return phi_y_face;
+}
+
+
+void UpdateNewVariables(const double dx, const double dy, const double dt,
+                        const amrex::MultiFab& p_old, const amrex::MultiFab& u_old, const amrex::MultiFab& v_old,
+                        amrex::MultiFab& p_new, amrex::MultiFab& u_new, amrex::MultiFab& v_new)
+{
+    BL_PROFILE("UpdateRHS()");
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel if (amrex::Gpu::notInLaunchRegion())
+#endif
+    for (amrex::MFIter mfi(p_old, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box& bx = mfi.tilebox();
+
+        // Read only arrays
+        const amrex::Array4<amrex::Real const>& p_old_array = p_old.const_array(mfi);
+        const amrex::Array4<amrex::Real const>& u_old_array = u_old.const_array(mfi);
+        const amrex::Array4<amrex::Real const>& v_old_array = v_old.const_array(mfi);
+
+        // Write arrays
+        const amrex::Array4<amrex::Real>& p_new_array = p_new.array(mfi);
+        const amrex::Array4<amrex::Real>& u_new_array = u_new.array(mfi);
+        const amrex::Array4<amrex::Real>& v_new_array = v_new.array(mfi);
+
+        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
+        {
+            UpdateNewVariablesKernel(i, j, k, 
+                                     dx, dy, dt,
+                                     p_old_array, u_old_array, v_old_array,
+                                     p_new_array, u_new_array, v_new_array);
+
+        });
+    }
+
+    return;
+}
