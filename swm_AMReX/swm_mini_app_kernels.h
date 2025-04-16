@@ -75,7 +75,7 @@ void UpdateNewVariablesKernel( const int i, const int j, const int k,
                                const amrex::Array4<amrex::Real>& u_new,
                                const amrex::Array4<amrex::Real>& v_new)
 {
-    amrex::Real u_rhs = 0.0;
+    amrex::Real du_dt = 0.0;
     //{
     //    // u_rhs is evaluated at the y face i,j (same location as u)... 
     //    // So:
@@ -94,7 +94,7 @@ void UpdateNewVariablesKernel( const int i, const int j, const int k,
     //    // The d()/dx of the pressure plus kinetic energy term is evaluated at y face 
     //    dPKe_dx = (PKe_r - PKe_l) / dx;
 
-    //    u_rhs += (dv_dx - du_dy)*v - dPKe_dx;
+    //    du_dt += (dv_dx - du_dy)*v - dPKe_dx;
     //}
     {
         // u_rhs is evaluated at the y face i,j (same location as u)... 
@@ -129,10 +129,10 @@ void UpdateNewVariablesKernel( const int i, const int j, const int k,
         const amrex::Real PKe_node_left  = p_node_left  + 0.5*( pow(u_node_left ,2.0) + pow(v_node_left ,2.0) );
         const amrex::Real dPKe_dx = (PKe_node_right - PKe_node_left) / dx;
 
-        u_rhs += (dv_dx - du_dy)*v - dPKe_dx;
+        du_dt += (dv_dx - du_dy)*v - dPKe_dx;
     }
 
-    amrex::Real v_rhs = 0.0;
+    amrex::Real dv_dt = 0.0;
     {
         // v_rhs is evaluated at the x face i,j (same location as v)... 
         // So all indexing in this block is relative to the v face i,j:
@@ -166,10 +166,10 @@ void UpdateNewVariablesKernel( const int i, const int j, const int k,
         const amrex::Real PKe_node_bottom = p_node_bottom  + 0.5*( pow(u_node_bottom ,2.0) + pow(v_node_bottom ,2.0) );
         const amrex::Real dPKe_dy = (PKe_node_top - PKe_node_bottom) / dy;
 
-        v_rhs += (dv_dx - du_dy)*u - dPKe_dy;
+        dv_dt += (dv_dx - du_dy)*u - dPKe_dy;
     }
 
-    amrex::Real p_rhs = 0.0;
+    amrex::Real dp_dt = 0.0;
     {
         // p_rhs is evaluated at the node i,j (same location as p)... 
         // So all indexing in this block is relative to the node i,j:
@@ -196,13 +196,12 @@ void UpdateNewVariablesKernel( const int i, const int j, const int k,
         const amrex::Real pv_x_face_bottom = p_x_face_bottom*v_x_face_bottom;
         const amrex::Real dpv_dy = (pv_x_face_top - pv_x_face_bottom) / dy;
 
-        p_rhs += (-1.0)*(dpu_dx + dpv_dy);
+        dp_dt += (-1.0)*(dpu_dx + dpv_dy);
     }
-    
 
-    u_new(i,j,k) = u_old(i,j,k) + dt * u_rhs;
-    v_new(i,j,k) = v_old(i,j,k) + dt * v_rhs;
-    p_new(i,j,k) = p_old(i,j,k) + dt * p_rhs;
+    u_new(i,j,k) = u_old(i,j,k) + dt * du_dt;
+    v_new(i,j,k) = v_old(i,j,k) + dt * dv_dt;
+    p_new(i,j,k) = p_old(i,j,k) + dt * dp_dt;
 }
 
 #endif // SWM_MINI_APP_KERNELS_H_

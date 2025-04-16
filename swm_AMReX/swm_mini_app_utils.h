@@ -123,5 +123,8 @@ AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real InterpolateCellCenterToYFace(const amrex::Array4<amrex::Real const>& phi_cell_center, 
                                         const int i, const int j, const int k);
 
+void UpdateNewVariables(const double dx, const double dy, const double dt,
+                        const amrex::MultiFab& p_old, const amrex::MultiFab& u_old, const amrex::MultiFab& v_old,
+                        amrex::MultiFab& p_new, amrex::MultiFab& u_new, amrex::MultiFab& v_new);
 
 #endif // SWM_MINI_APP_UTILS_H_

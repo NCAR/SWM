@@ -590,7 +590,7 @@ void UpdateNewVariables(const double dx, const double dy, const double dt,
                         const amrex::MultiFab& p_old, const amrex::MultiFab& u_old, const amrex::MultiFab& v_old,
                         amrex::MultiFab& p_new, amrex::MultiFab& u_new, amrex::MultiFab& v_new)
 {
-    BL_PROFILE("UpdateRHS()");
+    BL_PROFILE("UpdateNewVariables()");
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (amrex::Gpu::notInLaunchRegion())

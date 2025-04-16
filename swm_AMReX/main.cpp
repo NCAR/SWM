@@ -1,12 +1,6 @@
-/*
- *
- */
-
 #include <cmath>
 
 #include <AMReX.H>
-#include <AMReX_PlotFileUtil.H>
-#include <AMReX_ParmParse.H>
 
 #include "swm_mini_app_utils.h"
 
@@ -135,20 +129,29 @@ int main (int argc, char* argv[])
     for (int time_step = 1; time_step <= n_time_steps; ++time_step)
     {
 
-	BL_PROFILE_VAR_START(loop100);
-        // Sets: cu, cv, h, z
-        UpdateIntermediateVariables(dx, dy, geom,
-                                     p, u, v,
-                                     cu, cv, h, z);
-	BL_PROFILE_VAR_STOP(loop100);
+//	BL_PROFILE_VAR_START(loop100);
+//        // Sets: cu, cv, h, z
+//        UpdateIntermediateVariables(dx, dy, geom,
+//                                     p, u, v,
+//                                     cu, cv, h, z);
+//	BL_PROFILE_VAR_STOP(loop100);
+//
+//
+//        // Sets: p_new, u_new, v_new
+//	BL_PROFILE_VAR_START(loop200);
+//        UpdateNewVariables(dx, dy, tdt, geom,
+//                           p_old, u_old, v_old, cu, cv, h, z,
+//                           p_new, u_new, v_new);
+//	BL_PROFILE_VAR_STOP(loop200);
 
-
+//	BL_PROFILE_VAR_START(loop100);
+//	BL_PROFILE_VAR_START(loop200);
         // Sets: p_new, u_new, v_new
-	BL_PROFILE_VAR_START(loop200);
-        UpdateNewVariables(dx, dy, tdt, geom,
-                           p_old, u_old, v_old, cu, cv, h, z,
+        UpdateNewVariables(dx, dy, tdt,
+                           p_old, u_old, v_old,
                            p_new, u_new, v_new);
-	BL_PROFILE_VAR_STOP(loop200);
+//	BL_PROFILE_VAR_STOP(loop100);
+//	BL_PROFILE_VAR_STOP(loop200);
 
 
 	BL_PROFILE_VAR_START(loop300);
