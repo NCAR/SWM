@@ -79,11 +79,17 @@ def main():
     ###############################################################################
     # User Input
     ###############################################################################
-    strong_scaling_results_dir = '/home/lalo/SWM/swm_AMReX/scaling_output_test'
+    #strong_scaling_results_dir = '/home/lalo/SWM/swm_AMReX/scaling_output_test'
+    strong_scaling_results_dir = '/home/lalo/SWM/swm_AMReX/from_derecho/strong_scaling_runs_GPU_16384_mesh'
+    #strong_scaling_results_dir = '/home/lalo/SWM/swm_AMReX/from_derecho/strong_scaling_runs_GPU_8192_mesh'
     
     # Controls how the plots looks
     label_font_size=18
     figure_size=(8,8)
+
+    #x_label_text = r'$N_{\mathrm{proc}}$'
+    #x_label_text = r'$N_{\mathrm{node}}$'
+    x_label_text = r'$N_{\mathrm{GPU}}$'
     
     ############################################################################
     # 
@@ -108,7 +114,7 @@ def main():
     ############################################################################
     
     plt.figure(all_runtimes_figure.number)
-    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.xlabel(x_label_text, fontsize=label_font_size)
     plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
     #plt.legend()
     plt.tight_layout()
@@ -131,6 +137,11 @@ def main():
     plt.plot(df['n_proc'].to_list(), df['runtime_max'].tolist(), 'xk', label='All Runs')
     
     plt.legend()
+
+
+    ax1 = plt.gca()  # Main axis
+    ax1.set_xticks(n_proc)  # Set tick positions to match the plotted points
+    ax1.set_xticklabels(n_proc)  # Set tick labels to the corresponding n_proc values
     
     ############################################################################
     # Runtime for fastest run only for each n_proc
@@ -139,17 +150,21 @@ def main():
     plt.figure(runtime_figure.number)
     
     plt.figure(runtime_figure.number)
-    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.xlabel(x_label_text, fontsize=label_font_size)
     plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
     plt.tight_layout()
     
     plt.plot(n_proc, t_min, '-o', label='Actual')
 
+    ax1 = plt.gca()  # Main axis
+    ax1.set_xticks(n_proc)  # Set tick positions to match the plotted points
+    ax1.set_xticklabels(n_proc)  # Set tick labels to the corresponding n_proc values
+
     ############################################################################
     # Runtime for fastest run only for each n_proc.... but show multiple timers
     ############################################################################
     plt.figure(runtime_multi_timer_figure.number)
-    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.xlabel(x_label_text, fontsize=label_font_size)
     plt.ylabel(r'Runtime [s]',fontsize=label_font_size)
     plt.tight_layout()
 
@@ -163,19 +178,27 @@ def main():
 
     plt.legend()
 
+    ax1 = plt.gca()  # Main axis
+    ax1.set_xticks(n_proc)  # Set tick positions to match the plotted points
+    ax1.set_xticklabels(n_proc)  # Set tick labels to the corresponding n_proc values
+
     ############################################################################
     # Speedup
     ############################################################################
     
     plt.figure(speedup_figure.number)
     plt.plot([1,np.max(n_proc)], [1,np.max(n_proc)], '--k', label='Ideal') # Ideal speedup for reference
-    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.xlabel(x_label_text, fontsize=label_font_size)
     plt.ylabel(r'Speedup $= \frac{t_{\mathrm{serial}}}{t_\mathrm{parallel}}$',fontsize=label_font_size)
     plt.legend()
     plt.gca().set_aspect('equal')
     plt.tight_layout()
     
     plt.plot(n_proc, speedup(t_min[0], t_min), '-o', label='Actual')
+
+    ax1 = plt.gca()  # Main axis
+    ax1.set_xticks(n_proc)  # Set tick positions to match the plotted points
+    ax1.set_xticklabels(n_proc)  # Set tick labels to the corresponding n_proc values
     
     ############################################################################
     # Efficiency
@@ -183,12 +206,16 @@ def main():
     
     plt.figure(efficiency_figure.number)
     plt.plot([1,np.max(n_proc)], [1,1], '--k', label='Ideal') # Ideal efficiency for reference
-    plt.xlabel(r'$N_{\mathrm{proc}}$',fontsize=label_font_size)
+    plt.xlabel(x_label_text, fontsize=label_font_size)
     plt.ylabel(r'Efficiency $= \frac{\mathrm{Speedup}}{N_{\mathrm{proc}}} =  \frac{t_{\mathrm{serial}}}{N_{\mathrm{proc}}t_{\mathrm{parallel}}}$',fontsize=label_font_size)
     plt.legend()
     plt.tight_layout()
     
     plt.plot(n_proc, efficiency(t_min[0], t_min, n_proc), '-o', label='Actual')
+
+    ax1 = plt.gca()  # Main axis
+    ax1.set_xticks(n_proc)  # Set tick positions to match the plotted points
+    ax1.set_xticklabels(n_proc)  # Set tick labels to the corresponding n_proc values
     
     ############################################################################
     # Cleanup 
