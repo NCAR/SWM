@@ -34,7 +34,8 @@ n_cpu_core_small_mesh = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2
 t_cpu_core_small_mesh = np.array([17.38, 8.72, 4.347, 2.15, 1.41, 1.286, 1.307, 1.352, 0.4695, 0.1029, 0.07226, 0.05467, 0.03503])
 
 n_cpu_core_medium_mesh = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096])
-t_cpu_core_medium_mesh = np.array([79.71, 40.03, 20.26, 13.35, 9.476, 6.212, 6.373, 6.55, 3.102, 1.382, 0.4829, 0.1214, 0.08429])
+t_cpu_core_medium_mesh = np.array([79.53, 39.91, 20.09, 10.12, 6.709, 6.196, 6.336, 6.432, 3.071, 1.353, 0.4719, 0.1066, 0.0781])
+#t_cpu_core_medium_mesh = np.array([79.71, 40.03, 20.26, 13.35, 9.476, 6.212, 6.373, 6.55, 3.102, 1.382, 0.4829, 0.1214, 0.08429]) # Old data
 
 n_cpu_core_large_mesh = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096])
 t_cpu_core_large_mesh = np.array([335.6, 169.5, 89.94, 54.56, 27.09, 24.99, 25.62, 26.11, 13.05, 6.462, 3.083, 1.358, 0.4745])
@@ -160,6 +161,14 @@ marker_type_3 = 'd'
 ##############################################################################
 # Runtime Figures
 ##############################################################################
+
+runtime_figure_cpu_core_single_node = create_runtime_plot(n_cpu_core_large_mesh[0:8], x_label_cpu_core)
+plt.plot(n_cpu_core_large_mesh[0:8],  t_cpu_core_large_mesh[0:8],  large_mesh_line_type+color_1+marker_type_1,  label=legend_label_large_mesh)
+plt.plot(n_cpu_core_medium_mesh[0:8], t_cpu_core_medium_mesh[0:8], medium_mesh_line_type+color_2+marker_type_2, label=legend_label_medium_mesh)
+plt.plot(n_cpu_core_small_mesh[0:8],  t_cpu_core_small_mesh[0:8],  small_mesh_line_type+color_3+marker_type_3,  label=legend_label_small_mesh)
+plt.legend()
+plt.savefig("strong_scaling_runtime_cpu_core_single_node.png", dpi=300)
+
 runtime_figure_cpu_core = create_runtime_plot(n_cpu_core_large_mesh, x_label_cpu_core)
 plt.plot(n_cpu_core_large_mesh,  t_cpu_core_large_mesh,  large_mesh_line_type+color_1+marker_type_1,  label=legend_label_large_mesh)
 plt.plot(n_cpu_core_medium_mesh, t_cpu_core_medium_mesh, medium_mesh_line_type+color_2+marker_type_2, label=legend_label_medium_mesh)
@@ -200,6 +209,13 @@ plt.savefig("strong_scaling_runtime_cpu_node_and_gpu.png", dpi=300)
 ##############################################################################
 # Speedup Figures
 ##############################################################################
+speedup_figure_cpu_core_single_node  = create_speedup_plot(n_cpu_core_large_mesh[0:8], x_label_cpu_core)
+plt.plot(n_cpu_core_large_mesh[0:8],  speedup(t_cpu_core_large_mesh[0],  t_cpu_core_large_mesh[0:8]),  large_mesh_line_type+color_1+marker_type_1,  label=legend_label_large_mesh)
+plt.plot(n_cpu_core_medium_mesh[0:8], speedup(t_cpu_core_medium_mesh[0], t_cpu_core_medium_mesh[0:8]), medium_mesh_line_type+color_2+marker_type_2, label=legend_label_medium_mesh)  
+plt.plot(n_cpu_core_small_mesh[0:8],  speedup(t_cpu_core_small_mesh[0],  t_cpu_core_small_mesh[0:8]),  small_mesh_line_type+color_3+marker_type_3,  label=legend_label_small_mesh)
+plt.legend()
+plt.savefig("strong_scaling_speedup_cpu_core_single_node.png", dpi=300)
+
 speedup_figure_cpu_core  = create_speedup_plot(n_cpu_core_large_mesh, x_label_cpu_core)
 plt.plot(n_cpu_core_large_mesh,  speedup(t_cpu_core_large_mesh[0],  t_cpu_core_large_mesh),  large_mesh_line_type+color_1+marker_type_1,  label=legend_label_large_mesh)
 plt.plot(n_cpu_core_medium_mesh, speedup(t_cpu_core_medium_mesh[0], t_cpu_core_medium_mesh), medium_mesh_line_type+color_2+marker_type_2, label=legend_label_medium_mesh)  
@@ -241,6 +257,13 @@ plt.savefig("strong_scaling_speedup_cpu_node_vs_gpu.png", dpi=300)
 ##############################################################################
 # Efficiency Figures
 ##############################################################################
+
+efficiency_figure_cpu_core_single_node = create_efficiency_plot(n_cpu_core_large_mesh[0:8], x_label_cpu_core)
+plt.plot(n_cpu_core_large_mesh[0:8],  efficiency(t_cpu_core_large_mesh[0],  t_cpu_core_large_mesh[0:8], n_cpu_core_large_mesh[0:8]),  large_mesh_line_type+color_1+marker_type_1,  label=legend_label_large_mesh)
+plt.plot(n_cpu_core_medium_mesh[0:8], efficiency(t_cpu_core_medium_mesh[0], t_cpu_core_medium_mesh[0:8], n_cpu_core_medium_mesh[0:8]), medium_mesh_line_type+color_2+marker_type_2, label=legend_label_medium_mesh)
+plt.plot(n_cpu_core_small_mesh[0:8],  efficiency(t_cpu_core_small_mesh[0],  t_cpu_core_small_mesh[0:8], n_cpu_core_small_mesh[0:8]),  small_mesh_line_type+color_3+marker_type_3,  label=legend_label_small_mesh)
+plt.legend()
+plt.savefig("strong_scaling_efficiency_cpu_core_single_node.png", dpi=300)
 
 efficiency_figure_cpu_core = create_efficiency_plot(n_cpu_core_large_mesh, x_label_cpu_core)
 plt.plot(n_cpu_core_large_mesh,  efficiency(t_cpu_core_large_mesh[0],  t_cpu_core_large_mesh, n_cpu_core_large_mesh),  large_mesh_line_type+color_1+marker_type_1,  label=legend_label_large_mesh)
