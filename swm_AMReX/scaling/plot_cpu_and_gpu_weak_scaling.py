@@ -83,8 +83,11 @@ small_mesh_line_type = ':ro'
 medium_mesh_line_type = '-.bs'
 large_mesh_line_type = '-gd'
 
+gpu_line_type = '-go'
+cpu_line_type = '-.rs'
+
 ###############################################################################
-# Runtime
+# Runtime - Mesh Size
 ###############################################################################
 
 runtime_figure_cpu_node = create_runtime_plot(n_cpu_node_small_mesh, x_label_cpu_node)
@@ -100,5 +103,27 @@ plt.plot(n_gpu_medium_mesh, t_gpu_medium_mesh, medium_mesh_line_type, label=lege
 plt.plot(n_gpu_small_mesh, t_gpu_small_mesh, small_mesh_line_type, label=legend_label_small_mesh)
 plt.legend()
 plt.savefig("weak_scaling_runtime_gpu.png", dpi=300)
+
+###############################################################################
+# Runtime - CPU vs GPU
+###############################################################################
+
+runtime_figure_compare_cpu_gpu_4096 = create_runtime_plot(n_cpu_node_small_mesh, 'N')
+plt.plot(n_cpu_node_small_mesh, t_cpu_node_small_mesh, cpu_line_type, label='CPU Nodes -'+legend_label_small_mesh)
+plt.plot(n_gpu_small_mesh[:-1], t_gpu_small_mesh[:-1], gpu_line_type, label='GPU -'+legend_label_small_mesh)
+plt.legend()
+plt.savefig("weak_scaling_runtime_compare_cpu_gpu_4096.png", dpi=300)
+
+runtime_figure_compare_cpu_gpu_8192 = create_runtime_plot(n_cpu_node_small_mesh, 'N')
+plt.plot(n_cpu_node_medium_mesh, t_cpu_node_medium_mesh, cpu_line_type, label='CPU Nodes -'+legend_label_medium_mesh)
+plt.plot(n_gpu_medium_mesh[:-1], t_gpu_medium_mesh[:-1], gpu_line_type, label='GPU -'+legend_label_medium_mesh)
+plt.legend()
+plt.savefig("weak_scaling_runtime_compare_cpu_gpu_8192.png", dpi=300)
+
+runtime_figure_compare_cpu_gpu_16384 = create_runtime_plot(n_cpu_node_small_mesh, 'N')
+plt.plot(n_cpu_node_large_mesh, t_cpu_node_large_mesh, cpu_line_type, label='CPU Nodes -'+legend_label_large_mesh)
+plt.plot(n_gpu_large_mesh[:-1], t_gpu_large_mesh[:-1], gpu_line_type, label='GPU -'+legend_label_large_mesh)
+plt.legend()
+plt.savefig("weak_scaling_runtime_compare_cpu_gpu_16384.png", dpi=300)
 
 plt.show()
