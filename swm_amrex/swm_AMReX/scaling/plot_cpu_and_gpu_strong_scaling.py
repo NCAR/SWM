@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 plot_cpu_core_single_node = False
 plot_cpu_core = False
 plot_cpu_node = False
-plot_gpu = False
-plot_compare_cpu_node_gpu = True
+plot_gpu = True
+plot_compare_cpu_node_gpu = False
 
 # Set default figure size in inches
 plt.rcParams["figure.figsize"] = (8, 8) 
@@ -22,6 +22,12 @@ mpl.rcParams['axes.labelsize'] = 24
 # Font size for the x and y axis tick labels
 plt.rcParams['xtick.labelsize'] = 18
 plt.rcParams['ytick.labelsize'] = 18
+
+# Set default line thickness (linewidth)
+mpl.rcParams['lines.linewidth'] = 3  
+
+# Set default marker size (markersize)
+mpl.rcParams['lines.markersize'] = 10 
 
 # Font size for lebels in the legend
 plt.rc('legend', fontsize=20) 
@@ -36,8 +42,8 @@ plt.rc('legend', fontsize=20)
 n_cpu_core = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 
 t_cpu_core = {}
-t_cpu_core[1024] = [1.341, 0.6346, 0.2891, 0.1434, 0.08059, 0.05177, 0.04403, 0.045, 0.03228, 0.02579, 0.02533, 0.02398, 0.02411]
-t_cpu_core[2048] = [4.642, 2.285, 1.114, 0.596, 0.2524, 0.1446, 0.0987, 0.09266, 0.06734, 0.05125, 0.03412, 0.02748, 0.2614]
+#t_cpu_core[1024] = [1.341, 0.6346, 0.2891, 0.1434, 0.08059, 0.05177, 0.04403, 0.045, 0.03228, 0.02579, 0.02533, 0.02398, 0.02411]
+#t_cpu_core[2048] = [4.642, 2.285, 1.114, 0.596, 0.2524, 0.1446, 0.0987, 0.09266, 0.06734, 0.05125, 0.03412, 0.02748, 0.2614]
 t_cpu_core[4096] = [17.38, 8.72, 4.347, 2.15, 1.41, 1.286, 1.307, 1.352, 0.4695, 0.1029, 0.07226, 0.05467, 0.03503]
 t_cpu_core[8192] = [79.53, 39.91, 20.09, 10.12, 6.709, 6.196, 6.336, 6.432, 3.071, 1.353, 0.4719, 0.1066, 0.0781]
 t_cpu_core[16384] = [335.6, 169.5, 89.94, 54.56, 27.09, 24.99, 25.62, 26.11, 13.05, 6.462, 3.083, 1.358, 0.4745]
@@ -222,6 +228,7 @@ if plot_cpu_node:
   for mesh_size in reversed(t_cpu_node):
      plt.plot(n_cpu_node, speedup(t_cpu_node[mesh_size][0], t_cpu_node[mesh_size]), line_type[mesh_size], label=legend_label_mesh[mesh_size])
   plt.legend()
+  plt.gca().legend().set_visible(False)
   plt.savefig("strong_scaling_speedup_cpu_node.png", dpi=300)
 
 if plot_gpu:
@@ -248,6 +255,7 @@ if plot_cpu_core_single_node:
   efficiency_figure_cpu_core_single_node = create_efficiency_plot(n_cpu_core[0:8], x_label_cpu_core)
   for mesh_size in reversed(t_cpu_core):
       plt.plot(n_cpu_core[0:8], efficiency(t_cpu_core[mesh_size][0], t_cpu_core[mesh_size][0:8], n_cpu_core[0:8]), line_type[mesh_size], label=legend_label_mesh[mesh_size])
+  plt.gca().set_ylim(bottom=0)
   plt.legend()
   plt.savefig("strong_scaling_efficiency_cpu_core_single_node.png", dpi=300)
 
@@ -255,6 +263,7 @@ if plot_cpu_core:
   efficiency_figure_cpu_core = create_efficiency_plot(n_cpu_core, x_label_cpu_core)
   for mesh_size in reversed(t_cpu_core):
       plt.plot(n_cpu_core, efficiency(t_cpu_core[mesh_size][0], t_cpu_core[mesh_size], n_cpu_core), line_type[mesh_size], label=legend_label_mesh[mesh_size])
+  plt.gca().set_ylim(bottom=0)
   plt.legend()
   plt.savefig("strong_scaling_efficiency_cpu_core.png", dpi=300)
 
@@ -263,6 +272,8 @@ if plot_cpu_node:
   for mesh_size in reversed(t_cpu_node):
       plt.plot(n_cpu_node, efficiency(t_cpu_node[mesh_size][0], t_cpu_node[mesh_size], n_cpu_node), line_type[mesh_size], label=legend_label_mesh[mesh_size])
   plt.legend()
+  plt.gca().legend().set_visible(False)
+  plt.gca().set_ylim(bottom=0)
   plt.savefig("strong_scaling_efficiency_cpu_node.png", dpi=300)
 
 if plot_gpu:
@@ -270,6 +281,8 @@ if plot_gpu:
   for mesh_size in reversed(t_gpu):
       plt.plot(n_gpu, efficiency(t_gpu[mesh_size][0], t_gpu[mesh_size], n_gpu), line_type[mesh_size], label=legend_label_mesh[mesh_size])
   plt.legend()
+  plt.gca().legend().set_visible(False)
+  plt.gca().set_ylim(bottom=0)
   plt.savefig("strong_scaling_efficiency_gpu.png", dpi=300)
 
 #if plot_compare_cpu_node_gpu:
