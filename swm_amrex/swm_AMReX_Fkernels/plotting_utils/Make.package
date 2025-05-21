@@ -1,5 +1,0 @@
-#CEXE_sources += plotfile2hdf5.cpp
-CEXE_sources += main.cpp
-
-# Executable name
-#EXE = plotfile2hdf5
