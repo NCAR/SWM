@@ -9,49 +9,5 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 # Flags that get used when building  debug flags
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -g")
 
-# Additional flags if using the NVIDIA compiler for OpenACC
-set(NVC_OPENACC_FLAGS gpu=cc70 -Minfo=accel -Mnofma)
-
-###############################################################################
-# Plain C version
-###############################################################################
-set(SWM_C_SOURCES
-    shallow_swap.c
-    wtime.c
-)
-
-add_executable(swm_c ${SWM_C_SOURCES})
-
-# Link math library
-target_link_libraries(swm_c m)
-
-###############################################################################
-# C with OpenACC version
-###############################################################################
-set(SWM_C_ACC_SWAP_SOURCES
-    shallow_swap.acc.c
-    wtime.c
-)
-
-add_executable(swm_c_acc ${SWM_C_ACC_SWAP_SOURCES})
-
-target_link_libraries(swm_c_acc m)
-
-if(CMAKE_C_COMPILER_ID STREQUAL "NVIDIA")
-    target_compile_options(swm_c_acc PRIVATE ${NVC_OPENACC_FLAGS})
-endif()
-
-###############################################################################
-# C with OpenACC version
-###############################################################################
-set(SWM_C_ACC_TILE_SOURCES
-    shallow_swap.acc.Tile.c
-    wtime.c
-)
-
-add_executable(swm_c_acc_tile ${SWM_C_ACC_TILE_SOURCES})
-target_link_libraries(swm_c_acc_tile m)
-
-if(CMAKE_C_COMPILER_ID STREQUAL "NVIDIA")
-    target_compile_options(swm_c_acc_tile PRIVATE ${NVC_OPENACC_FLAGS})
-endif()
+add_subdirectory(c)
+add_subdirectory(c_OpenACC)
