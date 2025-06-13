@@ -234,6 +234,23 @@ $$ \frac{\partial \xfacecolor{v_{i,j}}}{\partial t} = \left( \frac{ \textcolor{c
 
 $$ \frac{\partial \nodecolor{P_{i,j}}}{\partial t} = - \left( \frac{ \yfacecolor{[Pu]_{i,j}} - \yfacecolor{[Pu]_{i-1,j}} }{dx} \right) - \left(  \frac{ \xfacecolor{[Pv]_{i,j}} - \xfacecolor{[Pu]_{i,j-1}}}{dy} \right) $$
 
+
+\section{Governing Equations to match the variable names from the C version of the code}
+
+They use $c_u$ and $c_v$ instead of $[Pu]$ and $[Pv]$
+
+$$ \textcolor{y_face_color}{c_{u}\rvert_{i,j}}  = \frac{ \textcolor{node_color}{P_{i,j}} + \textcolor{node_color}{P_{i+1,j}} }{2} \textcolor{y_face_color}{u_{i,j}} $$
+
+
+$$ \textcolor{x_face_color}{c_{v}\rvert_{i,j}} = \frac{\textcolor{node_color}{P_{i,j}} + \textcolor{node_color}{P_{i,j+1}}}{2} \textcolor{x_face_color}{v_{i,j}}$$
+
+
+$$ \frac{\partial \yfacecolor{u_{i,j}}}{\partial t} = \left( \frac{ \cellcolor{\eta_{i,j-1}} + \cellcolor{\eta_{i,j}} }{2} \right) \left( \frac{ \xfacecolor{c_v\rvert_{i,j-1}} + \xfacecolor{c_v\rvert_{i,j}} + \xfacecolor{c_v\rvert_{i+1,j-1}} + \xfacecolor{c_v\rvert_{i+1,j}} }{4} \right) - \left(\frac{ \nodecolor{ h_{i+1,j} } -  \nodecolor{ h_{i,j} } }{dx} \right)  $$
+
+$$ \frac{\partial \xfacecolor{v_{i,j}}}{\partial t} = \left( \frac{ \textcolor{cell_centered_color}{\eta_{i-1,j}} +  \textcolor{cell_centered_color}{\eta_{i,j}} }{2} \right) \left( \frac{ \yfacecolor{c_u\rvert_{i-1,j}} + \yfacecolor{c_u\rvert_{i-1,j+1}} + \yfacecolor{c_u\rvert_{i,j}} + \yfacecolor{c_u\rvert_{i,j+1}} }{4} \right) - \left( \frac{ \nodecolor{h_{i,j+1}} - \nodecolor{h_{i,j}} }{dy} \right)  $$
+
+$$ \frac{\partial \nodecolor{P_{i,j}}}{\partial t} = - \left( \frac{ \yfacecolor{c_u\rvert_{i,j}} - \yfacecolor{c_u\rvert_{i-1,j}} }{dx} \right) - \left(  \frac{ \xfacecolor{c_v\rvert_{i,j}} - \xfacecolor{c_v\rvert_{i,j-1}}}{dy} \right) $$
+
 \section{Governing Equations to Reduce the Memory Footprint}
 
 Plug the potential vorticity into the governing equations for momentum.
