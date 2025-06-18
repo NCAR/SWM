@@ -1,5 +1,4 @@
 #include <string>
-#include <cmath>
 
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
