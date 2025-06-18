@@ -4,6 +4,9 @@
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
+///////////////////////////////////////////////////////////////////////////////
+// SWM mini app utilities common to all versions of the code
+///////////////////////////////////////////////////////////////////////////////
 void ParseInput(int & nx, int & ny,
                 amrex::Real & dx, amrex::Real & dy,
                 int & max_chunk_size,
@@ -53,6 +56,13 @@ void Copy(const amrex::MultiFab & src, amrex::MultiFab & dest);
 
 void Swap(amrex::MultiFab & src, amrex::MultiFab & dest);
 
+void UpdateVariables(const amrex::Geometry& geom,
+                     amrex::MultiFab& u_new, amrex::MultiFab& v_new, amrex::MultiFab& p_new,
+                     amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p);
+
+///////////////////////////////////////////////////////////////////////////////
+// SWM mini app utilities common to all versions of the code
+///////////////////////////////////////////////////////////////////////////////
 void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Geometry& geom,
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,
                                  amrex::MultiFab& cu, amrex::MultiFab& cv, amrex::MultiFab& h, amrex::MultiFab& z);
@@ -66,13 +76,5 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
                         const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v, 
                         const amrex::MultiFab& p_new, const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, 
                         amrex::MultiFab& p_old, amrex::MultiFab& u_old, amrex::MultiFab& v_old);
-
-void UpdateVariables(const amrex::Geometry& geom,
-                     const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, const amrex::MultiFab& p_new,
-                     amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p);
-
-void UpdateVariables(const amrex::Geometry& geom,
-                     amrex::MultiFab& u_new, amrex::MultiFab& v_new, amrex::MultiFab& p_new,
-                     amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p);
 
 #endif // SWM_MINI_APP_UTILS_H_
