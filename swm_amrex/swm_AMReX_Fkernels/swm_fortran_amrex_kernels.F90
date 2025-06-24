@@ -16,6 +16,8 @@ contains
     real, dimension(:,:,:), pointer :: p, u, v
     real, dimension(:,:,:), intent(inout) :: cu, cv, h, z
 
+    print *, 'UpdateIntermediateVariablesAmrexKernel'
+
     cu(i+1,j,k) = 0.5 * (p(i+1,j,k) + p(i,j,k)) * u(i+1,j,k)
     cv(i,j+1,k) = 0.5 * (p(i,j+1,k) + p(i,j,k)) * v(i,j+1,k)
     z(i+1,j+1,k) = (fsdx * (v(i+1,j+1,k) - v(i,j+1,k)) - fsdy * (u(i+1,j+1,k) - u(i+1,j,k))) / &
@@ -32,6 +34,7 @@ contains
     real, dimension(:,:,:), pointer :: pold, uold, vold, pnew, unew, vnew
 
     print *,'i,j,k: ',i,j,k
+    print *, 'UpdateNewVariablesAmrexKernel'
     unew(i+1,j,k) = uold(i+1,j,k) + &
                   tdts8 * (z(i+1,j+1,k) + z(i+1,j,k)) * (cv(i+1,j+1,k) + cv(i,j+1,k) + cv(i,j,k) + cv(i+1,j,k)) - &
                   tdtsdx * (h(i+1,j,k) - h(i,j,k))
@@ -49,6 +52,7 @@ contains
 
     real, dimension(size(pold,1),size(pold,2),size(pold,3)) :: pold_cpy, uold_cpy, vold_cpy
 
+    print *, 'UpdateOldVariablesAmrexKernel'
     pold_cpy(i,j,k) = pold(i,j,k)
     uold_cpy(i,j,k) = uold(i,j,k)
     vold_cpy(i,j,k) = vold(i,j,k)
