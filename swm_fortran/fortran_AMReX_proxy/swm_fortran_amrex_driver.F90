@@ -1,4 +1,3 @@
-
 Program SWM_Fortran_Driver
 
   use params
@@ -215,19 +214,20 @@ Program SWM_Fortran_Driver
         end do
       end do
 
-#ifdef _COPY_
-      do j=1,N_LEN
-        do i=1,M_LEN
-          u(i,j,1) = unew(i,j,1)
-          v(i,j,1) = vnew(i,j,1)
-          p(i,j,1) = pnew(i,j,1)
+      if (COPY) then
+        do j=1,N_LEN
+          do i=1,M_LEN
+            u(i,j,1) = unew(i,j,1)
+            v(i,j,1) = vnew(i,j,1)
+            p(i,j,1) = pnew(i,j,1)
+          end do
         end do
-      end do
-#else
-      call dswap(u, unew)
-      call dswap(v, vnew)
-      call dswap(p, pnew)
-#endif
+      else
+        call dswap(u, unew)
+        call dswap(v, vnew)
+        call dswap(p, pnew)
+      end if
+      
       call cpu_time(c2)
       t300 = t300 + (c2 - c1)
     else ! ncycle = 1

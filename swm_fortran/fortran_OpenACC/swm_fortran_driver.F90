@@ -1,4 +1,3 @@
-
 Program SWM_Fortran_Driver
 
   use params
@@ -214,20 +213,21 @@ Program SWM_Fortran_Driver
       call cpu_time(c1)
       call UpdateOldVariablesKernel(alpha,pnew,unew,vnew,p,u,v,pold,uold,vold)
 
-#ifdef COPY
-      !$acc parallel loop collapse(2)
-      do j=1,N_LEN
-        do i=1,M_LEN
-          u(i,j) = unew(i,j)
-          v(i,j) = vnew(i,j)
-          p(i,j) = pnew(i,j)
+      if (COPY) then
+        !$acc parallel loop collapse(2)
+        do j=1,N_LEN
+          do i=1,M_LEN
+            u(i,j) = unew(i,j)
+            v(i,j) = vnew(i,j)
+            p(i,j) = pnew(i,j)
+          end do
         end do
-      end do
-#else
-      call dswap(u, unew)
-      call dswap(v, vnew)
-      call dswap(p, pnew)
-#endif
+      else
+        call dswap(u, unew)
+        call dswap(v, vnew)
+        call dswap(p, pnew)
+      end if
+
       call cpu_time(c2)
       t300 = t300 + (c2 - c1)
     else ! ncycle = 1
@@ -240,20 +240,21 @@ Program SWM_Fortran_Driver
           pold(i,j) = p(i,j)
         end do
       end do
-#ifdef COPY
-      !$acc parallel loop collapse(2)
-      do j=1,N_LEN
-        do i=1,N_LEN
-          u(i,j) = unew(i,j)
-          v(i,j) = vnew(i,j)
-          p(i,j) = pnew(i,j)
+
+      if (COPY) then
+        !$acc parallel loop collapse(2)
+        do j=1,N_LEN
+          do i=1,N_LEN
+            u(i,j) = unew(i,j)
+            v(i,j) = vnew(i,j)
+            p(i,j) = pnew(i,j)
+          end do
         end do
-      end do
-#else
-      call dswap(u, unew)
-      call dswap(v, vnew)
-      call dswap(p, pnew)
-#endif
+      else
+        call dswap(u, unew)
+        call dswap(v, vnew)
+        call dswap(p, pnew)
+      end if
     end if
   end do ! End of time loop
 
