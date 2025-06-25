@@ -38,7 +38,6 @@ module purge
 # Modules we always use
 module load cmake
 
-# Compiler
 if [[ "${COMPILER}" == "GNU" ]]; then
     module load gcc
     export SWM_BUILD_DIR="${SWM_BUILD_DIR}_GNU"
@@ -64,11 +63,12 @@ if [[ "${AMREX_USE_CUDA}" == "YES" ]]; then
     export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_CUDA"
 fi
 
+# Always used but we have to load the ncarcompilers module after we load the compiler modules
 module load ncarcompilers
 
-# HDF5
+# HDF5 is only used by the AMReX mini-app version of SWM, still loading it by default for now but will eventually move to netcdf output
 module load hdf5
-# Loading the hdf5 module on derecheo should define a variable NCAR_ROOT_HDF5. We need to set HDF5_HOME
+# Loading the hdf5 module on derecheo should define a variable NCAR_ROOT_HDF5. We need to set HDF5_HOME.
 export HDF5_HOME="${NCAR_ROOT_HDF5}"
 
 # Profile or Debugg with linary forge
@@ -80,14 +80,18 @@ module list
 # Build the version of AMReX that we are asking for
 ###############################################################################
 
-# Initialize an array for CMake options
+# Initialize an array for CMake AMReX build options
 amrex_cmake_opts=()
 
-# Always-used options
+# AMReX options we always-use
 amrex_cmake_opts+=("-DAMReX_SPACEDIM=2")
 amrex_cmake_opts+=("-DAMReX_PRECISION=DOUBLE")
 amrex_cmake_opts+=("-DAMReX_FORTRAN=YES")
-# These were on by default but I don't think we are using any of these features so I am turning them off
+amrex_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
+amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
+amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
+
+# These AMReX options were on by default, however I don't think we are using any of these features so I am turning them off.
 amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS=NO")
 amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS_INCFLO=NO")
 amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS_EM=NO")
@@ -97,23 +101,7 @@ amrex_cmake_opts+=("-DAMReX_TINY_PROFILE=NO")
 
 #amrex_cmake_opts+=("-DAMReX_BUILD_SHARED_LIBS=YES")
 
-#if [[ "${AMREX_USE_CUDA}" == "YES" ]]; then
-#
-#    #CMAKE_C_COMPILER=$(which nvc)
-#    #CMAKE_CXX_COMPILER=$(which nvc++)
-#    #CMAKE_Fortran_COMPILER=$(which nvfortran)
-#    #amrex_cmake_opts+=("-DAMReX_DIFFERENT_COMPILER=ON")
-#
-#    amrex_cmake_opts+=("-DCMAKE_C_COMPILER=$(which nvc)")
-#    amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=$(which nvc++)")
-#    amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$(which nvfortran)")
-#fi
-
-amrex_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
-amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
-amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
-
-# These take on differnent values depending on the options chosen
+# These AMReX options take on differnent values depending on the user input
 if [[ "${AMREX_USE_MPI}" == "YES" ]]; then
     amrex_cmake_opts+=("-DAMReX_MPI=YES")
 else
@@ -131,6 +119,7 @@ else
     amrex_cmake_opts+=("-DAMReX_GPU_BACKEND=NONE")
 fi
 
+# Installing AMReX as a subdirectory of the AMReX build directory. Could change this to a different location if needed.
 export AMREX_INSTALL_DIR=$AMREX_BUILD_DIR/install
 
 mkdir -p $AMREX_BUILD_DIR

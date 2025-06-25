@@ -16,8 +16,3 @@ endif()
 add_subdirectory(fortran)
 add_subdirectory(fortran_OpenACC)
 add_subdirectory(fortran_AMReX_proxy)
-
-
-## Fortran mock up of AMReX-style driver
-#add_executable(swm_fortran_amrex_driver swm_fortran_amrex_driver.F90 swm_fortran_amrex_kernels.F90)
-#target_compile_options(swm_fortran_amrex_driver PRIVATE ${DEFAULT_REAL_FLAG})
