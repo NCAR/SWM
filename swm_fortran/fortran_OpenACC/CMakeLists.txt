@@ -26,6 +26,6 @@ else()
 endif()
 
 # Fortran with OpenACC on CPU 
-add_executable(swm_fortran_acc swm_fortran_driver.F90 swm_fortran_kernels.F90 ../fortran/params.F90)
+add_executable(swm_fortran_acc swm_fortran_driver.F90 swm_fortran_kernels.F90 ../params.F90)
 target_compile_options(swm_fortran_acc PRIVATE ${DEFAULT_REAL_FLAG} ${OPENACC_COMPILE_FLAGS})
 target_link_options(swm_fortran_acc PRIVATE ${OPENACC_LINK_FLAGS})

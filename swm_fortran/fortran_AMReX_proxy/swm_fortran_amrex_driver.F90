@@ -1,13 +1,7 @@
-#define M 256
-#define N 256
-#define M_LEN (M + 1)
-#define N_LEN (N + 1)
-#define L_OUT .true.
-#define VAL_OUT .false.
-#define ITMAX 4000
 
 Program SWM_Fortran_Driver
 
+  use params
   use swm_fortran_amrex_kernels, only : UpdateIntermediateVariablesAmrexKernel
   use swm_fortran_amrex_kernels, only : UpdateNewVariablesAmrexKernel
   use swm_fortran_amrex_kernels, only : UpdateOldVariablesAmrexKernel
