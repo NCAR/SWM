@@ -23,6 +23,8 @@ export SWM_ROOT=/glade/u/home/htorres/SWM
 export SWM_BUILD_DIR=/glade/u/home/htorres/SWM_build
 
 # Options... example to pick cpu vs gpu?
+export COMPILER=NVHPC   # Set to NVHPC or GNU
+
 export AMREX_USE_MPI=NO   # Set to YES or NO
 
 export AMREX_USE_CUDA=YES   # Set to YES or NO
@@ -37,13 +39,18 @@ module purge
 module load cmake
 
 # Compiler
-#module load gcc
-#export SWM_BUILD_DIR="${SWM_BUILD_DIR}_GNU"
-#export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_GNU"
-
-module load nvhpc
-export SWM_BUILD_DIR="${SWM_BUILD_DIR}_NVHPC"
-export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_NVHPC"
+if [[ "${COMPILER}" == "GNU" ]]; then
+    module load gcc
+    export SWM_BUILD_DIR="${SWM_BUILD_DIR}_GNU"
+    export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_GNU"
+elif [[ "${COMPILER}" == "NVHPC" ]]; then
+    module load nvhpc
+    export SWM_BUILD_DIR="${SWM_BUILD_DIR}_NVHPC"
+    export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_NVHPC"
+else
+    echo "Unknown compiler option: ${COMPILER}"
+    exit 1
+fi
 
 if [[ "${AMREX_USE_MPI}" == "YES" ]]; then
     module load cray-mpich
@@ -58,15 +65,6 @@ if [[ "${AMREX_USE_CUDA}" == "YES" ]]; then
 fi
 
 module load ncarcompilers
-
-## CUDA Only
-#module load nvhpc cuda
-
-## MPI and CUDA
-#module load nvhpc cuda cray-mpich
-
-# MPI and CUDA on multi-gpu
-#module load gcc cuda cray-mpich ncarcompilers
 
 # HDF5
 module load hdf5
@@ -97,7 +95,7 @@ amrex_cmake_opts+=("-DAMReX_AMRLEVEL=NO")
 amrex_cmake_opts+=("-DAMReX_PARTICLES=NO")
 amrex_cmake_opts+=("-DAMReX_TINY_PROFILE=NO")
 
-amrex_cmake_opts+=("-DAMReX_BUILD_SHARED_LIBS=YES")
+#amrex_cmake_opts+=("-DAMReX_BUILD_SHARED_LIBS=YES")
 
 #if [[ "${AMREX_USE_CUDA}" == "YES" ]]; then
 #
@@ -114,7 +112,6 @@ amrex_cmake_opts+=("-DAMReX_BUILD_SHARED_LIBS=YES")
 amrex_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
 amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
 amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
-amrex_cmake_opts+=("-DAMReX_DIFFERENT_COMPILER=ON")
 
 # These take on differnent values depending on the options chosen
 if [[ "${AMREX_USE_MPI}" == "YES" ]]; then
@@ -129,6 +126,7 @@ if [[ "${AMREX_USE_CUDA}" == "YES" ]]; then
     amrex_cmake_opts+=("-DAMReX_GPU_BACKEND=CUDA")
     amrex_cmake_opts+=("-DAMReX_GPU_RDC=YES")
     amrex_cmake_opts+=("-DAMReX_CUDA_ARCH=8.0") # Set the CUDA architecture version, adjust as needed
+    amrex_cmake_opts+=("-DAMReX_DIFFERENT_COMPILER=ON")
 else
     amrex_cmake_opts+=("-DAMReX_GPU_BACKEND=NONE")
 fi
@@ -146,36 +144,27 @@ cmake "${amrex_cmake_opts[@]}" \
 #    --trace \
 
 make -j 32 install 
-#make -j 32 install 2>&1 | less -R
 #make test_install  # optional step to test if the installation is working
-
 #exit 0 # Exit early for testing purposes
 
 ###############################################################################
 # Build SWM Using the version of AMReX that we just built
 ###############################################################################
-#cmake -DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX \
-#      -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_Fortran_COMPILER=$FC \
-#      -S $SWM_ROOT -B $SWM_BUILD_DIR
+cmake -DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX \
+      -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_Fortran_COMPILER=$FC \
+      -S $SWM_ROOT -B $SWM_BUILD_DIR
+
 
 #cmake -DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX \
 #      -DAMReX_GPU_BACKEND=CUDA \
 #      -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_Fortran_COMPILER=nvfortran \
-#      -DCMAKE_CUDA_FLAGS="-O3 -DNDEBUG  --expt-relaxed-constexpr --expt-extended-lambda -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored -Xcudafe --diag_suppress=implicit_return_from_non_void_function -maxrregcount=255 -Xcudafe --display_error_number --Wext-lambda-captures-this --use_fast_math --generate-line-info" \
 #      -S $SWM_ROOT -B $SWM_BUILD_DIR
-
-cmake -DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX \
-      -DAMReX_GPU_BACKEND=CUDA \
-      -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_Fortran_COMPILER=nvfortran \
-      -S $SWM_ROOT -B $SWM_BUILD_DIR
 
 #cmake -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_Fortran_COMPILER=nvfortran \
 #      -S $SWM_ROOT -B $SWM_BUILD_DIR
 
-
 cd $SWM_BUILD_DIR
 make 
-#make 2>&1 | log.txt
 
 ###############################################################################
 # Run all the versions of SWM mini-app
@@ -192,18 +181,14 @@ $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fkernels/swm_amrex_fkernels $SWM_ROOT/swm_amr
 $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp $SWM_ROOT/swm_amrex/inputs
 $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc $SWM_ROOT/swm_amrex/inputs
 
-if [[ "${AMREX_USE_MPI}" == "YES" ]]; then
-    mpirun -np 2 $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex $SWM_ROOT/swm_amrex/inputs
-    mpirun -np 2 $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fkernels/swm_amrex_fkernels $SWM_ROOT/swm_amrex/inputs
-    mpirun -np 2 $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp $SWM_ROOT/swm_amrex/inputs
-    mpirun -np 2 $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc $SWM_ROOT/swm_amrex/inputs
-else
-    $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex $SWM_ROOT/swm_amrex/inputs
-    $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fkernels/swm_amrex_fkernels $SWM_ROOT/swm_amrex/inputs
-    $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp $SWM_ROOT/swm_amrex/inputs
-    $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc $SWM_ROOT/swm_amrex/inputs
-fi
-
-#echo "C Compiler:   $CC"
-#echo "C++ Compiler: $CXX"
-#echo "Fortran Compiler: $FC"
+#if [[ "${AMREX_USE_MPI}" == "YES" ]]; then
+#    mpirun -np 2 $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex $SWM_ROOT/swm_amrex/inputs
+#    mpirun -np 2 $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fkernels/swm_amrex_fkernels $SWM_ROOT/swm_amrex/inputs
+#    mpirun -np 2 $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp $SWM_ROOT/swm_amrex/inputs
+#    mpirun -np 2 $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc $SWM_ROOT/swm_amrex/inputs
+#else
+#    $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex $SWM_ROOT/swm_amrex/inputs
+#    $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fkernels/swm_amrex_fkernels $SWM_ROOT/swm_amrex/inputs
+#    $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp $SWM_ROOT/swm_amrex/inputs
+#    $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc $SWM_ROOT/swm_amrex/inputs
+#fi
