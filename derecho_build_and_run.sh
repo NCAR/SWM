@@ -8,13 +8,6 @@ set -x  # Print each command before executing it
 # User Input
 ###############################################################################
 
-# Directory where you pulled the AMReX repositry
-export AMREX_HOME=/glade/u/home/htorres/amrex
-
-# Directory where the amrex AMReX build will be created
-# This is used as a base name and will appended to based on the options you pick
-export AMREX_BUILD_DIR=/glade/u/home/htorres/amrex_build
-
 # Directory where you pulled the SWM repository
 export SWM_ROOT=/glade/u/home/htorres/SWM
 
@@ -22,16 +15,29 @@ export SWM_ROOT=/glade/u/home/htorres/SWM
 # This is used as a base name and will appended to based on the options you pick
 export SWM_BUILD_DIR=/glade/u/home/htorres/SWM_build
 
+# Directory where you pulled the AMReX repositry
+export AMREX_HOME=/glade/u/home/htorres/amrex
+
+# Directory where the amrex AMReX build will be created
+# This is used as a base name and will appended to based on the options you pick
+export AMREX_BUILD_DIR=/glade/u/home/htorres/amrex_build
+
 # Options... example to pick cpu vs gpu?
-export COMPILER=NVHPC   # Set to NVHPC or GNU
+#export COMPILER=GNU   # Set to GNU or NVHPC
+export COMPILER=NVHPC   # Set to GNU or NVHPC
 
-export AMREX_USE_MPI=NO   # Set to YES or NO
-
-export AMREX_USE_CUDA=YES   # Set to YES or NO
+export CPU_BUILD=YES  # Set to YES or NO
+export GPU_BUILD=YES  # Set to YES or NO
 
 ###############################################################################
 # Module Setup
 ###############################################################################
+
+if [[ "${GPU_BUILD}" == "YES" ]]; then
+  export AMREX_USE_MPI=NO   # Set to YES or NO
+  
+  export AMREX_USE_CUDA=YES   # Set to YES or NO
+fi
 
 module purge
 
@@ -139,17 +145,28 @@ make -j 32 install
 ###############################################################################
 # Build SWM Using the version of AMReX that we just built
 ###############################################################################
-cmake -DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX \
-      -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_Fortran_COMPILER=$FC \
-      -S $SWM_ROOT -B $SWM_BUILD_DIR
 
+# Initialize an array for SWM CMake build options
+swm_cmake_opts=()
+# SWM buld options
+swm_cmake_opts+=("-DSWM_DEVICE=cpu;gpu")
+
+swm_cmake_opts+=("-DSWM_C=ON")
+swm_cmake_opts+=("-DSWM_FORTRAN=ON")
+swm_cmake_opts+=("-DSWM_AMREX=ON")
+swm_cmake_opts+=("-DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX")
+
+swm_cmake_opts+=("-DSWM_OPENACC=ON")
+swm_cmake_opts+=("-DSWM_CUDA=ON")
+
+swm_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
+swm_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
+swm_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
+
+cmake "${swm_cmake_opts[@]}" -S $SWM_ROOT -B $SWM_BUILD_DIR
 
 #cmake -DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX \
-#      -DAMReX_GPU_BACKEND=CUDA \
-#      -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_Fortran_COMPILER=nvfortran \
-#      -S $SWM_ROOT -B $SWM_BUILD_DIR
-
-#cmake -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_Fortran_COMPILER=nvfortran \
+#      -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_Fortran_COMPILER=$FC \
 #      -S $SWM_ROOT -B $SWM_BUILD_DIR
 
 cd $SWM_BUILD_DIR

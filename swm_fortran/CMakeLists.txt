@@ -1,4 +1,3 @@
-#enable_language(Fortran)
 
 # Set default flags
 set(CMAKE_Fortran_FLAGS_RELEASE "-O2")
@@ -14,5 +13,9 @@ else()
 endif()
 
 add_subdirectory(fortran)
-add_subdirectory(fortran_OpenACC)
+
+if (SWM_OPENACC)
+  add_subdirectory(fortran_OpenACC)
+endif()
+
 add_subdirectory(fortran_AMReX_proxy)

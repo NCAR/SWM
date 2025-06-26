@@ -1,12 +1,16 @@
 ###############################################################################
 # Plain C version
 ###############################################################################
-set(SWM_C_SOURCES
-    shallow_swap.c
-    wtime.c
-)
+if("cpu" IN_LIST SWM_DEVICE)
 
-add_executable(swm_c ${SWM_C_SOURCES})
+  set(SWM_C_SOURCES
+      shallow_swap.c
+      wtime.c
+  )
+  
+  add_executable(swm_c ${SWM_C_SOURCES})
+  
+  # Link math library
+  target_link_libraries(swm_c m)
 
-# Link math library
-target_link_libraries(swm_c m)
+endif()

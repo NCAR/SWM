@@ -1,6 +1,8 @@
-enable_language(CUDA)
-if(CMAKE_VERSION VERSION_LESS 3.20)
-   include(AMReX_SetupCUDA)
+if (SWM_CUDA)
+  enable_language(CUDA)
+  if(CMAKE_VERSION VERSION_LESS 3.20)
+     include(AMReX_SetupCUDA)
+  endif()
 endif()
 
 set(SWM_AMREX_SOURCES
@@ -13,12 +15,10 @@ add_executable(swm_amrex ${SWM_AMREX_SOURCES})
 
 target_sources(swm_amrex PRIVATE ${SWM_AMREX_SOURCES})
 
-# Or, if you have a helper function, uncomment this:
-#find_package(AMReX REQUIRED CONFIG)
-#include("${AMReX_DIR}/../../../AMReXCMakeModules/AMReXTargetHelpers.cmake")
-#include("/glade/u/home/htorres/amrex_build_GNU_MPI_CUDA/install/lib/cmake/AMReX/AMReXCMakeModules/AMReXTargetHelpers.cmake")
-include("AMReXTargetHelpers")
-setup_target_for_cuda_compilation(swm_amrex)
+if (SWM_CUDA)
+  include("AMReXTargetHelpers")
+  setup_target_for_cuda_compilation(swm_amrex)
+endif()
 
 target_include_directories(swm_amrex PUBLIC ${PROJECT_SOURCE_DIR}/swm_amrex)
 target_include_directories(swm_amrex PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
