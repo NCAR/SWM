@@ -10,4 +10,7 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -g")
 
 add_subdirectory(c)
-add_subdirectory(c_OpenACC)
+
+if (SWM_OPENACC)
+  add_subdirectory(c_OpenACC)
+endif()
