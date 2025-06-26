@@ -23,21 +23,26 @@ export AMREX_HOME=/glade/u/home/htorres/amrex
 export AMREX_BUILD_DIR=/glade/u/home/htorres/amrex_build
 
 # Options... example to pick cpu vs gpu?
-#export COMPILER=GNU   # Set to GNU or NVHPC
-export COMPILER=NVHPC   # Set to GNU or NVHPC
+export COMPILER=GNU   # Set to GNU or NVHPC
+#export COMPILER=NVHPC   # Set to GNU or NVHPC
 
-export CPU_BUILD=YES  # Set to YES or NO
-export GPU_BUILD=YES  # Set to YES or NO
+# Options are ON or OFF
+export CPU_BUILD=ON  
+export GPU_BUILD=ON  
+
+export SWM_C=ON        
+export SWM_FORTRAN=ON  
+export SWM_AMREX=ON    
+
+export SWM_ACC=ON        
+export SWM_MPI=ON        
+export SWM_OMP=ON        
+export SWM_CUDA=ON       
+
 
 ###############################################################################
 # Module Setup
 ###############################################################################
-
-if [[ "${GPU_BUILD}" == "YES" ]]; then
-  export AMREX_USE_MPI=NO   # Set to YES or NO
-  
-  export AMREX_USE_CUDA=YES   # Set to YES or NO
-fi
 
 module purge
 
@@ -57,20 +62,30 @@ else
     exit 1
 fi
 
-if [[ "${AMREX_USE_MPI}" == "YES" ]]; then
-    module load cray-mpich
-    export SWM_BUILD_DIR="${SWM_BUILD_DIR}_MPI"
-    export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_MPI"
+if [[ "${SWM_AMREX}" == "ON" ]]; then
+
+    if [[ "${SWM_MPI}" == "ON" ]]; then
+        module load cray-mpich
+        export SWM_BUILD_DIR="${SWM_BUILD_DIR}_MPI"
+        export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_MPI"
+    fi
+    
+    if [[ "${SWM_CUDA}" == "ON" ]]; then
+        module load cuda                                  # If we are using the nvhpc module then that already load the cuda module, but this is good to be explicit
+        export SWM_BUILD_DIR="${SWM_BUILD_DIR}_CUDA"
+        export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_CUDA"
+    fi
+
+    if [[ "${SWM_OMP}" == "ON" ]]; then
+        export SWM_BUILD_DIR="${SWM_BUILD_DIR}_OMP"
+        export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_OMP"
+    fi
+
 fi
 
-if [[ "${AMREX_USE_CUDA}" == "YES" ]]; then
-    module load cuda
-    export SWM_BUILD_DIR="${SWM_BUILD_DIR}_CUDA"
-    export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_CUDA"
+if [[ "${COMPILER}" == "GNU" ]]; then
+    module load ncarcompilers
 fi
-
-# Always used but we have to load the ncarcompilers module after we load the compiler modules
-module load ncarcompilers
 
 # HDF5 is only used by the AMReX mini-app version of SWM, still loading it by default for now but will eventually move to netcdf output
 module load hdf5
@@ -82,65 +97,106 @@ export HDF5_HOME="${NCAR_ROOT_HDF5}"
 
 module list
 
+# WARNING: Will delete the build directory if it exists. Make sure this wont delete anything important!
+fresh_build=YES       
+if [[ "${fresh_build}" == "YES" ]]; then
+    if [[ -d "${SWM_BUILD_DIR}" ]]; then
+        echo "Deleting existing SWM build directory: ${SWM_BUILD_DIR}"
+        rm -rf "${SWM_BUILD_DIR}"
+    fi
+    if [[ -d "${AMREX_BUILD_DIR}" ]]; then
+        echo "Deleting existing AMReX build directory: ${AMREX_BUILD_DIR}"
+        rm -rf "${AMREX_BUILD_DIR}"
+    fi
+fi
+
 ###############################################################################
 # Build the version of AMReX that we are asking for
 ###############################################################################
 
-# Initialize an array for CMake AMReX build options
-amrex_cmake_opts=()
+if [[ "${SWM_AMREX}" == "ON" ]]; then
 
-# AMReX options we always-use
-amrex_cmake_opts+=("-DAMReX_SPACEDIM=2")
-amrex_cmake_opts+=("-DAMReX_PRECISION=DOUBLE")
-amrex_cmake_opts+=("-DAMReX_FORTRAN=YES")
-amrex_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
-amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
-amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
+    # Initialize an array for CMake AMReX build options
+    amrex_cmake_opts=()
+    
+    # AMReX options we always-use
+    amrex_cmake_opts+=("-DAMReX_SPACEDIM=2")
+    amrex_cmake_opts+=("-DAMReX_PRECISION=DOUBLE")
+    amrex_cmake_opts+=("-DAMReX_FORTRAN=YES")
+    amrex_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
+    amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
+    amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
+    
+    #if [[ "${COMPILER}" == "NVHPC" ]] && [[ "${AMREX_USE_MPI}" == "YES" ]]; then
+    #    #echo "Building AMReX with NVHPC, MPI, and CUDA is not working in derecho yet. Please use GNU compiler instead."
+    #    #exit 1
+    #    amrex_cmake_opts+=("-DCMAKE_C_COMPILER=mpicc")
+    #    amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=mpicxx")
+    #    amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=mpifort")
+    #    #amrex_cmake_opts+=("-DCMAKE_CUDA_COMPILER=nvcc")
+    #else
+    #    amrex_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
+    #    amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
+    #    amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
+    #fi
+    
+    # These AMReX options were on by default, however I don't think we are using any of these features so I am turning them off.
+    amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS=NO")
+    amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS_INCFLO=NO")
+    amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS_EM=NO")
+    amrex_cmake_opts+=("-DAMReX_AMRLEVEL=NO")
+    amrex_cmake_opts+=("-DAMReX_PARTICLES=NO")
+    amrex_cmake_opts+=("-DAMReX_TINY_PROFILE=NO")
+    
+    # TODO: Decide if we want to use these options or just base the logic on the SWM ones
+    if [[ "${GPU_BUILD}" == "ON" ]]; then
+      export AMREX_USE_MPI=YES   # Set to YES or NO
+      export AMREX_USE_OMP=YES   # Set to YES or NO
+      export AMREX_USE_CUDA=YES  # Set to YES or NO
+    fi
+    
+    # These AMReX options take on differnent values depending on the user input
+    if [[ "${AMREX_USE_MPI}" == "YES" ]]; then
+        amrex_cmake_opts+=("-DAMReX_MPI=YES")
+    else
+        amrex_cmake_opts+=("-DAMReX_MPI=NO")
+    fi
+    
+    if [[ "${AMREX_USE_OMP}" == "YES" ]]; then
+        amrex_cmake_opts+=("-DAMReX_OMP=YES")
+    else
+        amrex_cmake_opts+=("-DAMReX_OMP=NO")
+    fi
+    
+    if [[ "${AMREX_USE_CUDA}" == "YES" ]]; then
+        amrex_cmake_opts+=("-DAMReX_GPU_BACKEND=CUDA")
+        amrex_cmake_opts+=("-DAMReX_GPU_RDC=YES")
+        amrex_cmake_opts+=("-DAMReX_CUDA_ARCH=8.0") # Set the CUDA architecture version, adjust as needed
+        amrex_cmake_opts+=("-DAMReX_DIFFERENT_COMPILER=ON")
+    else
+        amrex_cmake_opts+=("-DAMReX_GPU_BACKEND=NONE")
+    fi
+    
+    # Installing AMReX as a subdirectory of the AMReX build directory. Could change this to a different location if needed.
+    export AMREX_INSTALL_DIR=$AMREX_BUILD_DIR/install
+    
+    mkdir -p $AMREX_BUILD_DIR
+    cd $AMREX_BUILD_DIR
+    
+    cmake "${amrex_cmake_opts[@]}" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX="$AMREX_INSTALL_DIR" \
+        -S "$AMREX_HOME" \
+        -B "$AMREX_BUILD_DIR"
+    #    --trace \
+    
+    make -j 32 install 
+    #make -j 32 VERBOSE=1 install 
+    
+    #make test_install  # optional step to test if the installation is working
+    #exit 0 # Exit early for testing purposes
 
-# These AMReX options were on by default, however I don't think we are using any of these features so I am turning them off.
-amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS=NO")
-amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS_INCFLO=NO")
-amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS_EM=NO")
-amrex_cmake_opts+=("-DAMReX_AMRLEVEL=NO")
-amrex_cmake_opts+=("-DAMReX_PARTICLES=NO")
-amrex_cmake_opts+=("-DAMReX_TINY_PROFILE=NO")
-
-#amrex_cmake_opts+=("-DAMReX_BUILD_SHARED_LIBS=YES")
-
-# These AMReX options take on differnent values depending on the user input
-if [[ "${AMREX_USE_MPI}" == "YES" ]]; then
-    amrex_cmake_opts+=("-DAMReX_MPI=YES")
-else
-    amrex_cmake_opts+=("-DAMReX_MPI=NO")
 fi
-
-amrex_cmake_opts+=("-DAMReX_OMP=NO")
-
-if [[ "${AMREX_USE_CUDA}" == "YES" ]]; then
-    amrex_cmake_opts+=("-DAMReX_GPU_BACKEND=CUDA")
-    amrex_cmake_opts+=("-DAMReX_GPU_RDC=YES")
-    amrex_cmake_opts+=("-DAMReX_CUDA_ARCH=8.0") # Set the CUDA architecture version, adjust as needed
-    amrex_cmake_opts+=("-DAMReX_DIFFERENT_COMPILER=ON")
-else
-    amrex_cmake_opts+=("-DAMReX_GPU_BACKEND=NONE")
-fi
-
-# Installing AMReX as a subdirectory of the AMReX build directory. Could change this to a different location if needed.
-export AMREX_INSTALL_DIR=$AMREX_BUILD_DIR/install
-
-mkdir -p $AMREX_BUILD_DIR
-cd $AMREX_BUILD_DIR
-
-cmake "${amrex_cmake_opts[@]}" \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX="$AMREX_INSTALL_DIR" \
-    -S "$AMREX_HOME" \
-    -B "$AMREX_BUILD_DIR"
-#    --trace \
-
-make -j 32 install 
-#make test_install  # optional step to test if the installation is working
-#exit 0 # Exit early for testing purposes
 
 ###############################################################################
 # Build SWM Using the version of AMReX that we just built
@@ -148,20 +204,53 @@ make -j 32 install
 
 # Initialize an array for SWM CMake build options
 swm_cmake_opts=()
+
 # SWM buld options
-swm_cmake_opts+=("-DSWM_DEVICE=cpu;gpu")
+if [[ "${CPU_BUILD}" == "ON" ]] && [[ "${CPU_BUILD}" == "ON" ]]; then
+    swm_cmake_opts+=("-DSWM_DEVICE=cpu;gpu")
+elif [[ "${CPU_BUILD}" == "ON" ]]; then
+    swm_cmake_opts+=("-DSWM_DEVICE=cpu")
+elif [[ "${GPU_BUILD}" == "ON" ]]; then
+    swm_cmake_opts+=("-DSWM_DEVICE=gpu")
+else
+    echo "Error: At least one of CPU_BUILD or GPU_BUILD must be ON."
+    exit 1
+fi
 
-swm_cmake_opts+=("-DSWM_C=ON")
-swm_cmake_opts+=("-DSWM_FORTRAN=ON")
-swm_cmake_opts+=("-DSWM_AMREX=ON")
-swm_cmake_opts+=("-DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX")
+swm_cmake_opts+=("-DSWM_C=${SWM_C}")
+swm_cmake_opts+=("-DSWM_FORTRAN=${SWM_FORTRAN}")
+swm_cmake_opts+=("-DSWM_AMREX=${SWM_AMREX}")
 
-swm_cmake_opts+=("-DSWM_OPENACC=ON")
-swm_cmake_opts+=("-DSWM_CUDA=ON")
+if [[ "${SWM_AMREX}" == "ON" ]]; then
+    swm_cmake_opts+=("-DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX")
+fi
+
+swm_cmake_opts+=("-DSWM_OPENACC=${SWM_ACC}")
+swm_cmake_opts+=("-DSWM_OPENMP=${SWM_OMP}")
+swm_cmake_opts+=("-DSWM_MPI=${SWM_MPI}")
+swm_cmake_opts+=("-DSWM_CUDA=${SWM_CUDA}")
 
 swm_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
 swm_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
 swm_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
+
+# Hard coded options for the SWM build
+#swm_cmake_opts+=("-DSWM_DEVICE=cpu;gpu")
+#
+#swm_cmake_opts+=("-DSWM_C=ON")
+#swm_cmake_opts+=("-DSWM_FORTRAN=ON")
+#swm_cmake_opts+=("-DSWM_AMREX=ON")
+#swm_cmake_opts+=("-DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX")
+#
+#swm_cmake_opts+=("-DSWM_OPENACC=ON")
+#swm_cmake_opts+=("-DSWM_OPENMP=ON")
+#swm_cmake_opts+=("-DSWM_MPI=ON")
+#swm_cmake_opts+=("-DSWM_CUDA=ON")
+#
+#swm_cmake_opts+=("-DCMAKE_C_COMPILER=$CC")
+#swm_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
+#swm_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
+
 
 cmake "${swm_cmake_opts[@]}" -S $SWM_ROOT -B $SWM_BUILD_DIR
 
