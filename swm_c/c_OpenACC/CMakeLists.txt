@@ -42,7 +42,7 @@ target_compile_options(swm_c_acc PRIVATE ${OPENACC_COMPILE_FLAGS})
 target_link_options(swm_c_acc  PRIVATE ${OPENACC_LINK_FLAGS})
 
 ###############################################################################
-# C with OpenACC version
+# C with OpenACC and tile version
 ###############################################################################
 set(SWM_C_ACC_TILE_SOURCES
     shallow_swap.acc.Tile.c
@@ -51,5 +51,5 @@ set(SWM_C_ACC_TILE_SOURCES
 
 add_executable(swm_c_acc_tile ${SWM_C_ACC_TILE_SOURCES})
 target_link_libraries(swm_c_acc_tile m)
-target_compile_options(swm_c_acc PRIVATE ${OPENACC_COMPILE_FLAGS})
-target_link_options(swm_c_acc  PRIVATE ${OPENACC_LINK_FLAGS})
+target_compile_options(swm_c_acc_tile PRIVATE ${OPENACC_COMPILE_FLAGS})
+target_link_options(swm_c_acc_tile  PRIVATE ${OPENACC_LINK_FLAGS})
