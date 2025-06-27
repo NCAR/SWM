@@ -35,7 +35,7 @@ for SWM_DEVICE in cpu gpu; do
 
 # All other options are ON or OFF
 export SWM_C=ON        
-export SWM_FORTRAN=OFF
+export SWM_FORTRAN=ON
 export SWM_AMREX=OFF
 
 export SWM_ACC=ON        
@@ -301,6 +301,7 @@ if [[ "${SWM_C}" == "ON" ]]; then
     echo "Running SWM C mini-apps"
 
     if [[ "${SWM_DEVICE}" == "cpu" ]]; then
+        echo "Running SWM plain C mini-app "
         $SWM_BUILD_DIR/swm_c/c/swm_c
     fi
 
@@ -308,6 +309,21 @@ if [[ "${SWM_C}" == "ON" ]]; then
         echo "Running SWM C mini-apps with OpenACC"
         $SWM_BUILD_DIR/swm_c/c_OpenACC/swm_c_acc
         $SWM_BUILD_DIR/swm_c/c_OpenACC/swm_c_acc_tile
+    fi
+fi
+
+if [[ "${SWM_FORTRAN}" == "ON" ]]; then
+    echo "Running SWM Fortran mini-apps"
+
+    if [[ "${SWM_DEVICE}" == "cpu" ]]; then
+        echo "Running SWM plain Fortran mini-apps"
+        $SWM_BUILD_DIR/swm_fortran/fortran/swm_fortran
+        #$SWM_BUILD_DIR/swm_fortran/fortran_AMReX_proxy/swm_fortran_amrex_driver # This runs very slowly particulary with the NVHPC compiler, so I am commenting it out for now
+    fi
+
+    if [[ "${SWM_ACC}" == "ON" ]]; then
+        echo "Running SWM Fortran mini-apps with OpenACC"
+        $SWM_BUILD_DIR/swm_fortran/fortran_OpenACC/swm_fortran_acc
     fi
 fi
 

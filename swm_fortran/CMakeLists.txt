@@ -12,10 +12,11 @@ else()
     set(DEFAULT_REAL_FLAG "")
 endif()
 
-add_subdirectory(fortran)
-
-if (SWM_OPENACC)
-  add_subdirectory(fortran_OpenACC)
+if (SWM_DEVICE STREQUAL "cpu")
+    add_subdirectory(fortran)
+    add_subdirectory(fortran_AMReX_proxy)
 endif()
 
-add_subdirectory(fortran_AMReX_proxy)
+if (SWM_OPENACC)
+    add_subdirectory(fortran_OpenACC)
+endif()

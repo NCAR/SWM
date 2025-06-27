@@ -9,7 +9,9 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 # Flags that get used when building  debug flags
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -g")
 
-add_subdirectory(c)
+if(SWM_DEVICE STREQUAL "cpu")
+  add_subdirectory(c)
+endif()
 
 if (SWM_OPENACC)
   add_subdirectory(c_OpenACC)
