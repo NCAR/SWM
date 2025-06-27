@@ -13,21 +13,25 @@ export SWM_ROOT=/glade/u/home/htorres/SWM
 
 # Directory where the SWM build will be created
 # This is used as a base name and will appended to based on the options you pick
-export SWM_BUILD_DIR=/glade/u/home/htorres/SWM_build
+export SWM_BUILD_DIR_BASE=/glade/u/home/htorres/SWM_build
 
 # Directory where you pulled the AMReX repositry
 export AMREX_HOME=/glade/u/home/htorres/amrex
 
 # Directory where the amrex AMReX build will be created
 # This is used as a base name and will appended to based on the options you pick
-export AMREX_BUILD_DIR=/glade/u/home/htorres/amrex_build
+export AMREX_BUILD_DIR_BASE=/glade/u/home/htorres/amrex_build
 
 # Set to GNU or NVHPC
 #export COMPILER=GNU   
-export COMPILER=NVHPC  
+#export COMPILER=NVHPC  
 
 # Set to "cpu", "gpu"
-export SWM_DEVICE=cpu  
+#export SWM_DEVICE=cpu  
+
+# Save the base directory for the SWM build
+for SWM_DEVICE in cpu gpu; do
+  for COMPILER in GNU NVHPC; do
 
 # All other options are ON or OFF
 export SWM_C=ON        
@@ -49,8 +53,8 @@ if [[ "${SWM_DEVICE}" == "cpu" ]] && [[ "${SWM_CUDA}" == "ON" ]]; then
 fi
 
 # These build directories will be appended to based on the user input
-export SWM_BUILD_DIR="${SWM_BUILD_DIR}_${SWM_DEVICE}_${COMPILER}"
-export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_${COMPILER}"
+export SWM_BUILD_DIR="${SWM_BUILD_DIR_BASE}_${SWM_DEVICE}_${COMPILER}"
+export AMREX_BUILD_DIR="${AMREX_BUILD_DIR_BASE}_${COMPILER}"
 
 ###############################################################################
 # Module Setup
@@ -330,3 +334,6 @@ fi
 #    $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp $SWM_ROOT/swm_amrex/inputs
 #    $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc $SWM_ROOT/swm_amrex/inputs
 #fi
+
+  done # SWM_DEVICE loop
+done # COMPILER loop
