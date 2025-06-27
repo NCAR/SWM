@@ -2,7 +2,7 @@
 set(SWM_AMREX_TARGET swm_amrex)
 
 if(SWM_OMP)
-  set(SWM_AMREX_TARGET "${SWM_AMREX_TARGET}_OPENMP")
+  set(SWM_AMREX_TARGET "${SWM_AMREX_TARGET}_OMP")
 endif()
 
 if(SWM_MPI)

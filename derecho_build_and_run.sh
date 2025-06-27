@@ -31,12 +31,13 @@ export AMREX_BUILD_DIR_BASE=/glade/u/home/htorres/amrex_build
 
 # Save the base directory for the SWM build
 for SWM_DEVICE in cpu gpu; do
-  for COMPILER in GNU NVHPC; do
+  #for COMPILER in GNU NVHPC; do
+  for COMPILER in GNU; do
 
 # All other options are ON or OFF
 export SWM_C=ON        
 export SWM_FORTRAN=ON
-export SWM_AMREX=OFF
+export SWM_AMREX=ON
 
 export SWM_ACC=ON        
 export SWM_MPI=ON        
@@ -197,15 +198,15 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
 
     # AMReX options based on the user input... had to translate from our ON and OFF to what AMReX uses, YES and NO
     if [[ "${SWM_MPI}" == "ON" ]]; then
-        amrex_cmake_opts+=("-DAMReX_USE_MPI=YES")
+        amrex_cmake_opts+=("-DAMReX_MPI=YES")
     else
-        amrex_cmake_opts+=("-DAMReX_USE_MPI=NO")
+        amrex_cmake_opts+=("-DAMReX_MPI=NO")
     fi
 
     if [[ "${SWM_OMP}" == "ON" ]]; then
-        amrex_cmake_opts+=("-DAMReX_USE_OMP=YES")
+        amrex_cmake_opts+=("-DAMReX_OMP=YES")
     else
-        amrex_cmake_opts+=("-DAMReX_USE_OMP=NO")
+        amrex_cmake_opts+=("-DAMReX_OMP=NO")
     fi
 
     if [[ "${SWM_CUDA}" == "ON" ]]; then
@@ -296,6 +297,9 @@ make
 ###############################################################################
 
 echo "Running SWM mini-apps for ${SWM_DEVICE} that were built with ${COMPILER} compiler"
+SWM_C=OFF
+SWM_FORTRAN=OFF
+SWM_AMREX=ON
 
 if [[ "${SWM_C}" == "ON" ]]; then
     echo "Running SWM C mini-apps"
@@ -325,6 +329,39 @@ if [[ "${SWM_FORTRAN}" == "ON" ]]; then
         echo "Running SWM Fortran mini-apps with OpenACC"
         $SWM_BUILD_DIR/swm_fortran/fortran_OpenACC/swm_fortran_acc
     fi
+fi
+
+if [[ "${SWM_AMREX}" == "ON" ]]; then
+
+  # Order matters for the suffix of the executable name
+  exe_suffix=""
+  #if [[ "${AMREX_USE_OMP}" == "YES" ]]; then # Maybe comeback to this if we decide to have seperate otions for openMP code we wrote vs that in amrex?
+  if [[ "${SWM_OMP}" == "ON" ]]; then
+    exe_suffix="${exe_suffix}_OMP"
+  fi
+  if [[ "${SWM_MPI}" == "ON" ]]; then
+    exe_suffix="_MPI"
+  fi
+  if [[ "${SWM_CUDA}" == "ON" ]]; then
+    exe_suffix="${exe_suffix}_CUDA"
+  fi
+
+  mpi_launcher=""
+  if [[ "${SWM_MPI}" == "ON" ]]; then
+    mpi_launcher="mpirun -np 2"
+  fi
+
+  input_file=$SWM_ROOT/swm_amrex/inputs
+
+  if [[ "${SWM_OMP}" == "ON" ]]; then
+    env OMP_NUM_THREADS=2 ${mpi_launcher} $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex${exe_suffix} ${input_file}
+  else
+    ${mpi_launcher} $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex${exe_suffix} ${input_file}
+  fi
+  
+  #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp ${input_file}
+  #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
+
 fi
 
 #$SWM_BUILD_DIR/swm_c/c/swm_c
