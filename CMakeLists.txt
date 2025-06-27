@@ -7,9 +7,8 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-
-set(SWM_DEVICE "cpu" CACHE STRING "Select device(s): cpu, gpu, or cpu;gpu for both (semicolon-separated)")
-set_property(CACHE SWM_DEVICE PROPERTY STRINGS cpu gpu "cpu;gpu")
+set(SWM_DEVICE "cpu" CACHE STRING "Select device: cpu or gpu")
+set_property(CACHE SWM_DEVICE PROPERTY STRINGS cpu gpu)
 
 option(SWM_C "Enable the C versions of the mini-app" ON)
 option(SWM_FORTRAN "Enable the Fortran versions of the mini-app" ON)
@@ -17,8 +16,13 @@ option(SWM_AMREX "Enable the AMReX version of the mini-app" OFF)
 
 option(SWM_OPENACC "Enable the OpenACC versions of the mini-app" ON)
 option(SWM_OPENMP "Enable the OpenMP versions of the mini-app" OFF)
-option(SWM_CUDA "Enable the CUDA versions of the mini-app" OFF)
 option(SWM_MPI "Enable the MPI versions of the mini-app" OFF)
+option(SWM_CUDA "Enable the CUDA versions of the mini-app" OFF)
+
+if(SWM_DEVICE STREQUAL "cpu" AND SWM_CUDA)
+    message(WARNING "SWM_CUDA is ON but SWM_DEVICE is set to 'cpu'. Disabling SWM_CUDA.")
+    set(SWM_CUDA OFF CACHE BOOL "Enable the CUDA versions of the mini-app" FORCE)
+endif()
 
 if (SWM_C)
   add_subdirectory(swm_c)
