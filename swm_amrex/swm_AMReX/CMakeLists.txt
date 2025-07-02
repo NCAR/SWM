@@ -11,10 +11,6 @@ endif()
 
 if(SWM_CUDA)
   set(SWM_AMREX_TARGET "${SWM_AMREX_TARGET}_CUDA")
-  enable_language(CUDA)
-  if(CMAKE_VERSION VERSION_LESS 3.20)
-     include(AMReX_SetupCUDA)
-  endif()
 endif()
 
 set(SWM_AMREX_SOURCES

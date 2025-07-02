@@ -30,19 +30,23 @@ export AMREX_BUILD_DIR_BASE=/glade/u/home/htorres/amrex_build
 #export SWM_DEVICE=cpu  
 
 # Save the base directory for the SWM build
-for SWM_DEVICE in cpu gpu; do
+#for SWM_DEVICE in cpu gpu; do
+for SWM_DEVICE in gpu; do
   #for COMPILER in GNU NVHPC; do
-  for COMPILER in GNU; do
+  #for COMPILER in GNU; do
+  for COMPILER in NVHPC; do
+
 
 # All other options are ON or OFF
-export SWM_C=ON        
-export SWM_FORTRAN=ON
+export SWM_C=OFF        
+export SWM_FORTRAN=OFF
 export SWM_AMREX=ON
 
 export SWM_ACC=ON        
-export SWM_MPI=ON        
-export SWM_OMP=ON        
-export SWM_CUDA=ON       
+export SWM_MPI=OFF        
+export SWM_OMP=OFF        
+export SWM_CUDA=ON
+
 
 ###############################################################################
 # Setup based on user input
@@ -110,18 +114,27 @@ export HDF5_HOME="${NCAR_ROOT_HDF5}"
 
 module list
 
-# WARNING: Will delete the build directory if it exists. Make sure this wont delete anything important!
-fresh_build=YES       
-if [[ "${fresh_build}" == "YES" ]]; then
-    if [[ -d "${SWM_BUILD_DIR}" ]]; then
-        echo "Deleting existing SWM build directory: ${SWM_BUILD_DIR}"
-        rm -rf "${SWM_BUILD_DIR}"
-    fi
+
+# WARNING: YES will delete the build directory if it exists. Make sure this wont delete anything important!
+fresh_build_amrex=NO
+if [[ "${fresh_build_amrex}" == "YES" ]]; then
     if [[ -d "${AMREX_BUILD_DIR}" ]]; then
         echo "Deleting existing AMReX build directory: ${AMREX_BUILD_DIR}"
         rm -rf "${AMREX_BUILD_DIR}"
     fi
 fi
+
+# WARNING: YES will delete the build directory if it exists. Make sure this wont delete anything important!
+fresh_build_swm=YES
+if [[ "${fresh_build_swm}" == "YES" ]]; then
+    if [[ -d "${SWM_BUILD_DIR}" ]]; then
+        echo "Deleting existing SWM build directory: ${SWM_BUILD_DIR}"
+        rm -rf "${SWM_BUILD_DIR}"
+    fi
+fi
+
+###############################################################################
+# Build the version of AMReX that we are asking fori
 
 ###############################################################################
 # Build the version of AMReX that we are asking for
@@ -284,22 +297,29 @@ swm_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
 
 
 cmake "${swm_cmake_opts[@]}" -S $SWM_ROOT -B $SWM_BUILD_DIR
+#cmake "${swm_cmake_opts[@]}" -S $SWM_ROOT -B $SWM_BUILD_DIR --trace-expand
 
 #cmake -DAMReX_ROOT=$AMREX_INSTALL_DIR/lib/cmake/AMReX \
 #      -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_Fortran_COMPILER=$FC \
 #      -S $SWM_ROOT -B $SWM_BUILD_DIR
 
 cd $SWM_BUILD_DIR
-make 
+
+#make 
+#make 2>&1 | tee build.log
+make VERBOSE=1 2>&1 | tee build.log
+if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+    exit 1
+fi
 
 ###############################################################################
 # Run all the versions of SWM mini-app
 ###############################################################################
 
 echo "Running SWM mini-apps for ${SWM_DEVICE} that were built with ${COMPILER} compiler"
-SWM_C=OFF
-SWM_FORTRAN=OFF
-SWM_AMREX=ON
+#SWM_C=OFF
+#SWM_FORTRAN=OFF
+#SWM_AMREX=ON
 
 if [[ "${SWM_C}" == "ON" ]]; then
     echo "Running SWM C mini-apps"
@@ -348,19 +368,21 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
 
   mpi_launcher=""
   if [[ "${SWM_MPI}" == "ON" ]]; then
-    mpi_launcher="mpirun -np 2"
+    #mpi_launcher="mpirun -np 2"
+    mpi_launcher="mpirun -np 1"
   fi
 
   input_file=$SWM_ROOT/swm_amrex/inputs
 
   if [[ "${SWM_OMP}" == "ON" ]]; then
-    env OMP_NUM_THREADS=2 ${mpi_launcher} $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex${exe_suffix} ${input_file}
+    #env OMP_NUM_THREADS=2 ${mpi_launcher} $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex${exe_suffix} ${input_file}
+    env OMP_NUM_THREADS=1 ${mpi_launcher} $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex${exe_suffix} ${input_file}
   else
     ${mpi_launcher} $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex${exe_suffix} ${input_file}
   fi
   
   #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp ${input_file}
-  #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
+  $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
 
 fi
 

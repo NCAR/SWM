@@ -29,7 +29,6 @@ set(SWM_C_ACC_SWAP_SOURCES
     ../c/wtime.c
 )
 
-#set(SWM_C_ACC_SWAP_TARGET swm_c_acc_${SWM_DEVICE})
 set(SWM_C_ACC_SWAP_TARGET swm_c_acc)
 
 add_executable(${SWM_C_ACC_SWAP_TARGET} ${SWM_C_ACC_SWAP_SOURCES})
@@ -45,7 +44,6 @@ set(SWM_C_ACC_TILE_SOURCES
     ../c/wtime.c
 )
 
-#set(SWM_C_ACC_TILE_TARGET swm_c_acc_tile_${SWM_DEVICE})
 set(SWM_C_ACC_TILE_TARGET swm_c_acc_tile)
 
 add_executable(${SWM_C_ACC_TILE_TARGET} ${SWM_C_ACC_TILE_SOURCES})
