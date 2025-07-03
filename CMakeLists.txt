@@ -14,7 +14,7 @@ option(SWM_C "Enable the C versions of the mini-app" ON)
 option(SWM_FORTRAN "Enable the Fortran versions of the mini-app" ON)
 option(SWM_AMREX "Enable the AMReX version of the mini-app" OFF)
 
-option(SWM_OPENACC "Enable the OpenACC versions of the mini-app" ON)
+option(SWM_OPENACC "Enable the OpenACC versions of the mini-app" OFF)
 option(SWM_OPENMP "Enable the OpenMP versions of the mini-app" OFF)
 option(SWM_MPI "Enable the MPI versions of the mini-app" OFF)
 option(SWM_CUDA "Enable the CUDA versions of the mini-app" OFF)
