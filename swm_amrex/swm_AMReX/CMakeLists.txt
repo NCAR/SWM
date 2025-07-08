@@ -14,9 +14,9 @@ if(SWM_CUDA)
 endif()
 
 set(SWM_AMREX_SOURCES
-    ${PROJECT_SOURCE_DIR}/swm_amrex/main.cpp
-    ${PROJECT_SOURCE_DIR}/swm_amrex/swm_mini_app_utils.cpp
-    swm_mini_app_utils_amrex.cpp
+    ${PROJECT_SOURCE_DIR}/swm_amrex/common/main.cpp
+    ${PROJECT_SOURCE_DIR}/swm_amrex/common/swm_mini_app_utils.cpp
+    ./swm_mini_app_utils_amrex.cpp
 )
 
 add_executable(${SWM_AMREX_TARGET} ${SWM_AMREX_SOURCES})
@@ -28,7 +28,7 @@ if (SWM_CUDA)
   setup_target_for_cuda_compilation(${SWM_AMREX_TARGET})
 endif()
 
-target_include_directories(${SWM_AMREX_TARGET} PUBLIC ${PROJECT_SOURCE_DIR}/swm_amrex)
+target_include_directories(${SWM_AMREX_TARGET} PUBLIC ${PROJECT_SOURCE_DIR}/swm_amrex/common)
 target_include_directories(${SWM_AMREX_TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(${SWM_AMREX_TARGET} PUBLIC AMReX::amrex_2d)

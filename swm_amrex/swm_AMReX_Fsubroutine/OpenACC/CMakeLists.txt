@@ -15,7 +15,7 @@ elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC" OR CMAKE_Fortran_COMPILER_ID S
         set(OPENACC_LINK_FLAGS -acc=multicore)
     elseif(SWM_DEVICE STREQUAL "gpu")
         #set(OPENACC_COMPILE_FLAGS -acc=gpu -Minfo=accel -Mnofma)
-        set(OPENACC_COMPILE_FLAGS -acc=gpu -Minfo=accel -Mnofma -Mbounds -gpu=debug)
+        set(OPENACC_COMPILE_FLAGS -acc=gpu -Minfo=accel -Mnofma)
         #set(OPENACC_COMPILE_FLAGS -acc=gpu -Minfo=accel -Mnofma -mcmodel=medium)
         set(OPENACC_LINK_FLAGS -acc=gpu)
     endif()
@@ -31,112 +31,57 @@ endif()
 ## Fortran compiled seperatly 
 ################################################################################
 
-set(SWM_AMREX_FSUBROUTINE_ACC_CPP_SOURCES
-    ${PROJECT_SOURCE_DIR}/swm_amrex/main.cpp
-    ${PROJECT_SOURCE_DIR}/swm_amrex/swm_mini_app_utils.cpp
-    ../swm_mini_app_utils_fsubroutine.cpp
-)
-
-add_library(swm_fortran_kernels_obj OBJECT swm_fortran_kernelsACC.F90)
-# Maybe also add this flag... -Mnomain
-set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS ${OPENACC_COMPILE_FLAGS})
-#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_FLAGS "${OPENACC_COMPILE_FLAGS}")
-set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES
-    LANGUAGE Fortran
-    CUDA_SOURCE_PROPERTY_FORMAT OFF
-)
-target_include_directories(swm_fortran_kernels_obj PUBLIC $<TARGET_PROPERTY:AMReX::amrex_2d,INTERFACE_INCLUDE_DIRECTORIES>)
-
-if (SWM_CUDA)
-  # Prevent CMake from passing NVCC arch flags to nvc++
-  set(CMAKE_CUDA_ARCHITECTURES "" CACHE STRING "No CUDA arch flags for nvc++" FORCE)
-  set(CUDA_ARCHITECTURES "" CACHE STRING "No CUDA arch flags for nvc++" FORCE)
-  # Set CUDA host linker to nvc++ so -acc=gpu is understood
-  set(CMAKE_CUDA_HOST_LINK_LAUNCHER "/glade/u/apps/casper/24.12/spack/opt/spack/nvhpc/24.11/gcc/12.4.0/bzc3/Linux_x86_64/24.11/compilers/bin/nvc++")
-  set(CMAKE_CUDA_LINK_EXECUTABLE "/glade/u/apps/casper/24.12/spack/opt/spack/nvhpc/24.11/gcc/12.4.0/bzc3/Linux_x86_64/24.11/compilers/bin/nvc++ <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-endif()
-
-add_executable(swm_amrex_fsubroutine_acc
-    ${SWM_AMREX_FSUBROUTINE_ACC_CPP_SOURCES}
-    $<TARGET_OBJECTS:swm_fortran_kernels_obj>
-)
-
-# Now that the target exists, set properties and link options
-if (SWM_CUDA)
-  # Remove NVCC arch flags and add -gpu=cc80 for nvc++
-  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES CUDA_ARCHITECTURES "")
-  target_link_options(swm_amrex_fsubroutine_acc PRIVATE -gpu=cc80)
-  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES LINKER_LANGUAGE CUDA)
-else()
-  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES LINKER_LANGUAGE CXX)
-endif()
-
-target_link_options(swm_amrex_fsubroutine_acc PRIVATE ${OPENACC_LINK_FLAGS})
-
-if (SWM_CUDA)
-  # Ensure no CUDA arch flags are re-added by AMReX helpers
-  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES CUDA_ARCHITECTURES "")
-  include("AMReXTargetHelpers")
-  setup_target_for_cuda_compilation(swm_amrex_fsubroutine_acc
-    SOURCES ${SWM_AMREX_FSUBROUTINE_ACC_CPP_SOURCES}
-  )
-  # Clear again in case AMReX helpers re-add it
-  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES CUDA_ARCHITECTURES "")
-endif()
-
-target_include_directories(swm_amrex_fsubroutine_acc PUBLIC ${PROJECT_SOURCE_DIR}/swm_amrex)
-target_include_directories(swm_amrex_fsubroutine_acc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
-target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC AMReX::amrex_2d)
-target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC m)
-#target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC nvf)
-
-###############################################################################
-# Everything together
-###############################################################################
-
-#set(CMAKE_CUDA_HOST_LINK_LAUNCHER "/glade/u/apps/casper/24.12/spack/opt/spack/nvhpc/24.11/gcc/12.4.0/bzc3/Linux_x86_64/24.11/compilers/bin/nvc++")
-#
-#set(SWM_AMREX_FSUBROUTINE_ACC_SOURCES
+#set(SWM_AMREX_FSUBROUTINE_ACC_CPP_SOURCES
 #    ${PROJECT_SOURCE_DIR}/swm_amrex/main.cpp
 #    ${PROJECT_SOURCE_DIR}/swm_amrex/swm_mini_app_utils.cpp
 #    ../swm_mini_app_utils_fsubroutine.cpp
-#    swm_fortran_kernelsACC.F90
 #)
 #
+#add_library(swm_fortran_kernels_obj OBJECT swm_fortran_kernelsACC.F90)
+## Maybe also add this flag... -Mnomain
+#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS ${OPENACC_COMPILE_FLAGS})
+##set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_FLAGS "${OPENACC_COMPILE_FLAGS}")
+#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES
+#    LANGUAGE Fortran
+#    CUDA_SOURCE_PROPERTY_FORMAT OFF
+#)
+#target_include_directories(swm_fortran_kernels_obj PUBLIC $<TARGET_PROPERTY:AMReX::amrex_2d,INTERFACE_INCLUDE_DIRECTORIES>)
+#
+#if (SWM_CUDA)
+#  # Prevent CMake from passing NVCC arch flags to nvc++
+#  set(CMAKE_CUDA_ARCHITECTURES "" CACHE STRING "No CUDA arch flags for nvc++" FORCE)
+#  set(CUDA_ARCHITECTURES "" CACHE STRING "No CUDA arch flags for nvc++" FORCE)
+#  # Set CUDA host linker to nvc++ so -acc=gpu is understood
+#  set(CMAKE_CUDA_HOST_LINK_LAUNCHER "/glade/u/apps/casper/24.12/spack/opt/spack/nvhpc/24.11/gcc/12.4.0/bzc3/Linux_x86_64/24.11/compilers/bin/nvc++")
+#  set(CMAKE_CUDA_LINK_EXECUTABLE "/glade/u/apps/casper/24.12/spack/opt/spack/nvhpc/24.11/gcc/12.4.0/bzc3/Linux_x86_64/24.11/compilers/bin/nvc++ <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+#endif()
 #
 #add_executable(swm_amrex_fsubroutine_acc
-#    ${SWM_AMREX_FSUBROUTINE_ACC_SOURCES}
+#    ${SWM_AMREX_FSUBROUTINE_ACC_CPP_SOURCES}
+#    $<TARGET_OBJECTS:swm_fortran_kernels_obj>
 #)
 #
-#set(CMAKE_CXX_LINK_EXECUTABLE "/glade/u/apps/casper/24.12/spack/opt/spack/nvhpc/24.11/gcc/12.4.0/bzc3/Linux_x86_64/24.11/compilers/bin/nvc++ <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-#
-#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES LANGUAGE CUDA)
-#
-#if(SWM_CUDA)
+## Now that the target exists, set properties and link options
+#if (SWM_CUDA)
+#  # Remove NVCC arch flags and add -gpu=cc80 for nvc++
+#  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES CUDA_ARCHITECTURES "")
+#  target_link_options(swm_amrex_fsubroutine_acc PRIVATE -gpu=cc80)
 #  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES LINKER_LANGUAGE CUDA)
 #else()
 #  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES LINKER_LANGUAGE CXX)
 #endif()
-##set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES LINKER_LANGUAGE CXX)
-#
-#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS "${OPENACC_COMPILE_FLAGS}")
-#
 #
 #target_link_options(swm_amrex_fsubroutine_acc PRIVATE ${OPENACC_LINK_FLAGS})
-##target_link_options(swm_amrex_fsubroutine_acc
-##  PRIVATE
-##    $<$<OR:$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,Fortran>,$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,CUDA>>:${OPENACC_LINK_FLAGS}>
-##)
-##if(CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC" OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVIDIA")
-##  target_link_options(swm_amrex_fsubroutine_acc PRIVATE ${OPENACC_LINK_FLAGS})
-##endif()
 #
 #if (SWM_CUDA)
+#  # Ensure no CUDA arch flags are re-added by AMReX helpers
+#  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES CUDA_ARCHITECTURES "")
 #  include("AMReXTargetHelpers")
 #  setup_target_for_cuda_compilation(swm_amrex_fsubroutine_acc
-#    SOURCES ${SWM_AMREX_FSUBROUTINE_ACC_SOURCES}
+#    SOURCES ${SWM_AMREX_FSUBROUTINE_ACC_CPP_SOURCES}
 #  )
+#  # Clear again in case AMReX helpers re-add it
+#  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES CUDA_ARCHITECTURES "")
 #endif()
 #
 #target_include_directories(swm_amrex_fsubroutine_acc PUBLIC ${PROJECT_SOURCE_DIR}/swm_amrex)
@@ -144,3 +89,66 @@ target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC m)
 #
 #target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC AMReX::amrex_2d)
 #target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC m)
+##target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC nvf)
+
+###############################################################################
+# Everything together
+###############################################################################
+
+#set(CMAKE_CUDA_HOST_LINK_LAUNCHER "/glade/u/apps/casper/24.12/spack/opt/spack/nvhpc/24.11/gcc/12.4.0/bzc3/Linux_x86_64/24.11/compilers/bin/nvc++")
+
+set(SWM_AMREX_FSUBROUTINE_ACC_SOURCES
+    ${PROJECT_SOURCE_DIR}/swm_amrex/common/main.cpp
+    ${PROJECT_SOURCE_DIR}/swm_amrex/common/swm_mini_app_utils.cpp
+    ../swm_mini_app_utils_fsubroutine.cpp
+    swm_fortran_kernelsACC.F90
+)
+
+add_executable(swm_amrex_fsubroutine_acc
+    ${SWM_AMREX_FSUBROUTINE_ACC_SOURCES}
+)
+
+#set(CMAKE_CXX_LINK_EXECUTABLE "/glade/u/apps/casper/24.12/spack/opt/spack/nvhpc/24.11/gcc/12.4.0/bzc3/Linux_x86_64/24.11/compilers/bin/nvc++ <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+
+#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES LANGUAGE CUDA)
+
+#if(SWM_CUDA)
+#  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES LINKER_LANGUAGE CUDA)
+#else()
+#  set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES LINKER_LANGUAGE CXX)
+#endif()
+#set_target_properties(swm_amrex_fsubroutine_acc PROPERTIES LINKER_LANGUAGE CXX)
+
+#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS "${OPENACC_COMPILE_FLAGS}")
+#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS "${OPENACC_COMPILE_FLAGS};-Mnomain;-gpu=cc80,fastmath;-cuda;-gpu=lineinfo;-gpu=keepptx;-gpu=maxregcount:255;-Mdclchk;-gpu=rdc")
+set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS "-O2;-fast;-Mnomain;-gpu=cc80,fastmath;-cuda;-gpu=lineinfo;-gpu=keepptx;-gpu=maxregcount:255;-Mdclchk;-acc=gpu;-Minfo=accel;-mcmodel=medium;-gpu=cc80")
+
+# -gpu=rdc
+
+#target_link_options(swm_amrex_fsubroutine_acc PRIVATE ${OPENACC_LINK_FLAGS})
+#target_link_options(swm_amrex_fsubroutine_acc PRIVATE "${OPENACC_LINK_FLAGS};-cuda;-Mnomain;-gpu=maxregcount:255;-Mdclchk;-gpu=cc80")
+target_link_options(swm_amrex_fsubroutine_acc PRIVATE "-O2;-fast;-Mnomain;-gpu=cc80,fastmath;-cuda;-gpu=lineinfo;-gpu=keepptx;-gpu=maxregcount:255;-Mdclchk;-acc=gpu;-Minfo=accel;-mcmodel=medium;-gpu=cc80")
+
+#target_link_options(swm_amrex_fsubroutine_acc
+#  PRIVATE
+#    $<$<OR:$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,Fortran>,$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,CUDA>>:${OPENACC_LINK_FLAGS}>
+#)
+#if(CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC" OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVIDIA")
+#  target_link_options(swm_amrex_fsubroutine_acc PRIVATE ${OPENACC_LINK_FLAGS})
+#endif()
+
+if (SWM_CUDA)
+  include("AMReXTargetHelpers")
+  setup_target_for_cuda_compilation(swm_amrex_fsubroutine_acc
+    SOURCES ${SWM_AMREX_FSUBROUTINE_ACC_SOURCES}
+  )
+endif()
+
+target_include_directories(swm_amrex_fsubroutine_acc PUBLIC ${PROJECT_SOURCE_DIR}/swm_amrex/common)
+target_include_directories(swm_amrex_fsubroutine_acc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC AMReX::amrex_2d)
+target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC m)
+
+target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC cuda curand cusparse)
+target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC atomic nvf rt)
