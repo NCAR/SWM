@@ -1,6 +1,6 @@
 set(SWM_C_SOURCES
     shallow_swap.c
-    wtime.c
+    ../common/wtime.c
 )
 
 add_executable(swm_c ${SWM_C_SOURCES})

@@ -26,7 +26,7 @@ endif()
 ###############################################################################
 set(SWM_C_ACC_SWAP_SOURCES
     shallow_swap.acc.c
-    ../c/wtime.c
+    ../common/wtime.c
 )
 
 set(SWM_C_ACC_SWAP_TARGET swm_c_acc)
@@ -41,7 +41,7 @@ target_link_options(${SWM_C_ACC_SWAP_TARGET} PRIVATE ${OPENACC_LINK_FLAGS})
 ###############################################################################
 set(SWM_C_ACC_TILE_SOURCES
     shallow_swap.acc.Tile.c
-    ../c/wtime.c
+    ../common/wtime.c
 )
 
 set(SWM_C_ACC_TILE_TARGET swm_c_acc_tile)
