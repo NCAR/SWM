@@ -1,7 +1,13 @@
 # C++ sources and headers
-CEXE_sources += ../main.cpp ../swm_mini_app_utils.cpp
-CEXE_headers += ../swm_mini_app_utils.h
+CEXE_sources += main.cpp swm_mini_app_utils.cpp swm_mini_app_utils_fsubroutine.cpp
+CEXE_headers += swm_mini_app_utils.h funcF.H
 
 # Fortran sources and headers
 F90EXE_sources += swm_fortran_kernelsOMP.F90
 
+VPATH_LOCATIONS += ${SWM_ROOT}/swm_amrex/common
+VPATH_LOCATIONS += ${SWM_ROOT}/swm_amrex/swm_AMReX_Fsubroutine
+VPATH_LOCATIONS += ${SWM_ROOT}/swm_amrex/swm_AMReX_Fsubroutine/OpenMP
+
+INCLUDE_LOCATIONS += ${SWM_ROOT}/swm_amrex/common
+INCLUDE_LOCATIONS += ${SWM_ROOT}/swm_amrex/swm_AMReX_Fsubroutine

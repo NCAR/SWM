@@ -61,7 +61,7 @@ void UpdateVariables(const amrex::Geometry& geom,
                      amrex::MultiFab& u, amrex::MultiFab& v, amrex::MultiFab& p);
 
 ///////////////////////////////////////////////////////////////////////////////
-// SWM mini app utilities common to all versions of the code
+// SWM mini app utilities defined by each version of the code
 ///////////////////////////////////////////////////////////////////////////////
 void UpdateIntermediateVariables(amrex::Real dx, amrex::Real dy, const amrex::Geometry& geom,
                                  const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v,

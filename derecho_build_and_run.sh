@@ -28,8 +28,8 @@ export AMREX_BUILD_DIR_BASE=/glade/u/home/htorres/amrex_build
 
 # Set to "cpu", "gpu"
 #export SWM_DEVICE=cpu  
+#export SWM_DEVICE=gpu  
 
-# Save the base directory for the SWM build
 #for SWM_DEVICE in cpu gpu; do
 #for SWM_DEVICE in cpu; do
 for SWM_DEVICE in gpu; do
@@ -45,10 +45,9 @@ export SWM_FORTRAN=OFF
 export SWM_AMREX=ON
 
 export SWM_ACC=ON
-export SWM_MPI=OFF
-export SWM_OMP=OFF
+export SWM_MPI=ON
+export SWM_OMP=ON
 export SWM_CUDA=ON
-
 
 ###############################################################################
 # Setup based on user input
@@ -102,9 +101,10 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
 
 fi
 
-if [[ "${COMPILER}" == "GNU" ]]; then
-    module load ncarcompilers
-fi
+#if [[ "${COMPILER}" == "GNU" ]]; then
+#    module load ncarcompilers
+#fi
+module load ncarcompilers
 
 # HDF5 is only used by the AMReX mini-app version of SWM, still loading it by default for now but will eventually move to netcdf output
 module load hdf5
@@ -115,7 +115,6 @@ export HDF5_HOME="${NCAR_ROOT_HDF5}"
 #module load linaro-forge
 
 module list
-
 
 # WARNING: YES will delete the build directory if it exists. Make sure this wont delete anything important!
 fresh_build_amrex=YES
@@ -196,10 +195,12 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
         -DCMAKE_INSTALL_PREFIX="$AMREX_INSTALL_DIR" \
         -S "$AMREX_HOME" \
         -B "$AMREX_BUILD_DIR"
-    #    --trace \
+        #--trace-expand
     
-    make -j 32 install 
+    #make -j 32 install 
     #make -j 32 VERBOSE=1 install 
+
+    cmake --build "$AMREX_BUILD_DIR" --target install
     
     #make test_install  # optional step to test if the installation is working
     #exit 0 # Exit early for testing purposes
@@ -249,9 +250,6 @@ fi
 ###############################################################################
 
 echo "Running SWM mini-apps for ${SWM_DEVICE} that were built with ${COMPILER} compiler"
-#SWM_C=OFF
-#SWM_FORTRAN=OFF
-#SWM_AMREX=ON
 
 if [[ "${SWM_C}" == "ON" ]]; then
     echo "Running SWM C mini-apps"
@@ -285,9 +283,8 @@ fi
 
 if [[ "${SWM_AMREX}" == "ON" ]]; then
 
-  # Order matters for the suffix of the executable name
+  # Order matters for the suffix of the executable name... if everything is on then the suffix should be _OMP_MPI_CUDA
   exe_suffix=""
-  #if [[ "${AMREX_USE_OMP}" == "YES" ]]; then # Maybe comeback to this if we decide to have seperate otions for openMP code we wrote vs that in amrex?
   if [[ "${SWM_OMP}" == "ON" ]]; then
     exe_suffix="${exe_suffix}_OMP"
   fi
@@ -313,8 +310,25 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
     ${mpi_launcher} $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex${exe_suffix} ${input_file}
   fi
   
+  # TODO: Run these when our CMake build of these versions of SWM are working
   #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp ${input_file}
   #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
+
+  # These will have differnt names and be saved in the build direcotry later. This is a temporary work around using the old make file.
+  if [[ "${SWM_DEVICE}" == "gpu" && "${SWM_CUDA}" == "ON" ]]; then
+
+    compiler_name=$(echo "${COMPILER}" | tr '[:upper:]' '[:lower:]')
+    if [[ "${SWM_ACC}" == "ON" ]]; then
+      #$SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.nvhpc.TPROF.ACC.CUDA.ex ${input_file}
+      $SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.${compiler_name}.TPROF.ACC.CUDA.ex ${input_file}
+    fi
+
+    ##TODO: This is not working right now because we are not able to build AMReX with OpenMP, CUDA, and nvhpc right now. Come back and fix this later.
+    #if [[ "${SWM_OMP}" == "ON" ]]; then
+    #  $SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.${compiler_name}.TPROF.ACC.CUDA.ex ${input_file}
+    #fi
+
+  fi
 
 fi
 
