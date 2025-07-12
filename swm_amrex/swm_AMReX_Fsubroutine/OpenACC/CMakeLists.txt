@@ -40,23 +40,10 @@ add_executable(swm_amrex_fsubroutine_acc
     ${SWM_AMREX_FSUBROUTINE_ACC_SOURCES}
 )
 
-#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS "${OPENACC_COMPILE_FLAGS}")
 set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS "${OPENACC_COMPILE_FLAGS};-Mnomain")
-#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS "${OPENACC_COMPILE_FLAGS};-Mnomain;-gpu=cc80,fastmath;-cuda;-gpu=lineinfo;-gpu=keepptx;-gpu=maxregcount:255;-Mdclchk;-gpu=rdc")
-#set_source_files_properties(swm_fortran_kernelsACC.F90 PROPERTIES COMPILE_OPTIONS "-O2;-fast;-Mnomain;-gpu=cc80,fastmath;-cuda;-gpu=lineinfo;-gpu=keepptx;-gpu=maxregcount:255;-Mdclchk;-acc=gpu;-Minfo=accel;-mcmodel=medium;-gpu=cc80")
 
 #target_link_options(swm_amrex_fsubroutine_acc PRIVATE ${OPENACC_LINK_FLAGS})
 target_link_options(swm_amrex_fsubroutine_acc PRIVATE "${OPENACC_LINK_FLAGS};-Mnomain")
-#target_link_options(swm_amrex_fsubroutine_acc PRIVATE "${OPENACC_LINK_FLAGS};-cuda;-Mnomain;-gpu=maxregcount:255;-Mdclchk;-gpu=cc80")
-#target_link_options(swm_amrex_fsubroutine_acc PRIVATE "-O2;-fast;-Mnomain;-gpu=cc80,fastmath;-cuda;-gpu=lineinfo;-gpu=keepptx;-gpu=maxregcount:255;-Mdclchk;-acc=gpu;-Minfo=accel;-mcmodel=medium;-gpu=cc80")
-
-#target_link_options(swm_amrex_fsubroutine_acc
-#  PRIVATE
-#    $<$<OR:$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,Fortran>,$<STREQUAL:$<TARGET_PROPERTY:LINKER_LANGUAGE>,CUDA>>:${OPENACC_LINK_FLAGS}>
-#)
-#if(CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC" OR CMAKE_Fortran_COMPILER_ID STREQUAL "NVIDIA")
-#  target_link_options(swm_amrex_fsubroutine_acc PRIVATE ${OPENACC_LINK_FLAGS})
-#endif()
 
 if (SWM_CUDA)
   include("AMReXTargetHelpers")
@@ -65,13 +52,8 @@ if (SWM_CUDA)
   )
 endif()
 
-#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gpu=rdc")
-
 target_include_directories(swm_amrex_fsubroutine_acc PUBLIC ${PROJECT_SOURCE_DIR}/swm_amrex/common)
 target_include_directories(swm_amrex_fsubroutine_acc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC AMReX::amrex_2d)
 target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC m)
-
-#target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC cuda curand cusparse)
-#target_link_libraries(swm_amrex_fsubroutine_acc PUBLIC atomic nvf rt)

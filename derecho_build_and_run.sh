@@ -45,8 +45,8 @@ export SWM_FORTRAN=OFF
 export SWM_AMREX=ON
 
 export SWM_ACC=ON
-export SWM_MPI=OFF
-export SWM_OMP=OFF
+export SWM_MPI=ON
+export SWM_OMP=ON
 export SWM_CUDA=ON
 
 # WARNING: YES will delete the amrex build directory if it exists. Make sure this wont delete anything important!
@@ -74,13 +74,16 @@ export AMREX_BUILD_DIR="${AMREX_BUILD_DIR_BASE}_${COMPILER}"
 
 module purge
 
+# Initialize an array for the modules we are going to load 
+modules_to_load=()
+
 # Modules we always use
-module load cmake
+modules_to_load+=("cmake")
 
 if [[ "${COMPILER}" == "GNU" ]]; then
-    module load gcc
+    modules_to_load+=("gcc")
 elif [[ "${COMPILER}" == "NVHPC" ]]; then
-    module load nvhpc
+    modules_to_load+=("nvhpc")
 else
     echo "Unsupported compiler option: ${COMPILER}"
     exit 1
@@ -89,7 +92,7 @@ fi
 if [[ "${SWM_AMREX}" == "ON" ]]; then
 
     if [[ "${SWM_MPI}" == "ON" ]]; then
-        module load cray-mpich
+        modules_to_load+=("cray-mpich")
         #export SWM_BUILD_DIR="${SWM_BUILD_DIR}_MPI"
         export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_MPI"
     fi
@@ -100,7 +103,7 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
     fi
 
     if [[ "${SWM_DEVICE}" == "gpu" ]] && [[ "${SWM_CUDA}" == "ON" ]]; then
-        module load cuda                                  
+        modules_to_load+=("cuda")
         #export SWM_BUILD_DIR="${SWM_BUILD_DIR}_CUDA"
         export AMREX_BUILD_DIR="${AMREX_BUILD_DIR}_CUDA"
     fi
@@ -108,26 +111,23 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
 fi
 
 #if [[ "${COMPILER}" == "GNU" ]]; then
-#    module load ncarcompilers
+#    modules_to_load+=("ncarcompilers")
 #fi
-module load ncarcompilers
+
+modules_to_load+=("ncarcompilers")
 
 # HDF5 is only used by the AMReX mini-app version of SWM, still loading it by default for now but will eventually move to netcdf output
-module load hdf5
-# Loading the hdf5 module on derecheo should define a variable NCAR_ROOT_HDF5. We need to set HDF5_HOME.
-export HDF5_HOME="${NCAR_ROOT_HDF5}"
+modules_to_load+=("hdf5")
 
 # Profile or Debugg with linary forge
-#module load linaro-forge
+#modules_to_load+=("linaro-forge")
+
+module load "${modules_to_load[@]}"
 
 module list
 
-if [[ "${fresh_build_swm}" == "YES" ]]; then
-    if [[ -d "${SWM_BUILD_DIR}" ]]; then
-        echo "Deleting existing SWM build directory: ${SWM_BUILD_DIR}"
-        rm -rf "${SWM_BUILD_DIR}"
-    fi
-fi
+# Loading the hdf5 module on derecheo should define a variable NCAR_ROOT_HDF5. We need to set HDF5_HOME. Migt be able to get rid of this later when we switch to netcdf output
+export HDF5_HOME="${NCAR_ROOT_HDF5}"
 
 ###############################################################################
 # Build the version of AMReX that we are asking for
@@ -182,6 +182,11 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
         amrex_cmake_opts+=("-DAMReX_GPU_RDC=NO")
         amrex_cmake_opts+=("-DAMReX_CUDA_ARCH=8.0") 
         amrex_cmake_opts+=("-DAMReX_DIFFERENT_COMPILER=ON")
+
+        # Set the CUDA compiler and host compiler... get errors if these are not set correctly when OpenMP is also on... 
+        # Might only need this when using the NVHPC compiler, CUDA, and OpenMP
+        export CUDAHOSTCXX=$(which nvc++)
+
     else
         amrex_cmake_opts+=("-DAMReX_GPU_BACKEND=NONE")
     fi
@@ -200,9 +205,11 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
         #--trace-expand
     
     #make -j 32 install 
+    #make VERBOSE=1 install 
     make -j 32 VERBOSE=1 install 
 
     #cmake --build "$AMREX_BUILD_DIR" --target install -j 32
+    #cmake --build "$AMREX_BUILD_DIR" --target install VERBOSE=1
     
     #make test_install  # optional step to test if the installation is working
     #exit 0 # Exit early for testing purposes
@@ -212,6 +219,13 @@ fi
 ###############################################################################
 # Build SWM Using the version of AMReX that we just built
 ###############################################################################
+
+if [[ "${fresh_build_swm}" == "YES" ]]; then
+    if [[ -d "${SWM_BUILD_DIR}" ]]; then
+        echo "Deleting existing SWM build directory: ${SWM_BUILD_DIR}"
+        rm -rf "${SWM_BUILD_DIR}"
+    fi
+fi
 
 # Initialize an array for SWM CMake build options
 swm_cmake_opts=()
@@ -241,7 +255,8 @@ cmake "${swm_cmake_opts[@]}" -S $SWM_ROOT -B $SWM_BUILD_DIR # --trace-expand
 cd $SWM_BUILD_DIR
 
 #make 
-make VERBOSE=1 2>&1 | tee build.log
+#make VERBOSE=1 2>&1 | tee build.log
+make -j 32 VERBOSE=1 2>&1 | tee build.log
 if [ "${PIPESTATUS[0]}" -ne 0 ]; then
     exit 1
 fi
@@ -313,7 +328,7 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
   
   # TODO: Run these when our CMake build of these versions of SWM are working
   $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
-  #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp ${input_file}
+  $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp ${input_file}
 
   ## These will have differnt names and be saved in the build direcotry later. This is a temporary work around using the old make file.
   #if [[ "${SWM_DEVICE}" == "gpu" && "${SWM_CUDA}" == "ON" ]]; then

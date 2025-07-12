@@ -12,10 +12,9 @@ if(SWM_DEVICE STREQUAL "gpu" AND SWM_CUDA)
         add_subdirectory(OpenACC)
     endif()
 
-    # TODO: Come back after OpenACC is working and enable this. 
-    #if(SWM_OPENMP)
-    #    add_subdirectory(OpenMP)
-    #endif()
+    if(SWM_OPENMP)
+        add_subdirectory(OpenMP)
+    endif()
 
   endif()
 
