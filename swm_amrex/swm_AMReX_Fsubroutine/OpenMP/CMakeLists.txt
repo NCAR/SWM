@@ -1,7 +1,7 @@
 ###############################################################################
 # Hack to run old Makefile
 ###############################################################################
-add_custom_target(run_gnumakefile ALL
+add_custom_target(swm_amrex_fsubroutine_omp ALL
     COMMAND ${CMAKE_MAKE_PROGRAM} -f GNUmakefile
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Building with legacy GNUmakefile"
