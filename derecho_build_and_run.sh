@@ -45,9 +45,15 @@ export SWM_FORTRAN=OFF
 export SWM_AMREX=ON
 
 export SWM_ACC=ON
-export SWM_MPI=ON
-export SWM_OMP=ON
+export SWM_MPI=OFF
+export SWM_OMP=OFF
 export SWM_CUDA=ON
+
+# WARNING: YES will delete the amrex build directory if it exists. Make sure this wont delete anything important!
+fresh_build_amrex=NO
+
+# WARNING: YES will delete the swm build directory if it exists. Make sure this wont delete anything important!
+fresh_build_swm=NO
 
 ###############################################################################
 # Setup based on user input
@@ -116,17 +122,6 @@ export HDF5_HOME="${NCAR_ROOT_HDF5}"
 
 module list
 
-# WARNING: YES will delete the build directory if it exists. Make sure this wont delete anything important!
-fresh_build_amrex=YES
-if [[ "${fresh_build_amrex}" == "YES" ]]; then
-    if [[ -d "${AMREX_BUILD_DIR}" ]]; then
-        echo "Deleting existing AMReX build directory: ${AMREX_BUILD_DIR}"
-        rm -rf "${AMREX_BUILD_DIR}"
-    fi
-fi
-
-# WARNING: YES will delete the build directory if it exists. Make sure this wont delete anything important!
-fresh_build_swm=YES
 if [[ "${fresh_build_swm}" == "YES" ]]; then
     if [[ -d "${SWM_BUILD_DIR}" ]]; then
         echo "Deleting existing SWM build directory: ${SWM_BUILD_DIR}"
@@ -140,6 +135,13 @@ fi
 
 if [[ "${SWM_AMREX}" == "ON" ]]; then
 
+    if [[ "${fresh_build_amrex}" == "YES" ]]; then
+        if [[ -d "${AMREX_BUILD_DIR}" ]]; then
+            echo "Deleting existing AMReX build directory: ${AMREX_BUILD_DIR}"
+            rm -rf "${AMREX_BUILD_DIR}"
+        fi
+    fi
+
     # Initialize an array for CMake AMReX build options
     amrex_cmake_opts=()
     
@@ -151,7 +153,7 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
     amrex_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
     amrex_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
 
-    amrex_cmake_opts+=("-DAMReX_FORTRAN_INTERFACES=YES")
+    amrex_cmake_opts+=("-DAMReX_FORTRAN_INTERFACES=YES") 
     
     # These AMReX options were on by default, however I don't think we are using any of these features so I am turning them off.
     amrex_cmake_opts+=("-DAMReX_LINEAR_SOLVERS=NO")
@@ -198,9 +200,9 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
         #--trace-expand
     
     #make -j 32 install 
-    #make -j 32 VERBOSE=1 install 
+    make -j 32 VERBOSE=1 install 
 
-    cmake --build "$AMREX_BUILD_DIR" --target install
+    #cmake --build "$AMREX_BUILD_DIR" --target install -j 32
     
     #make test_install  # optional step to test if the installation is working
     #exit 0 # Exit early for testing purposes
@@ -234,8 +236,7 @@ swm_cmake_opts+=("-DCMAKE_CXX_COMPILER=$CXX")
 swm_cmake_opts+=("-DCMAKE_Fortran_COMPILER=$FC")
 
 
-cmake "${swm_cmake_opts[@]}" -S $SWM_ROOT -B $SWM_BUILD_DIR
-#cmake "${swm_cmake_opts[@]}" -S $SWM_ROOT -B $SWM_BUILD_DIR --trace-expand
+cmake "${swm_cmake_opts[@]}" -S $SWM_ROOT -B $SWM_BUILD_DIR # --trace-expand
 
 cd $SWM_BUILD_DIR
 
@@ -311,24 +312,24 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
   fi
   
   # TODO: Run these when our CMake build of these versions of SWM are working
+  $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
   #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp ${input_file}
-  #$SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
 
-  # These will have differnt names and be saved in the build direcotry later. This is a temporary work around using the old make file.
-  if [[ "${SWM_DEVICE}" == "gpu" && "${SWM_CUDA}" == "ON" ]]; then
+  ## These will have differnt names and be saved in the build direcotry later. This is a temporary work around using the old make file.
+  #if [[ "${SWM_DEVICE}" == "gpu" && "${SWM_CUDA}" == "ON" ]]; then
 
-    compiler_name=$(echo "${COMPILER}" | tr '[:upper:]' '[:lower:]')
-    if [[ "${SWM_ACC}" == "ON" ]]; then
-      #$SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.nvhpc.TPROF.ACC.CUDA.ex ${input_file}
-      $SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.${compiler_name}.TPROF.ACC.CUDA.ex ${input_file}
-    fi
+  #  compiler_name=$(echo "${COMPILER}" | tr '[:upper:]' '[:lower:]')
+  #  if [[ "${SWM_ACC}" == "ON" ]]; then
+  #    #$SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.nvhpc.TPROF.ACC.CUDA.ex ${input_file}
+  #    $SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.${compiler_name}.TPROF.ACC.CUDA.ex ${input_file}
+  #  fi
 
-    ##TODO: This is not working right now because we are not able to build AMReX with OpenMP, CUDA, and nvhpc right now. Come back and fix this later.
-    #if [[ "${SWM_OMP}" == "ON" ]]; then
-    #  $SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.${compiler_name}.TPROF.ACC.CUDA.ex ${input_file}
-    #fi
+  #  ##TODO: This is not working right now because we are not able to build AMReX with OpenMP, CUDA, and nvhpc right now. Come back and fix this later.
+  #  #if [[ "${SWM_OMP}" == "ON" ]]; then
+  #  #  $SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.${compiler_name}.TPROF.ACC.CUDA.ex ${input_file}
+  #  #fi
 
-  fi
+  #fi
 
 fi
 
