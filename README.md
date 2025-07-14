@@ -1,3 +1,3 @@
 # SWM
 
-This repository contains mini-apps to solve the shallow water equations implemented in multiple programming languages and frameworks. We recommend getting started with our (quick start guide)[https://swm-documentation.readthedocs.io/en/latest/quick_start/]. Visit our [documentation page](https://swm-documentation.readthedocs.io/) for an overview of how the application works and detailed build and run instructions.
+This repository contains mini-apps to solve the shallow water equations implemented in multiple programming languages and frameworks. We recommend getting started with our [quick start guide](https://swm-documentation.readthedocs.io/en/latest/quick_start/). Visit our [documentation page](https://swm-documentation.readthedocs.io/) for an overview of how the application works and detailed build and run instructions.
