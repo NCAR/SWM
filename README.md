@@ -1,22 +1,3 @@
 # SWM
 
-This repository provides a shallow water equations mini-app implemented in multiple programming languages and frameworks. 
-
-Visit our documentation page - [SWM Documentation](https://swm-documentation.readthedocs.io/)
-
-## Versions
-TODO: Give an updated view of the different versions in the source tree. 
-- [C](swm_c)
-    - [Plain C](/swm_c/shallow_swap.c)
-    - OpenACC
-        - [swap](/swm_c/shallow_swap.acc.c)
-        - [tile](/swm_c/shallow_swap.acc.Tile.c)
-- C++
-    - [ARMeX](/swm_AMReX)
-- [Python](swm_python)
-    - numpy
-    - gt4py 
-- [Julia](swm_julia) 
-
-## Build
-TODO: Provide minimal build instructions here and a link to the more detailed build page on readthedocs.
+This repository contains mini-apps to solve the shallow water equations implemented in multiple programming languages and frameworks. We recommend getting started with our (quick start guide)[https://swm-documentation.readthedocs.io/en/latest/quick_start/]. Visit our [documentation page](https://swm-documentation.readthedocs.io/) for an overview of how the application works and detailed build and run instructions.
