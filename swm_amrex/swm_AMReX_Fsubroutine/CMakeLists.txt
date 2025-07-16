@@ -1,8 +1,6 @@
-find_package(AMReX REQUIRED FORTRAN) 
-# Maybe also check for fortran interface here if we need it. Any other components?
+find_package(AMReX REQUIRED FORTRAN FINTERFACES) 
 
-
-# These only for offloading onto the GPU with CUDA backend
+# These version are only for offloading onto the GPU with CUDA backend
 if(SWM_DEVICE STREQUAL "gpu" AND SWM_CUDA)
 
   # For now only build the NVIDIA compiler... could update later to support other compilers if we test this.

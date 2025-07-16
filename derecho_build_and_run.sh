@@ -50,10 +50,10 @@ export SWM_OMP=ON
 export SWM_CUDA=ON
 
 # WARNING: YES will delete the amrex build directory if it exists. Make sure this wont delete anything important!
-fresh_build_amrex=NO
+fresh_build_amrex=YES
 
 # WARNING: YES will delete the swm build directory if it exists. Make sure this wont delete anything important!
-fresh_build_swm=NO
+fresh_build_swm=YES
 
 ###############################################################################
 # Setup based on user input
@@ -326,25 +326,16 @@ if [[ "${SWM_AMREX}" == "ON" ]]; then
     ${mpi_launcher} $SWM_BUILD_DIR/swm_amrex/swm_AMReX/swm_amrex${exe_suffix} ${input_file}
   fi
   
-  # TODO: Run these when our CMake build of these versions of SWM are working
-  $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
-  $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp ${input_file}
+  # Only run the AMReX mini-app with Fortran subroutines that use OpenACC and OpenMP offloading if the user has selected the GPU.
+  if [[ "${SWM_DEVICE}" == "gpu" && "${SWM_CUDA}" == "ON" ]]; then
+    if [[ "${SWM_ACC}" == "ON" ]]; then
+      $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/swm_amrex_fsubroutine_acc ${input_file}
+    fi
 
-  ## These will have differnt names and be saved in the build direcotry later. This is a temporary work around using the old make file.
-  #if [[ "${SWM_DEVICE}" == "gpu" && "${SWM_CUDA}" == "ON" ]]; then
-
-  #  compiler_name=$(echo "${COMPILER}" | tr '[:upper:]' '[:lower:]')
-  #  if [[ "${SWM_ACC}" == "ON" ]]; then
-  #    #$SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.nvhpc.TPROF.ACC.CUDA.ex ${input_file}
-  #    $SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.${compiler_name}.TPROF.ACC.CUDA.ex ${input_file}
-  #  fi
-
-  #  ##TODO: This is not working right now because we are not able to build AMReX with OpenMP, CUDA, and nvhpc right now. Come back and fix this later.
-  #  #if [[ "${SWM_OMP}" == "ON" ]]; then
-  #  #  $SWM_ROOT/swm_amrex/swm_AMReX_Fsubroutine/OpenACC/main2d.${compiler_name}.TPROF.ACC.CUDA.ex ${input_file}
-  #  #fi
-
-  #fi
+    if [[ "${SWM_OMP}" == "ON" ]]; then
+      $SWM_BUILD_DIR/swm_amrex/swm_AMReX_Fsubroutine/OpenMP/swm_amrex_fsubroutine_omp ${input_file}
+    fi
+  fi
 
 fi
 

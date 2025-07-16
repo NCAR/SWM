@@ -1,17 +1,7 @@
-################################################################################
-## Hack to run old Makefile
-################################################################################
-#add_custom_target(swm_amrex_fsubroutine_omp ALL
-#    COMMAND ${CMAKE_MAKE_PROGRAM} -f GNUmakefile
-#    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-#    COMMENT "Building with legacy GNUmakefile"
-#)
-
 ###############################################################################
 # Using CMake to buidd the SWM AMReX Fsubroutine with OpenACC support
 ###############################################################################
 find_package(AMReX REQUIRED FORTRAN FINTERFACES) 
-
 find_package(OpenMP REQUIRED)
 
 # TODO: This is basicaly a copy of the block from the CMakeLists.txt for the C OpenACC build. Maybe combine in a function?
@@ -34,7 +24,6 @@ set(SWM_AMREX_FSUBROUTINE_OMP_SOURCES
 )
 
 add_executable(swm_amrex_fsubroutine_omp ${SWM_AMREX_FSUBROUTINE_OMP_SOURCES})
-
 
 set_source_files_properties(swm_fortran_kernelsOMP.F90 PROPERTIES COMPILE_OPTIONS "${OPENMP_COMPILE_FLAGS};-Mnomain")
 

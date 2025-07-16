@@ -1,12 +1,3 @@
-################################################################################
-## Hack to run old Makefile
-################################################################################
-#add_custom_target(swm_amrex_fsubroutine_acc ALL
-#    COMMAND ${CMAKE_MAKE_PROGRAM} -f GNUmakefile
-#    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-#    COMMENT "Building with legacy GNUmakefile"
-#)
-
 ###############################################################################
 # Using CMake to buidd the SWM AMReX Fsubroutine with OpenACC support
 ###############################################################################
