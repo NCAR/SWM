@@ -20,6 +20,10 @@ option(SWM_MPI "Enable the MPI versions of the mini-app" OFF)
 option(SWM_CUDA "Enable the CUDA versions of the mini-app" OFF)
 option(SWM_HIP "Enable the HIP versions of the mini-app" OFF)
 
+if(SWM_CUDA AND SWM_HIP)
+    message(FATAL_ERROR "SWM_CUDA and SWM_HIP cannot both be ON. Please enable only one.")
+endif()
+
 if(SWM_DEVICE STREQUAL "cpu" AND SWM_CUDA)
     message(WARNING "SWM_CUDA is ON but SWM_DEVICE is set to 'cpu'. Disabling SWM_CUDA.")
     set(SWM_CUDA OFF CACHE BOOL "Enable the CUDA versions of the mini-app" FORCE)
