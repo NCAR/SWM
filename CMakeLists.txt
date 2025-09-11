@@ -18,10 +18,16 @@ option(SWM_OPENACC "Enable the OpenACC versions of the mini-app" OFF)
 option(SWM_OPENMP "Enable the OpenMP versions of the mini-app" OFF)
 option(SWM_MPI "Enable the MPI versions of the mini-app" OFF)
 option(SWM_CUDA "Enable the CUDA versions of the mini-app" OFF)
+option(SWM_HIP "Enable the HIP versions of the mini-app" OFF)
 
 if(SWM_DEVICE STREQUAL "cpu" AND SWM_CUDA)
     message(WARNING "SWM_CUDA is ON but SWM_DEVICE is set to 'cpu'. Disabling SWM_CUDA.")
     set(SWM_CUDA OFF CACHE BOOL "Enable the CUDA versions of the mini-app" FORCE)
+endif()
+
+if(SWM_DEVICE STREQUAL "cpu" AND SWM_HIP)
+    message(WARNING "SWM_HIP is ON but SWM_DEVICE is set to 'cpu'. Disabling SWM_HIP.")
+    set(SWM_HIP OFF CACHE BOOL "Enable the HIP versions of the mini-app" FORCE)
 endif()
 
 if (SWM_C)

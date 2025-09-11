@@ -11,6 +11,13 @@ if(SWM_CUDA)
 
 endif()
 
+if(SWM_HIP)
+  find_package(hip REQUIRED)
+  find_package(hiprand REQUIRED)
+  find_package(rocprim REQUIRED)
+  list(APPEND AMREX_COMPONENTS HIP)
+endif()
+
 if(SWM_MPI)
   list(APPEND AMREX_COMPONENTS MPI)
 endif()
@@ -23,4 +30,6 @@ find_package(AMReX REQUIRED ${AMREX_COMPONENTS})
 
 add_subdirectory(swm_AMReX)
 #add_subdirectory(swm_AMReX_Fkernels)
-add_subdirectory(swm_AMReX_Fsubroutine)
+if (NOT SWM_HIP)
+  add_subdirectory(swm_AMReX_Fsubroutine)
+endif()
