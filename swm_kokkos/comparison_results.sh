@@ -17,6 +17,7 @@ file_lists=("p.txt" "u.txt" "v.txt")
 
 # 4. Loop through each file and compare
 for file in "${file_lists[@]}"; do
-    echo "Comparing $file between SWM_C and SWM_KOKKOS..."
+    echo "...Comparing $file between SWM_C and SWM_KOKKOS..."
     python comparison_results.py "${path1}${file}" "${path2}${file}"
+    echo ""
 done

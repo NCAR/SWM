@@ -32,4 +32,11 @@ else:
     if (debug):
         print("Difference matrix:")
         print(diff)
-    print("Are matrices equal?", np.array_equal(matrix1, matrix2))
+    if not np.sum(diff):
+        print("Matrices are the same.")
+    else:
+        is_close = np.isclose(matrix1, matrix2, rtol=1e-10, atol=1e-18)
+        if np.all(is_close):
+            print("Matrices are approximately equal (element-wise isclose).")
+        else:
+            print("Matrices differ (element-wise isclose).")
