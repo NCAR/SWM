@@ -28,34 +28,34 @@ int main(int argc, char **argv) {
   Kokkos::initialize( argc, argv );
   {
 
-    // Define Kokkos Views
-    ViewMatrixType u("u", M_LEN, N_LEN);
-    ViewMatrixType v("v", M_LEN, N_LEN);
-    ViewMatrixType p("p", M_LEN, N_LEN);
-    ViewMatrixType unew("unew", M_LEN, N_LEN);
-    ViewMatrixType vnew("vnew", M_LEN, N_LEN);
-    ViewMatrixType pnew("pnew", M_LEN, N_LEN);
-    ViewMatrixType uold("uold", M_LEN, N_LEN);
-    ViewMatrixType vold("vold", M_LEN, N_LEN);
-    ViewMatrixType pold("pold", M_LEN, N_LEN);
-    ViewMatrixType cu("cu", M_LEN, N_LEN);
-    ViewMatrixType cv("cv", M_LEN, N_LEN);
-    ViewMatrixType z("z", M_LEN, N_LEN);
-    ViewMatrixType h("h", M_LEN, N_LEN);
-    ViewMatrixType psi("psi", M_LEN, N_LEN);
+    // Allocate a large contiguous block for all variables
+    constexpr int num_vars = 14;
+    ViewMatrixType big_data("big_data", M_LEN, N_LEN * num_vars);
+
+    // Create 2D views as subviews of big_data
+    auto u    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto v    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(N_LEN, 2 * N_LEN));
+    auto p    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(2 * N_LEN, 3 * N_LEN));
+    auto unew = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(3 * N_LEN, 4 * N_LEN));
+    auto vnew = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(4 * N_LEN, 5 * N_LEN));
+    auto pnew = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(5 * N_LEN, 6 * N_LEN));
+    auto uold = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(6 * N_LEN, 7 * N_LEN));
+    auto vold = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(7 * N_LEN, 8 * N_LEN));
+    auto pold = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(8 * N_LEN, 9 * N_LEN));
+    auto cu   = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(9 * N_LEN, 10 * N_LEN));
+    auto cv   = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(10 * N_LEN, 11 * N_LEN));
+    auto z    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(11 * N_LEN, 12 * N_LEN));
+    auto h    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(12 * N_LEN, 13 * N_LEN));
+    auto psi  = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(13 * N_LEN, 14 * N_LEN));
 
     double dt,tdt,dx,dy,a,alpha,el,pi;
     double tpi,di,dj,pcf;
     double tdts8,tdtsdx,tdtsdy,fsdx,fsdy;
 
     int mnmin,ncycle;
-    int i,j;
   
-    // timer variables 
-    double mfs100,mfs200,mfs300;
-    double t100,t200,t300;
-    double tstart,ctime,tcyc,time,ptime;
-    double c1,c2;
+    // timer variables
+    double ctime,tcyc,time,ptime;
 
     // ** Initialisations ** 
 
@@ -149,15 +149,35 @@ int main(int argc, char **argv) {
       
       // Compute capital u, capital v, z and h
 
-      Kokkos::parallel_for("compute_cu_cv_z_h", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {M,N}), KOKKOS_LAMBDA(const int i, const int j) {
-          cu(i+1,j) = .5 * (p(i+1,j) + p(i,j)) * u(i+1,j);
-          cv(i,j+1) = .5 * (p(i,j+1) + p(i,j)) * v(i,j+1);
-          z(i+1,j+1) = (fsdx * (v(i+1,j+1) - v(i,j+1)) - fsdy * (u(i+1,j+1) - u(i+1,j))) / (p(i,j) + p(i+1,j) + p(i+1,j+1) + p(i,j+1));
-          h(i,j) = p(i,j) + .25 * (u(i+1,j) * u(i+1,j) + u(i,j) * u(i,j) + v(i,j+1) * v(i,j+1) + v(i,j) * v(i,j));
+      // Compute cu
+      Kokkos::parallel_for("compute_cu", Kokkos::RangePolicy<>(1, M_LEN), KOKKOS_LAMBDA(const int i) {
+          for (int j = 0; j < N; ++j) {
+            cu(i,j) = 0.5 * (p(i,j) + p(i-1,j)) * u(i,j);
+          }
+      });
+
+      // Compute cv
+      Kokkos::parallel_for("compute_cv", Kokkos::RangePolicy<>(0, M), KOKKOS_LAMBDA(const int i) {
+          for (int j = 1; j < N_LEN; ++j) {
+            cv(i,j) = 0.5 * (p(i,j) + p(i,j-1)) * v(i,j);
+          }
+      });
+
+      // Compute z
+      Kokkos::parallel_for("compute_z", Kokkos::RangePolicy<>(1, M_LEN), KOKKOS_LAMBDA(const int i) {
+          for (int j = 1; j < N_LEN; ++j) {
+            z(i,j) = (fsdx * (v(i,j) - v(i-1,j)) - fsdy * (u(i,j) - u(i,j-1))) / (p(i-1,j-1) + p(i,j-1) + p(i,j) + p(i-1,j));
+          }
+      });
+
+      // Compute h
+      Kokkos::parallel_for("compute_h", Kokkos::RangePolicy<>(0, M), KOKKOS_LAMBDA(const int i) {
+          for (int j = 0; j < N; ++j) {
+            h(i,j) = p(i,j) + 0.25 * ( u(i+1,j) * u(i+1,j) + u(i,j) * u(i,j) + v(i,j+1) * v(i,j+1) + v(i,j) * v(i,j) );
+          }
       });
   
       // Periodic continuation
-
       Kokkos::parallel_for("periodic_top_bottom_cu_cv_z_h", Kokkos::RangePolicy<>(0,N), KOKKOS_LAMBDA(const int j) {
         cu(0,j) = cu(M,j);
         cv(M,j+1) = cv(0,j+1);
@@ -172,11 +192,12 @@ int main(int argc, char **argv) {
         h(i,N) = h(i,0);
       });
 
-      Kokkos::fence();
-      cu(0,N) = cu(M,0);
-      cv(M,0) = cv(0,N);
-      z(0,0) = z(M,N);
-      h(M,N) = h(0,0);
+      Kokkos::parallel_for("periodic_corner_cu_cv_z_h", Kokkos::RangePolicy<>(0, 1), KOKKOS_LAMBDA(const int) {
+        cu(0,N) = cu(M,0);
+        cv(M,0) = cv(0,N);
+        z(0,0) = z(M,N);
+        h(M,N) = h(0,0);
+      });
       
       // Compute new values u,v and p
 
@@ -184,10 +205,25 @@ int main(int argc, char **argv) {
       tdtsdx = tdt / dx;
       tdtsdy = tdt / dy;
 
-      Kokkos::parallel_for("compute_unew_vnew_pnew", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {M,N}), KOKKOS_LAMBDA(const int i, const int j) {
-          unew(i+1,j) = uold(i+1,j) + tdts8 * (z(i+1,j+1) + z(i+1,j)) * (cv(i+1,j+1) + cv(i,j+1) + cv(i,j) + cv(i+1,j)) - tdtsdx * (h(i+1,j) - h(i,j));
-          vnew(i,j+1) = vold(i,j+1) - tdts8 * (z(i+1,j+1) + z(i,j+1)) * (cu(i+1,j+1) + cu(i,j+1) + cu(i,j) + cu(i+1,j)) - tdtsdy * (h(i,j+1) - h(i,j));
-          pnew(i,j) = pold(i,j) - tdtsdx * (cu(i+1,j) - cu(i,j)) - tdtsdy * (cv(i,j+1) - cv(i,j));
+      // Compute unew
+      Kokkos::parallel_for("compute_unew", Kokkos::RangePolicy<>(1, M_LEN), KOKKOS_LAMBDA(const int i) {
+          for (int j = 0; j < N; ++j) {
+            unew(i,j) = uold(i,j) + tdts8 * (z(i,j+1) + z(i,j)) * (cv(i,j+1) + cv(i-1,j+1) + cv(i-1,j) + cv(i,j)) - tdtsdx * (h(i,j) - h(i-1,j));
+          }
+      });
+
+      // Compute vnew
+      Kokkos::parallel_for("compute_vnew", Kokkos::RangePolicy<>(0, M), KOKKOS_LAMBDA(const int i) {
+          for (int j = 1; j < N_LEN; ++j) {
+            vnew(i,j) = vold(i,j) - tdts8 * (z(i+1,j) + z(i,j)) * (cu(i+1,j) + cu(i,j) + cu(i,j-1) + cu(i+1,j-1)) - tdtsdy * (h(i,j) - h(i,j-1));
+          }
+      });
+
+      // Compute pnew
+      Kokkos::parallel_for("compute_pnew", Kokkos::RangePolicy<>(0, M), KOKKOS_LAMBDA(const int i) {
+          for (int j = 0; j < N; ++j) {
+            pnew(i,j) = pold(i,j) - tdtsdx * (cu(i+1,j) - cu(i,j)) - tdtsdy * (cv(i,j+1) - cv(i,j));
+          }
       });
 
       // Periodic continuation
@@ -204,11 +240,11 @@ int main(int argc, char **argv) {
         pnew(i,N) = pnew(i,0);
       });
 
-      Kokkos::fence();
-
-      unew(0,N) = unew(M,0);
-      vnew(M,0) = vnew(0,N);
-      pnew(M,N) = pnew(0,0);
+      Kokkos::parallel_for("periodic_corner_unew_vnew_pnew", Kokkos::RangePolicy<>(0, 1), KOKKOS_LAMBDA(const int) {
+        unew(0,N) = unew(M,0);
+        vnew(M,0) = vnew(0,N);
+        pnew(M,N) = pnew(0,0);
+      });
 
       time = time + dt;
 
@@ -216,11 +252,23 @@ int main(int argc, char **argv) {
 
       if ( ncycle > 1 ) {
 
-        Kokkos::parallel_for("time_smoothing", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
+        Kokkos::parallel_for("time_smoothing_u", Kokkos::RangePolicy<>(0,M_LEN), KOKKOS_LAMBDA(const int i) {
+          for (int j = 0; j < N_LEN; ++j) {
             uold(i,j) = u(i,j) + alpha * (unew(i,j) - 2. * u(i,j) + uold(i,j));
-            vold(i,j) = v(i,j) + alpha * (vnew(i,j) - 2. * v(i,j) + vold(i,j));
-            pold(i,j) = p(i,j) + alpha * (pnew(i,j) - 2. * p(i,j) + pold(i,j));
+          }
         });
+
+        Kokkos::parallel_for("time_smoothing_v", Kokkos::RangePolicy<>(0,M_LEN), KOKKOS_LAMBDA(const int i) {
+          for (int j = 0; j < N_LEN; ++j) {
+            vold(i,j) = v(i,j) + alpha * (vnew(i,j) - 2. * v(i,j) + vold(i,j));
+          }
+        });
+
+        Kokkos::parallel_for("time_smoothing_p", Kokkos::RangePolicy<>(0,M_LEN), KOKKOS_LAMBDA(const int i) {
+          for (int j = 0; j < N_LEN; ++j) {
+            pold(i,j) = p(i,j) + alpha * (pnew(i,j) - 2. * p(i,j) + pold(i,j));
+          }
+        }); 
 
         // Dependency
   #ifdef _COPY_
