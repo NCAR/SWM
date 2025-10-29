@@ -2,22 +2,20 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <cmath>
 #include <Kokkos_Core.hpp>
 
 #define MIN(x,y) ((x)>(y)?(y):(x))
 #define MAX(x,y) ((x)>(y)?(x):(y))
 
-#define TRUE 1
-#define FALSE 0
 #define M 256
 #define N 256
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define SIZE ((M_LEN)*(N_LEN))
 #define ITMAX 4000
-#define L_OUT TRUE
-#define VAL_OUT TRUE 
+#define L_OUT true 
+#define VAL_OUT true
 //#define _COPY_
 
 using ViewMatrixType = Kokkos::View<double**>;
@@ -83,8 +81,8 @@ int main(int argc, char **argv) {
 
     // Initial values of the stream function and p
     Kokkos::parallel_for("init_psi_p", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
-        psi(i,j) = a * sin((i + .5) * di) * sin((j + .5) * dj);
-        p(i,j) = pcf * (cos(2. * (i) * di) + cos(2. * (j) * dj)) + 50000.;
+        psi(i,j) = a * std::sin((i + .5) * di) * std::sin((j + .5) * dj);
+        p(i,j) = pcf * (std::cos(2. * (i) * di) + std::cos(2. * (j) * dj)) + 50000.;
     });
     
     // Initialize velocities
@@ -108,11 +106,11 @@ int main(int argc, char **argv) {
 
     u(0,N) = u(M,0);
     v(M,0) = v(0,N);
-    
+
     Kokkos::parallel_for("init_old_arrays", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
-        unew(i,j) = u(i,j);
-        vnew(i,j) = v(i,j);
-        pnew(i,j) = p(i,j);
+        uold(i,j) = u(i,j);
+        vold(i,j) = v(i,j);
+        pold(i,j) = p(i,j);
     });
 
     // Print initial values
@@ -128,25 +126,26 @@ int main(int argc, char **argv) {
       mnmin = MIN(M,N);
       printf(" initial diagonal elements of p\n");
       for (i=0; i<mnmin; i++) {
-        printf("%f ",p(i,j));
+        printf("%f ",p(i,i));
       }
       printf("\n initial diagonal elements of u\n");
       for (i=0; i<mnmin; i++) {
-        printf("%f ",u(i,j));
+        printf("%f ",u(i,i));
       }
       printf("\n initial diagonal elements of v\n");
       for (i=0; i<mnmin; i++) {
-        printf("%f ",v(i,j));
+        printf("%f ",v(i,i));
       }
       printf("\n");
     }
 
     // Start timer
     Kokkos::Timer timer;
+    time = 0.;
 
     // ** Start of time loop ** 
 
-    for (ncycle=1;ncycle<=ITMAX;ncycle++) {
+    for (ncycle=1;ncycle<=ITMAX;++ncycle) {
       
       // Compute capital u, capital v, z and h
 
@@ -297,7 +296,7 @@ int main(int argc, char **argv) {
     }
 
   }
-  
+
   // Finalize Kokkos
   Kokkos::finalize();
 
