@@ -15,10 +15,10 @@
 #define SIZE ((M_LEN)*(N_LEN))
 #define ITMAX 4000
 #define L_OUT true 
-#define VAL_OUT true
-//#define _COPY_
+#define VAL_OUT false
 
-using ViewMatrixType = Kokkos::View<double**>;
+using ViewMatrixType = Kokkos::View<double**, Kokkos::LayoutRight>;
+
 void write_to_file(ViewMatrixType array, int tM, int tN, const char *filename);
 void print_to_file(ViewMatrixType array, int tM, int tN, const char *filename);
 
@@ -125,15 +125,15 @@ int main(int argc, char **argv) {
 
       mnmin = MIN(M,N);
       printf(" initial diagonal elements of p\n");
-      for (i=0; i<mnmin; i++) {
+      for (int i=0; i<mnmin; i++) {
         printf("%f ",p(i,i));
       }
       printf("\n initial diagonal elements of u\n");
-      for (i=0; i<mnmin; i++) {
+      for (int i=0; i<mnmin; i++) {
         printf("%f ",u(i,i));
       }
       printf("\n initial diagonal elements of v\n");
-      for (i=0; i<mnmin; i++) {
+      for (int i=0; i<mnmin; i++) {
         printf("%f ",v(i,i));
       }
       printf("\n");
@@ -270,20 +270,11 @@ int main(int argc, char **argv) {
           }
         }); 
 
-        // Dependency
-  #ifdef _COPY_
-        Kokkos::parallel_for("copy_u_v_p_arrays", Kokkos::MDRangePolicy<Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
-            u(i,j) = unew(i,j);
-            v(i,j) = vnew(i,j);
-            p(i,j) = pnew(i,j);
-        });
-  #else
         // Swap the views
         Kokkos::fence();
         std::swap(u, unew);
         std::swap(v, vnew);
         std::swap(p, pnew);
-  #endif     
       }
       else {
         tdt = tdt + tdt;
@@ -325,15 +316,15 @@ int main(int argc, char **argv) {
 
       printf(" cycle number %d model time in hours %f\n", ITMAX, ptime);
       printf(" diagonal elements of p\n");
-      for (i=0; i<mnmin; i++) {
+      for (int i=0; i<mnmin; i++) {
         printf("%f ",pnew(i,i));
       }
       printf("\n diagonal elements of u\n");
-      for (i=0; i<mnmin; i++) {
+      for (int i=0; i<mnmin; i++) {
         printf("%f ",unew(i,i));
       }
       printf("\n diagonal elements of v\n");
-      for (i=0; i<mnmin; i++) {
+      for (int i=0; i<mnmin; i++) {
         printf("%f ",vnew(i,i));
       }
       printf("\n");
