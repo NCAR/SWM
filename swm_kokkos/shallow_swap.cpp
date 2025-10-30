@@ -30,23 +30,23 @@ int main(int argc, char **argv) {
 
     // Allocate a large contiguous block for all variables
     constexpr int num_vars = 14;
-    ViewMatrixType big_data("big_data", M_LEN, N_LEN * num_vars);
+    ViewMatrixType big_data("big_data", M_LEN * num_vars, N_LEN);
 
     // Create 2D views as subviews of big_data
     auto u    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(0, N_LEN));
-    auto v    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(N_LEN, 2 * N_LEN));
-    auto p    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(2 * N_LEN, 3 * N_LEN));
-    auto unew = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(3 * N_LEN, 4 * N_LEN));
-    auto vnew = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(4 * N_LEN, 5 * N_LEN));
-    auto pnew = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(5 * N_LEN, 6 * N_LEN));
-    auto uold = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(6 * N_LEN, 7 * N_LEN));
-    auto vold = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(7 * N_LEN, 8 * N_LEN));
-    auto pold = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(8 * N_LEN, 9 * N_LEN));
-    auto cu   = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(9 * N_LEN, 10 * N_LEN));
-    auto cv   = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(10 * N_LEN, 11 * N_LEN));
-    auto z    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(11 * N_LEN, 12 * N_LEN));
-    auto h    = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(12 * N_LEN, 13 * N_LEN));
-    auto psi  = Kokkos::subview(big_data, Kokkos::make_pair(0, M_LEN), Kokkos::make_pair(13 * N_LEN, 14 * N_LEN));
+    auto v    = Kokkos::subview(big_data, Kokkos::make_pair(M_LEN, 2 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto p    = Kokkos::subview(big_data, Kokkos::make_pair(2 * M_LEN, 3 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto unew = Kokkos::subview(big_data, Kokkos::make_pair(3 * M_LEN, 4 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto vnew = Kokkos::subview(big_data, Kokkos::make_pair(4 * M_LEN, 5 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto pnew = Kokkos::subview(big_data, Kokkos::make_pair(5 * M_LEN, 6 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto uold = Kokkos::subview(big_data, Kokkos::make_pair(6 * M_LEN, 7 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto vold = Kokkos::subview(big_data, Kokkos::make_pair(7 * M_LEN, 8 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto pold = Kokkos::subview(big_data, Kokkos::make_pair(8 * M_LEN, 9 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto cu   = Kokkos::subview(big_data, Kokkos::make_pair(9 * M_LEN, 10 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto cv   = Kokkos::subview(big_data, Kokkos::make_pair(10 * M_LEN, 11 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto z    = Kokkos::subview(big_data, Kokkos::make_pair(11 * M_LEN, 12 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto h    = Kokkos::subview(big_data, Kokkos::make_pair(12 * M_LEN, 13 * M_LEN), Kokkos::make_pair(0, N_LEN));
+    auto psi  = Kokkos::subview(big_data, Kokkos::make_pair(13 * M_LEN, 14 * M_LEN), Kokkos::make_pair(0, N_LEN));
 
     double dt,tdt,dx,dy,a,alpha,el,pi;
     double tpi,di,dj,pcf;
