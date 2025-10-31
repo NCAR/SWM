@@ -15,7 +15,7 @@
 #define SIZE ((M_LEN)*(N_LEN))
 #define ITMAX 4000
 #define L_OUT true 
-#define VAL_OUT true
+#define VAL_OUT false
 
 using Layout = Kokkos::LayoutRight;
 using ExecSpace = Kokkos::DefaultExecutionSpace;
@@ -314,18 +314,13 @@ int main(int argc, char **argv) {
       std::swap(p, pnew);
     } // ** End of time loop ** 
 
-    // copy/swap the latest values after swap for printing
-    if constexpr (!std::is_same_v<MemSpace, Kokkos::HostSpace>) {
-      Kokkos::deep_copy(u_host, u);
-      Kokkos::deep_copy(v_host, v);
-      Kokkos::deep_copy(p_host, p);
-      printf("Deep copy to host views completed.\n");
-    } else {
-      // std::swap(u_host, u);
-      // std::swap(v_host, v);
-      // std::swap(p_host, p);
-      printf("Swap host views completed.\n");
-    }
+    // Try to use `if constexpr (!std::is_same_v<MemSpace, Kokkos::HostSpace>)` to use swap function
+    //   for the host space, but somehow it is not compiled correctly for the device space.
+    // Just use deep_copy for both spaces.
+    Kokkos::deep_copy(u_host, u);
+    Kokkos::deep_copy(v_host, v);
+    Kokkos::deep_copy(p_host, p);
+
     // Output p, u, v fields and run times.
     if(VAL_OUT) {
       write_to_file(p_host, M_LEN, N_LEN, "p.bin");
