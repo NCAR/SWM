@@ -22,6 +22,8 @@ using ExecSpace = Kokkos::DefaultExecutionSpace;
 using MemSpace = ExecSpace::memory_space;
 using ViewMatrixType = Kokkos::View<double**, Layout, MemSpace>;
 using HostViewMatrixType = Kokkos::View<double**, Layout, Kokkos::HostSpace>;
+using teamPolicy = Kokkos::TeamPolicy<ExecSpace>;
+using memberType = teamPolicy::member_type;
 
 void write_to_file(auto array, int tM, int tN, const char *filename);
 void print_to_file(auto array, int tM, int tN, const char *filename);
@@ -84,37 +86,48 @@ int main(int argc, char **argv) {
     pcf = pi * pi * a * a / (el * el);
 
     // Initial values of the stream function and p
-    Kokkos::parallel_for("init_psi_p", Kokkos::MDRangePolicy<ExecSpace, Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
-        psi(i,j) = a * std::sin((i + .5) * di) * std::sin((j + .5) * dj);
-        p(i,j) = pcf * (std::cos(2. * (i) * di) + std::cos(2. * (j) * dj)) + 50000.;
+    Kokkos::parallel_for("init_psi_p", teamPolicy(M_LEN, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+        const int i = team.league_rank();
+        Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N_LEN), [&](const int j) {
+            psi(i,j) = a * std::sin((i + .5) * di) * std::sin((j + .5) * dj);
+            p(i,j) = pcf * (std::cos(2. * (i) * di) + std::cos(2. * (j) * dj)) + 50000.;
+        });
     });
     
     // Initialize velocities
-    Kokkos::parallel_for("init_u_v", Kokkos::MDRangePolicy<ExecSpace, Kokkos::Rank<2>>({0,0}, {M,N}), KOKKOS_LAMBDA(const int i, const int j) {
-        u(i+1,j) = -(psi(i+1,j+1) - psi(i+1,j)) / dy;
-        v(i,j+1) = (psi(i+1,j+1) - psi(i,j+1)) / dx;
+    Kokkos::parallel_for("init_u_v", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+        const int i = team.league_rank();
+        Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N), [&](const int j) {
+            u(i+1,j) = -(psi(i+1,j+1) - psi(i+1,j)) / dy;
+            v(i,j+1) = (psi(i+1,j+1) - psi(i,j+1)) / dx;
+        });
     });
       
     // Periodic continuation
-    Kokkos::parallel_for("periodic_top_bottom_init", Kokkos::RangePolicy<ExecSpace>(0,N), KOKKOS_LAMBDA(const int j) {
+    Kokkos::parallel_for("periodic_top_bottom_init", teamPolicy(N, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+      const int j = team.league_rank();
       u(0,j) = u(M,j);
       v(M,j+1) = v(0,j+1);
     });
 
-    Kokkos::parallel_for("periodic_left_right_init", Kokkos::RangePolicy<ExecSpace>(0,M), KOKKOS_LAMBDA(const int i) {
+    Kokkos::parallel_for("periodic_left_right_init", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+      const int i = team.league_rank();
       u(i+1,N) = u(i+1,0);
       v(i,0) = v(i,N);
     });
 
-    Kokkos::parallel_for("periodic_corners_init", Kokkos::RangePolicy<ExecSpace>(0,1), KOKKOS_LAMBDA(const int) {
+    Kokkos::parallel_for("periodic_corners_init", teamPolicy(1, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
       u(0,N) = u(M,0);
       v(M,0) = v(0,N);
     });
 
-    Kokkos::parallel_for("init_old_arrays", Kokkos::MDRangePolicy<ExecSpace, Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
+    Kokkos::parallel_for("init_old_arrays", teamPolicy(M_LEN, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+      const int i = team.league_rank();
+      Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N_LEN), [&](const int j) {
         uold(i,j) = u(i,j);
         vold(i,j) = v(i,j);
         pold(i,j) = p(i,j);
+      });
     });
 
     // Create host mirrors for output
@@ -163,55 +176,61 @@ int main(int argc, char **argv) {
       // Compute capital u, capital v, z and h
 
       // Compute cu
-      Kokkos::parallel_for("compute_cu", Kokkos::RangePolicy<ExecSpace>(1, M_LEN), KOKKOS_LAMBDA(const int i) {
-          for (int j = 0; j < N; ++j) {
+      Kokkos::parallel_for("compute_cu", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank() + 1;
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N), [&](const int j) {
             cu(i,j) = 0.5 * (p(i,j) + p(i-1,j)) * u(i,j);
-          }
+          });
       });
 
       // Compute cv
-      Kokkos::parallel_for("compute_cv", Kokkos::RangePolicy<ExecSpace>(0, M), KOKKOS_LAMBDA(const int i) {
-          for (int j = 1; j < N_LEN; ++j) {
+      Kokkos::parallel_for("compute_cv", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank();
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, 1, N_LEN), [&](const int j) {
             cv(i,j) = 0.5 * (p(i,j) + p(i,j-1)) * v(i,j);
-          }
+          });
       });
 
       // Compute z
-      Kokkos::parallel_for("compute_z", Kokkos::RangePolicy<ExecSpace>(1, M_LEN), KOKKOS_LAMBDA(const int i) {
-          for (int j = 1; j < N_LEN; ++j) {
+      Kokkos::parallel_for("compute_z", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank() + 1;
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, 1, N_LEN), [&](const int j) {
             z(i,j) = (fsdx * (v(i,j) - v(i-1,j)) - fsdy * (u(i,j) - u(i,j-1))) / (p(i-1,j-1) + p(i,j-1) + p(i,j) + p(i-1,j));
-          }
+          });
       });
 
       // Compute h
-      Kokkos::parallel_for("compute_h", Kokkos::RangePolicy<ExecSpace>(0, M), KOKKOS_LAMBDA(const int i) {
-          for (int j = 0; j < N; ++j) {
-            h(i,j) = p(i,j) + 0.25 * ( u(i+1,j) * u(i+1,j) + u(i,j) * u(i,j) + v(i,j+1) * v(i,j+1) + v(i,j) * v(i,j) );
-          }
+      Kokkos::parallel_for("compute_h", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank();
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N), [&](const int j) {
+            h(i,j) = p(i,j) + 0.25 * (u(i+1,j) * u(i+1,j) + u(i,j) * u(i,j) + v(i,j+1) * v(i,j+1) + v(i,j) * v(i,j));
+          });
       });
   
       // Periodic continuation
-      Kokkos::parallel_for("periodic_top_bottom_cu_cv_z_h", Kokkos::RangePolicy<ExecSpace>(0,N), KOKKOS_LAMBDA(const int j) {
+      Kokkos::parallel_for("periodic_top_bottom_cu_cv_z_h", teamPolicy(N, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+        const int j = team.league_rank();
         cu(0,j) = cu(M,j);
         cv(M,j+1) = cv(0,j+1);
         z(0,j+1) = z(M,j+1);
         h(M,j) = h(0,j);
       });
 
-      Kokkos::parallel_for("periodic_left_right_cu_cv_z_h", Kokkos::RangePolicy<ExecSpace>(0,M), KOKKOS_LAMBDA(const int i) {
+      Kokkos::parallel_for("periodic_left_right_cu_cv_z_h", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+        const int i = team.league_rank();
         cu(i+1,N) = cu(i+1,0);
         cv(i,0) = cv(i,N);
         z(i+1,0) = z(i+1,N);
         h(i,N) = h(i,0);
       });
 
-      Kokkos::parallel_for("periodic_corner_cu_cv_z_h", Kokkos::RangePolicy<ExecSpace>(0, 1), KOKKOS_LAMBDA(const int) {
+      Kokkos::parallel_for("periodic_corner_cu_cv_z_h", teamPolicy(1, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
         cu(0,N) = cu(M,0);
         cv(M,0) = cv(0,N);
         z(0,0) = z(M,N);
         h(M,N) = h(0,0);
       });
-      
+
       // Compute new values u,v and p
 
       tdts8 = tdt / 8.;
@@ -219,41 +238,45 @@ int main(int argc, char **argv) {
       tdtsdy = tdt / dy;
 
       // Compute unew
-      Kokkos::parallel_for("compute_unew", Kokkos::RangePolicy<ExecSpace>(1, M_LEN), KOKKOS_LAMBDA(const int i) {
-          for (int j = 0; j < N; ++j) {
+      Kokkos::parallel_for("compute_unew", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank() + 1;
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N), [&](const int j) {
             unew(i,j) = uold(i,j) + tdts8 * (z(i,j+1) + z(i,j)) * (cv(i,j+1) + cv(i-1,j+1) + cv(i-1,j) + cv(i,j)) - tdtsdx * (h(i,j) - h(i-1,j));
-          }
+          });
       });
 
       // Compute vnew
-      Kokkos::parallel_for("compute_vnew", Kokkos::RangePolicy<ExecSpace>(0, M), KOKKOS_LAMBDA(const int i) {
-          for (int j = 1; j < N_LEN; ++j) {
+      Kokkos::parallel_for("compute_vnew", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank();
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, 1, N_LEN), [&](const int j) {
             vnew(i,j) = vold(i,j) - tdts8 * (z(i+1,j) + z(i,j)) * (cu(i+1,j) + cu(i,j) + cu(i,j-1) + cu(i+1,j-1)) - tdtsdy * (h(i,j) - h(i,j-1));
-          }
+          });
       });
 
       // Compute pnew
-      Kokkos::parallel_for("compute_pnew", Kokkos::RangePolicy<ExecSpace>(0, M), KOKKOS_LAMBDA(const int i) {
-          for (int j = 0; j < N; ++j) {
+      Kokkos::parallel_for("compute_pnew", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank();
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N), [&](const int j) {
             pnew(i,j) = pold(i,j) - tdtsdx * (cu(i+1,j) - cu(i,j)) - tdtsdy * (cv(i,j+1) - cv(i,j));
-          }
+          });
       });
 
       // Periodic continuation
-
-      Kokkos::parallel_for("periodic_top_bottom_unew_vnew_pnew", Kokkos::RangePolicy<ExecSpace>(0,N), KOKKOS_LAMBDA(const int j) {
+      Kokkos::parallel_for("periodic_top_bottom_unew_vnew_pnew", teamPolicy(N, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+        const int j = team.league_rank();
         unew(0,j) = unew(M,j);
         vnew(M,j+1) = vnew(0,j+1);
         pnew(M,j) = pnew(0,j);
       });
 
-      Kokkos::parallel_for("periodic_left_right_unew_vnew_pnew", Kokkos::RangePolicy<ExecSpace>(0,M), KOKKOS_LAMBDA(const int i) {
+      Kokkos::parallel_for("periodic_left_right_unew_vnew_pnew", teamPolicy(M, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+        const int i = team.league_rank();
         unew(i+1,N) = unew(i+1,0);
         vnew(i,0) = vnew(i,N);
         pnew(i,N) = pnew(i,0);
       });
 
-      Kokkos::parallel_for("periodic_corner_unew_vnew_pnew", Kokkos::RangePolicy<ExecSpace>(0, 1), KOKKOS_LAMBDA(const int) {
+      Kokkos::parallel_for("periodic_corner_unew_vnew_pnew", teamPolicy(1, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
         unew(0,N) = unew(M,0);
         vnew(M,0) = vnew(0,N);
         pnew(M,N) = pnew(0,0);
@@ -264,30 +287,36 @@ int main(int argc, char **argv) {
       // Time smoothing and update for next cycle
 
       if ( ncycle > 1 ) {
-        Kokkos::parallel_for("time_smoothing_u", Kokkos::RangePolicy<ExecSpace>(0,M_LEN), KOKKOS_LAMBDA(const int i) {
-          for (int j = 0; j < N_LEN; ++j) {
+        Kokkos::parallel_for("time_smoothing_u", teamPolicy(M_LEN, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank();
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N_LEN), [&](const int j) {
             uold(i,j) = u(i,j) + alpha * (unew(i,j) - 2. * u(i,j) + uold(i,j));
-          }
+          });
         });
 
-        Kokkos::parallel_for("time_smoothing_v", Kokkos::RangePolicy<ExecSpace>(0,M_LEN), KOKKOS_LAMBDA(const int i) {
-          for (int j = 0; j < N_LEN; ++j) {
+        Kokkos::parallel_for("time_smoothing_v", teamPolicy(M_LEN, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank();
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N_LEN), [&](const int j) {
             vold(i,j) = v(i,j) + alpha * (vnew(i,j) - 2. * v(i,j) + vold(i,j));
-          }
+          });
         });
 
-        Kokkos::parallel_for("time_smoothing_p", Kokkos::RangePolicy<ExecSpace>(0,M_LEN), KOKKOS_LAMBDA(const int i) {
-          for (int j = 0; j < N_LEN; ++j) {
+        Kokkos::parallel_for("time_smoothing_p", teamPolicy(M_LEN, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+          const int i = team.league_rank();
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N_LEN), [&](const int j) {
             pold(i,j) = p(i,j) + alpha * (pnew(i,j) - 2. * p(i,j) + pold(i,j));
-          }
-        }); 
+          });
+        });
       }
       else {
         tdt = tdt + tdt;
-        Kokkos::parallel_for("first_cycle_copy", Kokkos::MDRangePolicy<ExecSpace, Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
-            uold(i,j) = u(i,j);
-            vold(i,j) = v(i,j);
-            pold(i,j) = p(i,j);
+        Kokkos::parallel_for("first_cycle_copy", teamPolicy(M_LEN, Kokkos::AUTO), KOKKOS_LAMBDA(const memberType& team) {
+            const int i = team.league_rank();
+            Kokkos::parallel_for(Kokkos::TeamThreadRange(team, N_LEN), [&](const int j) {
+              uold(i,j) = u(i,j);
+              vold(i,j) = v(i,j);
+              pold(i,j) = p(i,j);
+            });
         });
       }
       if constexpr (!std::is_same_v<MemSpace, Kokkos::HostSpace>) {
