@@ -317,23 +317,9 @@ int main(int argc, char **argv) {
             pold(i,j) = p(i,j);
         });
       }
+      // My test shows it is better to use fence and then swap for device views, rather than doing a device copy without fence.
       if constexpr (!std::is_same_v<MemSpace, Kokkos::HostSpace>) {
         Kokkos::fence();
-        Kokkos::parallel_for("swap_device_u_unew_views", Kokkos::MDRangePolicy<ExecSpace, Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
-            auto temp = u(i,j);
-            u(i,j) = unew(i,j);
-            unew(i,j) = temp;
-        });
-        Kokkos::parallel_for("swap_device_v_vnew_views", Kokkos::MDRangePolicy<ExecSpace, Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
-            auto temp = v(i,j);
-            v(i,j) = vnew(i,j);
-            vnew(i,j) = temp;
-        });
-        Kokkos::parallel_for("swap_device_p_pnew_views", Kokkos::MDRangePolicy<ExecSpace, Kokkos::Rank<2>>({0,0}, {M_LEN,N_LEN}), KOKKOS_LAMBDA(const int i, const int j) {
-            auto temp = p(i,j);
-            p(i,j) = pnew(i,j);
-            pnew(i,j) = temp;
-        });
       }      
       // Swap the views
       std::swap(u, unew);
