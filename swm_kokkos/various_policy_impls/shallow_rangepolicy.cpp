@@ -8,7 +8,7 @@
 #define MIN(x,y) ((x)>(y)?(y):(x))
 #define MAX(x,y) ((x)>(y)?(x):(y))
 
-#define M 256
+#define M 128
 #define N 256
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
