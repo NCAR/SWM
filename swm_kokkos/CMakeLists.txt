@@ -11,3 +11,4 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -g")
 
 add_subdirectory(various_policy_impls)
+add_subdirectory(kokkos_fortran_openacc)
