@@ -9,18 +9,18 @@
 #define MIN(x,y) ((x)>(y)?(y):(x))
 #define MAX(x,y) ((x)>(y)?(x):(y))
 
-#define M 4
+#define M 256
 #define N M
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
-#define ITMAX 1
+#define ITMAX 4000
 #define L_OUT true 
 #define VAL_OUT true
 
 using Layout = Kokkos::LayoutLeft;
 using ExecSpace = Kokkos::DefaultExecutionSpace;
 using MemSpace = ExecSpace::memory_space;
-using ViewMatrixType = Kokkos::View<double**, Layout, MemSpace>;
+using ViewMatrixType = Kokkos::View<double**, Layout, MemSpace, Kokkos::MemoryTraits<Kokkos::Restrict>>;
 using HostViewMatrixType = Kokkos::View<double**, Layout, Kokkos::HostSpace>;
 
 void write_to_file(auto array, int tM, int tN, const char *filename);
@@ -220,6 +220,15 @@ int main(int argc, char **argv) {
                       M_LEN, N_LEN, M, N, fsdx, fsdy,
                       dx, dy, alpha, tdt, time, ITMAX);
 
+    // If ITMAX is odd, the valid data resides in the 'new' buffers
+    // (unew, vnew, pnew). We must swap the C++ Views to match the
+    // final state of the Fortran pointers.
+    if (ITMAX % 2 == 1) {
+      std::swap(u, unew);
+      std::swap(v, vnew);
+      std::swap(p, pnew);
+    }
+
     // Try to use `if constexpr (!std::is_same_v<MemSpace, Kokkos::HostSpace>)` to use swap function
     //   for the host space, but somehow it is not compiled correctly for the device space.
     // Just use deep_copy for both spaces.
@@ -227,7 +236,7 @@ int main(int argc, char **argv) {
     Kokkos::deep_copy(v_host, v);
     Kokkos::deep_copy(p_host, p);
 
-    // Output p, u, v fields and run times.
+    // Output p, u, v fields and run times.q
     if(VAL_OUT) {
       write_to_file(p_host, M_LEN, N_LEN, "p.bin");
       write_to_file(u_host, M_LEN, N_LEN, "u.bin");

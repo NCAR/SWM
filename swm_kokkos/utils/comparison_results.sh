@@ -10,7 +10,7 @@ conda activate npl
 
 # 2. Define the paths to the output files from both implementations
 path1="/glade/derecho/scratch/sunjian/SWM_KOKKOS_CUDA_BUILD/swm_c/c/"
-path2="/glade/derecho/scratch/sunjian/SWM_KOKKOS_CUDA_BUILD/swm_kokkos/"
+path2="/glade/derecho/scratch/sunjian/SWM_KOKKOS_CUDA_BUILD/swm_kokkos/kokkos_fortran_openacc/"
 
 # 3. Define output file names to compare
 file_lists=("p.txt" "u.txt" "v.txt")
