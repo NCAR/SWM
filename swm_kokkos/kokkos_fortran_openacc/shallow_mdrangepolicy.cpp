@@ -10,12 +10,12 @@
 #define MAX(x,y) ((x)>(y)?(x):(y))
 
 #define M 256
-#define N M
+#define N 256
 #define M_LEN (M + 1)
 #define N_LEN (N + 1)
 #define ITMAX 4000
 #define L_OUT true 
-#define VAL_OUT true
+#define VAL_OUT false
 
 using Layout = Kokkos::LayoutLeft;
 using ExecSpace = Kokkos::DefaultExecutionSpace;

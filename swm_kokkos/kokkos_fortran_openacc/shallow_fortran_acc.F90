@@ -64,7 +64,7 @@ contains
                 call first_cycle_copy(M_LEN, N_LEN, u_f_ptr, v_f_ptr, p_f_ptr, uold_f_ptr, &
                                       vold_f_ptr, pold_f_ptr)
             end if
-            !!!!! acc wait for async call !!!!!
+            !$acc wait(1)
             call dswap(u_f_ptr, unew_f_ptr)
             call dswap(v_f_ptr, vnew_f_ptr)
             call dswap(p_f_ptr, pnew_f_ptr)
@@ -82,7 +82,7 @@ contains
         ! Local variables
         integer :: i, j
 
-        !$acc parallel loop gang vector collapse(2) deviceptr(p,u,v,cu,cv,z,h)
+        !$acc parallel loop gang vector collapse(2) deviceptr(p,u,v,cu,cv,z,h) async(1)
         do j = 1, N
             do i = 1, M
                 cu(i+1,j) = 0.5d0 * (p(i+1,j) + p(i,j)) * u(i+1,j)
@@ -104,7 +104,7 @@ contains
         ! Local variables
         integer :: i, j
 
-        !$acc parallel loop gang vector deviceptr(cu,cv,z,h)
+        !$acc parallel loop gang vector deviceptr(cu,cv,z,h) async(1)
         do j = 1, N
             cu(1,j) = cu(M_LEN,j)
             cv(M_LEN,j+1) = cv(1,j+1)
@@ -113,7 +113,7 @@ contains
         end do
         !$acc end parallel
 
-        !$acc parallel loop gang vector deviceptr(cu,cv,z,h)
+        !$acc parallel loop gang vector deviceptr(cu,cv,z,h) async(1)
         do i = 1, M
             cu(i+1,N_LEN) = cu(i+1,1)
             cv(i,1) = cv(i,N_LEN)
@@ -122,7 +122,7 @@ contains
         end do
         !$acc end parallel
 
-        !$acc kernels deviceptr(cu,cv,z,h)
+        !$acc kernels deviceptr(cu,cv,z,h) async(1)
         cu(1,N_LEN) = cu(M_LEN,1)
         cv(M_LEN,1) = cv(1,N_LEN)
         z(1,1) = z(M_LEN,N_LEN)
@@ -141,7 +141,7 @@ contains
         ! Local variables
         integer :: i, j
 
-        !$acc parallel loop gang vector collapse(2) deviceptr(unew,vnew,pnew,uold,vold,pold,z,cu,cv,h)
+        !$acc parallel loop gang vector collapse(2) deviceptr(unew,vnew,pnew,uold,vold,pold,z,cu,cv,h) async(1)
         do j = 1, N
             do i = 1, M
                 unew(i+1,j) = uold(i+1,j) + &
@@ -164,7 +164,7 @@ contains
         ! Local variables
         integer :: i, j
 
-        !$acc parallel loop gang vector deviceptr(unew, vnew, pnew)
+        !$acc parallel loop gang vector deviceptr(unew, vnew, pnew) async(1)
         do j = 1, N
             unew(1,j) = unew(M_LEN,j)
             vnew(M_LEN,j+1) = vnew(1,j+1)
@@ -172,7 +172,7 @@ contains
         end do
         !$acc end parallel
 
-        !$acc parallel loop gang vector deviceptr(unew, vnew, pnew)
+        !$acc parallel loop gang vector deviceptr(unew, vnew, pnew) async(1)
         do i = 1, M
             unew(i+1,N_LEN) = unew(i+1,1)
             vnew(i,1) = vnew(i,N_LEN)
@@ -180,7 +180,7 @@ contains
         end do
         !$acc end parallel
 
-        !$acc kernels deviceptr(unew, vnew, pnew)
+        !$acc kernels deviceptr(unew, vnew, pnew) async(1)
         unew(1,N_LEN) = unew(M_LEN,1)
         vnew(M_LEN,1) = vnew(1,N_LEN)
         pnew(M_LEN,N_LEN) = pnew(1,1)
@@ -197,7 +197,7 @@ contains
         ! Local variables
         integer :: i, j
 
-        !$acc parallel loop gang vector collapse(2) deviceptr(u,unew,uold,v,vnew,vold,p,pnew,pold)
+        !$acc parallel loop gang vector collapse(2) deviceptr(u,unew,uold,v,vnew,vold,p,pnew,pold) async(1)
         do j = 1, N_LEN
             do i = 1, M_LEN
                 uold(i,j) = u(i,j) + alpha * (unew(i,j) - 2.d0 * u(i,j) + uold(i,j))
@@ -217,7 +217,7 @@ contains
         ! Local variables
         integer :: i, j
 
-        !$acc parallel loop gang vector collapse(2) deviceptr(u, v, p, uold, vold, pold)
+        !$acc parallel loop gang vector collapse(2) deviceptr(u, v, p, uold, vold, pold) async(1)
         do j = 1, N_LEN
             do i = 1, M_LEN
                 uold(i,j) = u(i,j)
