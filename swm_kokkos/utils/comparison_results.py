@@ -32,7 +32,7 @@ else:
     if (debug):
         print("Difference matrix:")
         print(diff)
-    if not np.sum(diff):
+    if np.all(diff == 0):
         print("Matrices are the same.")
     else:
         is_close = np.isclose(matrix1, matrix2, rtol=1e-10, atol=1e-18)
