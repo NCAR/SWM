@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
     Kokkos::deep_copy(v_host, v);
     Kokkos::deep_copy(p_host, p);
 
-    // Output p, u, v fields and run times.q
+    // Output p, u, v fields and run times.
     if(VAL_OUT) {
       write_to_file(p_host, M_LEN, N_LEN, "p.bin");
       write_to_file(u_host, M_LEN, N_LEN, "u.bin");
