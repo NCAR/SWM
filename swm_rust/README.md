@@ -71,4 +71,4 @@ Cargo does support a test suite if needed, however I don't envision using that f
 
 `swm_rust.rs` currently contains an example for timing. This should be comparable to how walltime is computed in the C examples.
 
-We will want to look for CUDA/GPU support crates eventually. 
+We will want to look for CUDA/GPU support crates eventually. See [NERSC docs](https://docs.nersc.gov/development/languages/rust/) for additional information on how to setup Rust to run efficiently on an HPC system. 
