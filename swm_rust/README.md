@@ -67,6 +67,8 @@ to the top of our `.rs` file and then use as we would any other Rust function.
 
 ## Performance related notes
 
+Cargo does support a test suite if needed, however I don't envision using that for performance testing work. 
+
 `swm_rust.rs` currently contains an example for timing. This should be comparable to how walltime is computed in the C examples.
 
 We will want to look for CUDA/GPU support crates eventually. 
