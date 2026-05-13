@@ -8,8 +8,3 @@ dependencies:
   - matplotlib
   - seaborn
   - jupyter
-
-
-# GPU install options below: 
-# pip install -U "jax[cuda13]"
-# pip install -U "jax[rocm7-local]"
