@@ -19,3 +19,5 @@ GPU install options below:
 ### Resources 
 
 [JAX documentation](https://docs.jax.dev/en/latest/notebooks/thinking_in_jax.html)
+
+[JAX discussion on speed](https://github.com/jax-ml/jax/discussions/11078)
