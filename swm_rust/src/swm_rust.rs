@@ -3,6 +3,7 @@
 // use std::env;
 
 use std::f64::consts;
+use std::mem;
 
 // Utils is a helper module that contains some utility functions in src/utils.rs
 mod utils;
@@ -43,20 +44,20 @@ fn main() {
     // Define Solution Arrays
     // -----------------------------------------------------------------------
 
-    let mut u: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut v: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut p: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut unew: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut vnew: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut pnew: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut uold: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut vold: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut pold: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut cu: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut cv: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut z: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut h: [f64; TOT_LEN] = [0.0; TOT_LEN];
-    let mut psi: [f64; TOT_LEN] = [0.0; TOT_LEN];
+    let mut u: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut v: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut p: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut unew: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut vnew: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut pnew: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut uold: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut vold: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut pold: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut cu: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut cv: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut z: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut h: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut psi: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
 
     // -----------------------------------------------------------------------
     // Initialize Data
@@ -149,24 +150,24 @@ fn main() {
             smooth_update_old_vars(&u, &v, &p, &unew, &vnew, &pnew, &mut uold, &mut vold, &mut pold, alpha);
 
             // update u, v, and p to new solution
-            u.copy_from_slice(&unew);
-            v.copy_from_slice(&vnew);
-            p.copy_from_slice(&pnew);
+            mem::swap(&mut u, &mut unew);
+            mem::swap(&mut v, &mut vnew);
+            mem::swap(&mut p, &mut pnew);
         } else {
             // update tdt for subsequent timesteps
             tdt = tdt + tdt;
 
             // no smoothing for first timestep
             // this might be redundant
-            uold.copy_from_slice(&u);
-            vold.copy_from_slice(&v);
-            pold.copy_from_slice(&p);
+            mem::swap(&mut uold, &mut u);
+            mem::swap(&mut vold, &mut v);
+            mem::swap(&mut pold, &mut p);
 
             // update u, v, and p to new solution
             // might be able to take out of if statement
-            u.copy_from_slice(&unew);
-            v.copy_from_slice(&vnew);
-            p.copy_from_slice(&pnew);
+            mem::swap(&mut u, &mut unew);
+            mem::swap(&mut v, &mut vnew);
+            mem::swap(&mut p, &mut pnew);
         }
     }
 

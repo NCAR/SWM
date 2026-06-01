@@ -24,7 +24,7 @@ pub fn ij_to_idx(i: usize, j: usize) -> usize {
     i*N_LEN + j
 }
 
-pub fn apply_uv_bcs(u: &mut [f64], v: &mut [f64]) {
+pub fn apply_uv_bcs(u: &mut Box<[f64]>, v: &mut Box<[f64]>) {
     for j in 0..N {
         u[ij_to_idx(0,j)] = u[ij_to_idx(M,j)];
         v[ij_to_idx(M,j+1)] = v[ij_to_idx(0,j+1)];
@@ -39,7 +39,7 @@ pub fn apply_uv_bcs(u: &mut [f64], v: &mut [f64]) {
     v[ij_to_idx(M,0)] = v[ij_to_idx(0,N)];
 }
 
-pub fn update_intermed_vars(u: &[f64], v: &[f64], p: &[f64], fsdx: f64, fsdy: f64, cu: &mut [f64], cv: &mut [f64], z: &mut [f64], h: &mut [f64]) {
+pub fn update_intermed_vars(u: &Box<[f64]>, v: &Box<[f64]>, p: &Box<[f64]>, fsdx: f64, fsdy: f64, cu: &mut Box<[f64]>, cv: &mut Box<[f64]>, z: &mut Box<[f64]>, h: &mut Box<[f64]>) {
     let mut idx00: usize;
     let mut idx01: usize;
     let mut idx10: usize;
@@ -58,7 +58,7 @@ pub fn update_intermed_vars(u: &[f64], v: &[f64], p: &[f64], fsdx: f64, fsdy: f6
     }
 }
 
-pub fn apply_intermed_bcs(cu: &mut [f64], cv: &mut [f64], z: &mut [f64], h: &mut [f64]) {
+pub fn apply_intermed_bcs(cu: &mut Box<[f64]>, cv: &mut Box<[f64]>, z: &mut Box<[f64]>, h: &mut Box<[f64]>) {
     for j in 0..N {
         cu[ij_to_idx(0,j)] = cu[ij_to_idx(M,j)];
         cv[ij_to_idx(M,j+1)] = cv[ij_to_idx(0,j+1)];
@@ -79,7 +79,7 @@ pub fn apply_intermed_bcs(cu: &mut [f64], cv: &mut [f64], z: &mut [f64], h: &mut
     h[M*N_LEN+N] = h[0];
 }
 
-pub fn time_update_new_vars(uold: &[f64], vold: &[f64], pold: &[f64], cu: &[f64], cv: &[f64], z: &[f64], h: &[f64], tdts8: f64, tdtsdx: f64, tdtsdy: f64, unew: &mut [f64], vnew: &mut [f64], pnew: &mut [f64]) {
+pub fn time_update_new_vars(uold: &Box<[f64]>, vold: &Box<[f64]>, pold: &Box<[f64]>, cu: &Box<[f64]>, cv: &Box<[f64]>, z: &Box<[f64]>, h: &Box<[f64]>, tdts8: f64, tdtsdx: f64, tdtsdy: f64, unew: &mut Box<[f64]>, vnew: &mut Box<[f64]>, pnew: &mut Box<[f64]>) {
     let mut idx00: usize;
     let mut idx01: usize;
     let mut idx10: usize;
@@ -97,7 +97,7 @@ pub fn time_update_new_vars(uold: &[f64], vold: &[f64], pold: &[f64], cu: &[f64]
     }
 }
 
-pub fn apply_uvp_bcs(u: &mut [f64], v: &mut [f64], p: &mut [f64]) {
+pub fn apply_uvp_bcs(u: &mut Box<[f64]>, v: &mut Box<[f64]>, p: &mut Box<[f64]>) {
     for j in 0..N {
         u[ij_to_idx(0,j)] = u[ij_to_idx(M,j)];
         v[ij_to_idx(M,j+1)] = v[ij_to_idx(0,j+1)];
@@ -115,7 +115,7 @@ pub fn apply_uvp_bcs(u: &mut [f64], v: &mut [f64], p: &mut [f64]) {
     p[ij_to_idx(M,N)] = p[ij_to_idx(0,0)];
 }
 
-pub fn smooth_update_old_vars(u: &[f64], v: &[f64], p: &[f64], unew: &[f64], vnew: &[f64], pnew: &[f64], uold: &mut [f64], vold: &mut [f64], pold: &mut [f64], alpha: f64) {
+pub fn smooth_update_old_vars(u: &Box<[f64]>, v: &Box<[f64]>, p: &Box<[f64]>, unew: &Box<[f64]>, vnew: &Box<[f64]>, pnew: &Box<[f64]>, uold: &mut Box<[f64]>, vold: &mut Box<[f64]>, pold: &mut Box<[f64]>, alpha: f64) {
     let mut idx: usize;
     for i in 0..M_LEN {
         for j in 0..N_LEN {
@@ -127,7 +127,7 @@ pub fn smooth_update_old_vars(u: &[f64], v: &[f64], p: &[f64], unew: &[f64], vne
     }
 }
 
-pub fn print_data_to_file(pathname: &str, data: &[f64]) {
+pub fn print_data_to_file(pathname: &str, data: &Box<[f64]>) {
     // define path and display
     let path = Path::new(pathname);
     let display = path.display();
