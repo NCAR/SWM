@@ -121,7 +121,7 @@ fn main() {
     // -----------------------------------------------------------------------
     // Time Marching Loop
     // -----------------------------------------------------------------------
-
+let start = Instant::now();
     for ncycle in 1..=ITMAX { // fix
         // compute intermediate variables cu, cv, z, and h using u, v, and p
         update_intermed_vars(&u, &v, &p, fsdx, fsdy, &mut cu, &mut cv, &mut z, &mut h);
@@ -164,19 +164,20 @@ fn main() {
             mem::swap(&mut p, &mut pnew);
         }
     }
-
+let elapsed_time = start.elapsed();
+println!("Elapsed time: {:?}", elapsed_time.as_secs_f64());
     // -----------------------------------------------------------------------
     // End
     // -----------------------------------------------------------------------
     
     // print data to txt files
-    // print_data_to_file("cu_rust.txt", &cu);
-    // print_data_to_file("cv_rust.txt", &cv);
-    // print_data_to_file("z_rust.txt", &z);
-    // print_data_to_file("h_rust.txt", &h);
-    // print_data_to_file("u_rust.txt", &u);
-    // print_data_to_file("v_rust.txt", &v);
-    // print_data_to_file("p_rust.txt", &p);
+    print_data_to_file("cu_rust.txt", &cu);
+    print_data_to_file("cv_rust.txt", &cv);
+    print_data_to_file("z_rust.txt", &z);
+    print_data_to_file("h_rust.txt", &h);
+    print_data_to_file("u_rust.txt", &u);
+    print_data_to_file("v_rust.txt", &v);
+    print_data_to_file("p_rust.txt", &p);
 
 
     // code for arg parsing and timing
