@@ -40,16 +40,12 @@ pub fn apply_uv_bcs(u: &mut Box<[f64]>, v: &mut Box<[f64]>) {
 }
 
 pub fn update_intermed_vars(u: &Box<[f64]>, v: &Box<[f64]>, p: &Box<[f64]>, fsdx: f64, fsdy: f64, cu: &mut Box<[f64]>, cv: &mut Box<[f64]>, z: &mut Box<[f64]>, h: &mut Box<[f64]>) {
-    let mut idx00: usize;
-    let mut idx01: usize;
-    let mut idx10: usize;
-    let mut idx11: usize;
     for i in 0..M {
         for j in 0..N {
-            idx00 = ij_to_idx(i,j);
-            idx01 = ij_to_idx(i,j+1);
-            idx10 = ij_to_idx(i+1,j);
-            idx11 = ij_to_idx(i+1,j+1);
+            let idx00 = ij_to_idx(i,j);
+            let idx01 = ij_to_idx(i,j+1);
+            let idx10 = ij_to_idx(i+1,j);
+            let idx11 = ij_to_idx(i+1,j+1);
             cu[idx10] = 0.5 * (p[idx10] + p[idx00]) * u[idx10];
             cv[idx01] = 0.5 * (p[idx01] + p[idx00]) * v[idx01];
             z[idx11] = (fsdx * (v[idx11] - v[idx01]) - fsdy * (u[idx11] - u[idx10])) / (p[idx00] + p[idx10] + p[idx11] + p[idx01]);
@@ -80,16 +76,12 @@ pub fn apply_intermed_bcs(cu: &mut Box<[f64]>, cv: &mut Box<[f64]>, z: &mut Box<
 }
 
 pub fn time_update_new_vars(uold: &Box<[f64]>, vold: &Box<[f64]>, pold: &Box<[f64]>, cu: &Box<[f64]>, cv: &Box<[f64]>, z: &Box<[f64]>, h: &Box<[f64]>, tdts8: f64, tdtsdx: f64, tdtsdy: f64, unew: &mut Box<[f64]>, vnew: &mut Box<[f64]>, pnew: &mut Box<[f64]>) {
-    let mut idx00: usize;
-    let mut idx01: usize;
-    let mut idx10: usize;
-    let mut idx11: usize;
     for i in 0..M {
         for j in 0..N {
-            idx00 = ij_to_idx(i,j);
-            idx01 = ij_to_idx(i,j+1);
-            idx10 = ij_to_idx(i+1,j);
-            idx11 = ij_to_idx(i+1,j+1);
+            let idx00 = ij_to_idx(i,j);
+            let idx01 = ij_to_idx(i,j+1);
+            let idx10 = ij_to_idx(i+1,j);
+            let idx11 = ij_to_idx(i+1,j+1);
             unew[idx10] = uold[idx10] + tdts8 * (z[idx11] + z[idx10]) * (cv[idx11] + cv[idx01] + cv[idx00] + cv[idx10]) - tdtsdx * (h[idx10] - h[idx00]);
             vnew[idx01] = vold[idx01] - tdts8 * (z[idx11] + z[idx01]) * (cu[idx11] + cu[idx01] + cu[idx00] + cu[idx10]) - tdtsdy * (h[idx01] - h[idx00]);
             pnew[idx00] = pold[idx00] - tdtsdx * (cu[idx10] - cu[idx00]) - tdtsdy * (cv[idx01] - cv[idx00]);
@@ -116,10 +108,9 @@ pub fn apply_uvp_bcs(u: &mut Box<[f64]>, v: &mut Box<[f64]>, p: &mut Box<[f64]>)
 }
 
 pub fn smooth_update_old_vars(u: &Box<[f64]>, v: &Box<[f64]>, p: &Box<[f64]>, unew: &Box<[f64]>, vnew: &Box<[f64]>, pnew: &Box<[f64]>, uold: &mut Box<[f64]>, vold: &mut Box<[f64]>, pold: &mut Box<[f64]>, alpha: f64) {
-    let mut idx: usize;
     for i in 0..M_LEN {
         for j in 0..N_LEN {
-            idx = ij_to_idx(i,j);
+            let idx = ij_to_idx(i,j);
             uold[idx] = u[idx] + alpha * (unew[idx] - 2. * u[idx] + uold[idx]);
             vold[idx] = v[idx] + alpha * (vnew[idx] - 2. * v[idx] + vold[idx]);
             pold[idx] = p[idx] + alpha * (pnew[idx] - 2. * p[idx] + pold[idx]);

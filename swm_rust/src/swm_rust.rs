@@ -1,5 +1,5 @@
 // Timing and environment stuff 
-// use std::time::Instant;
+use std::time::Instant;
 // use std::env;
 
 use std::f64::consts;
@@ -34,12 +34,6 @@ fn main() {
     let dj: f64 = tpi / N as f64;
     let pcf: f64 = pi * pi * a * a / (el * el);
 
-    // indices
-    let mut idx: usize;
-    let mut idx01: usize;
-    let mut idx10: usize;
-    let mut idx11: usize;
-
     // -----------------------------------------------------------------------
     // Define Solution Arrays
     // -----------------------------------------------------------------------
@@ -66,7 +60,7 @@ fn main() {
     // initialize stream function psi and pressure p
     for i in 0..M_LEN {
         for j in 0..N_LEN {
-            idx = ij_to_idx(i,j); // [i][j]
+            let idx: usize = ij_to_idx(i,j); // [i][j]
             psi[idx] = a * ( ( (i as f64) + 0.5 ) * di ).sin() * ( ( (j as f64) + 0.5 ) * dj ).sin();
             p[idx] = pcf * ( ( 2.0 * (i as f64) * di ).cos() + ( 2.0 * (j as f64) * dj ).cos() ) + 50000.;
         }
@@ -75,9 +69,9 @@ fn main() {
     // initialize velocities u and v
     for i in 0..M {
         for j in 0..N {
-            idx01 = ij_to_idx(i,j+1); // [i][j+1]
-            idx10 = ij_to_idx(i+1,j); // [i+1][j]
-            idx11 = ij_to_idx(i+1,j+1); // [i+1][j+1]
+            let idx01: usize = ij_to_idx(i,j+1); // [i][j+1]
+            let idx10: usize = ij_to_idx(i+1,j); // [i+1][j]
+            let idx11: usize = ij_to_idx(i+1,j+1); // [i+1][j+1]
             u[idx10] = -(psi[idx11] - psi[idx10]) / dy;
             v[idx01] = (psi[idx11] - psi[idx01]) / dx;
         }
@@ -89,7 +83,7 @@ fn main() {
     // initialize old arrays
     for i in 0..M_LEN {
         for j in 0..N_LEN {
-            idx = ij_to_idx(i,j);
+            let idx: usize = ij_to_idx(i,j);
             uold[idx] = u[idx];
             vold[idx] = v[idx];
             pold[idx] = p[idx];
