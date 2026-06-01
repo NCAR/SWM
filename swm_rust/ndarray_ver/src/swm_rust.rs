@@ -122,7 +122,10 @@ fn main() {
     // -----------------------------------------------------------------------
     // Time Marching Loop
     // -----------------------------------------------------------------------
-let start = Instant::now();
+
+    // time loop
+    let start = Instant::now();
+
     for ncycle in 1..=ITMAX { // fix
         // compute intermediate variables cu, cv, z, and h using u, v, and p
         update_intermed_vars(&u, &v, &p, fsdx, fsdy, &mut cu, &mut cv, &mut z, &mut h);
@@ -165,8 +168,11 @@ let start = Instant::now();
             mem::swap(&mut p, &mut pnew);
         }
     }
-let elapsed_time = start.elapsed();
-println!("Elapsed time: {:?}", elapsed_time.as_secs_f64());
+
+    // end time
+    let elapsed_time = start.elapsed();
+    println!("Elapsed time: {:?}", elapsed_time.as_secs_f64());
+    
     // -----------------------------------------------------------------------
     // End
     // -----------------------------------------------------------------------
