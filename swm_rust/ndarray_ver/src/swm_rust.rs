@@ -119,16 +119,26 @@ fn main() {
     // print_data_to_file("vinit_rust.txt", &v);
     // print_data_to_file("pinit_rust.txt", &p);
 
+    // Start timer
+    let tstart = Instant::now(); 
+    let mut time = 0.;
+    let mut t100 = 0.;
+    let mut t200 = 0.;
+    let mut t300 = 0.;
+
     // -----------------------------------------------------------------------
     // Time Marching Loop
     // -----------------------------------------------------------------------
 
-    // time loop
-    let start = Instant::now();
+    for ncycle in 1..=ITMAX {
 
-    for ncycle in 1..=ITMAX { // fix
+        let mut c1 = tstart.elapsed().as_secs_f64();
+
         // compute intermediate variables cu, cv, z, and h using u, v, and p
         update_intermed_vars(&u, &v, &p, fsdx, fsdy, &mut cu, &mut cv, &mut z, &mut h);
+
+        let mut c2 = tstart.elapsed().as_secs_f64();
+        t100 = t100 + (c2 - c1);
 
         // apply periodic boundary conditions to intermediate variables
         apply_intermed_bcs(&mut cu, &mut cv, &mut z, &mut h);
@@ -137,13 +147,25 @@ fn main() {
         let tdts8 = tdt / 8.0;
         let tdtsdx = tdt / dx;
         let tdtsdy = tdt / dy;
+
+        c1 = tstart.elapsed().as_secs_f64();
+
         time_update_new_vars(&uold, &vold, &pold, &cu, &cv, &z, &h, tdts8, tdtsdx, tdtsdy, &mut unew, &mut vnew, &mut pnew);
         
+        c2 = tstart.elapsed().as_secs_f64();
+        t200 = t200 + (c2 - c1);
+
         // apply periodic boundary conitions to new variables
         apply_uvp_bcs(&mut unew, &mut vnew, &mut pnew);
 
+        // update time
+        time = time + dt;
+
         // update update old vars and solution
         if ncycle > 1 {
+
+            c1 = tstart.elapsed().as_secs_f64();
+
             // smooth old vars using time filter
             smooth_update_old_vars(&u, &v, &p, &unew, &vnew, &pnew, &mut uold, &mut vold, &mut pold, alpha);
 
@@ -151,6 +173,9 @@ fn main() {
             mem::swap(&mut u, &mut unew);
             mem::swap(&mut v, &mut vnew);
             mem::swap(&mut p, &mut pnew);
+
+            c2 = tstart.elapsed().as_secs_f64(); 
+            t300 = t300 + (c2 - c1);
         } else {
             // update tdt for subsequent timesteps
             tdt = tdt + tdt;
@@ -169,10 +194,41 @@ fn main() {
         }
     }
 
-    // end time
-    let elapsed_time = start.elapsed();
-    println!("Elapsed time: {:?}", elapsed_time.as_secs_f64());
-    
+    // End time
+    let ctime = tstart.elapsed().as_secs_f64();
+
+    let ptime = time / 3600.;
+
+    println!(" cycle number {:?} model time in hours {:?}\n", ITMAX, ptime);
+    // printf(" diagonal elements of p\n");
+    // for (i=0; i<mnmin; i++) {
+    //   printf("%f ",pnew[i*N_LEN+i]);
+    // }
+    // printf("\n diagonal elements of u\n");
+    // for (i=0; i<mnmin; i++) {
+    //   printf("%f ",unew[i*N_LEN+i]);
+    // }
+    // printf("\n diagonal elements of v\n");
+    // for (i=0; i<mnmin; i++) {
+    //   printf("%f ",vnew[i*N_LEN+i]);
+    // }
+    // printf("\n");
+
+    let mut mfs100 = 0.0;
+    let mut mfs200 = 0.0;
+    let mut mfs300 = 0.0;
+    // gdr t100 etc. now an accumulation of all l100 time
+    if t100 > 0. { mfs100 = ITMAX as f64 * 24. * M as f64 * N as f64 / t100 / 1000000.; }
+    if t200 > 0. { mfs200 = ITMAX as f64 * 26. * M as f64 * N as f64 / t200 / 1000000.; }
+    if t300 > 0. { mfs300 = ITMAX as f64 * 15. * M as f64 * N as f64 / t300 / 1000000.; }
+
+    let tcyc = ctime / ITMAX as f64;
+
+    println!(" cycle number {:?} total computer time {:?} time per cycle {:?}", ITMAX, ctime, tcyc);
+    println!(" time and megaflops for loop 100 {:?} {:?}", t100, mfs100);
+    println!(" time and megaflops for loop 200 {:?} {:?}", t200, mfs200);
+    println!(" time and megaflops for loop 300 {:?} {:?}", t300, mfs300);
+
     // -----------------------------------------------------------------------
     // End
     // -----------------------------------------------------------------------
