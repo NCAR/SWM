@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::path::Path;
 use std::io::prelude::*;
+use std::f64::consts;
 
 // declare constants
 pub const M: usize = 256;
@@ -8,20 +9,45 @@ pub const N: usize = 256;
 pub const M_LEN: usize = M+1;
 pub const N_LEN: usize = N+1;
 pub const TOT_LEN: usize = (M_LEN)*(N_LEN);
-pub const ITMAX: usize = 1000;
-
-// Below is a dummy variable to test stuff. 
-// pub fn rand_util(in_val: i32) -> f64 {
-//     let mut x = 0.0;
-//     for i in 0..in_val {
-//         x += (i as f64).sin() * (i as f64).cos();
-//     }
-//     // Default we return the last line that has no semicolon, but we can also use the return keyword if needed.
-//     x
-// }
+pub const ITMAX: usize = 4000;
+pub const VERBOSE: bool = false;  // print out initial and final values
+pub const TIMING: bool = true;    // print out timings
 
 pub fn ij_to_idx(i: usize, j: usize) -> usize {
     i*N_LEN + j
+}
+
+pub fn init_conds(u: &mut Box<[f64]>, v: &mut Box<[f64]>, p: &mut Box<[f64]>, dx: f64, dy: f64, a: f64) { 
+    // init psi
+    let mut psi: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+
+    // set params
+    let el: f64 = N as f64 * dx;
+    let pi = consts::PI;
+    let tpi: f64 = pi + pi;
+    let di: f64 = tpi / M as f64;
+    let dj: f64 = tpi / N as f64;
+    let pcf: f64 = pi * pi * a * a / (el * el);
+    
+    // initialize stream function psi and pressure p
+    for i in 0..M_LEN {
+        for j in 0..N_LEN {
+            let idx: usize = ij_to_idx(i,j); // [i][j]
+            psi[idx] = a * ( ( (i as f64) + 0.5 ) * di ).sin() * ( ( (j as f64) + 0.5 ) * dj ).sin();
+            p[idx] = pcf * ( ( 2.0 * (i as f64) * di ).cos() + ( 2.0 * (j as f64) * dj ).cos() ) + 50000.;
+        }
+    }
+
+    // initialize velocities u and v
+    for i in 0..M {
+        for j in 0..N {
+            let idx01: usize = ij_to_idx(i,j+1); // [i][j+1]
+            let idx10: usize = ij_to_idx(i+1,j); // [i+1][j]
+            let idx11: usize = ij_to_idx(i+1,j+1); // [i+1][j+1]
+            u[idx10] = -(psi[idx11] - psi[idx10]) / dy;
+            v[idx01] = (psi[idx11] - psi[idx01]) / dx;
+        }
+    }
 }
 
 pub fn apply_uv_bcs(u: &mut Box<[f64]>, v: &mut Box<[f64]>) {
