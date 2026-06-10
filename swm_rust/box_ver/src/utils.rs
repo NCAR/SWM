@@ -3,23 +3,12 @@ use std::path::Path;
 use std::io::prelude::*;
 use std::f64::consts;
 
-// declare constants
-pub const M: usize = 256;
-pub const N: usize = 256;
-pub const M_LEN: usize = M+1;
-pub const N_LEN: usize = N+1;
-pub const TOT_LEN: usize = (M_LEN)*(N_LEN);
-pub const ITMAX: usize = 4000;
-pub const VERBOSE: bool = false;  // print out initial and final values
-pub const TIMING: bool = true;    // print out timings
+use crate::consts::*;
+use crate::types::{Arr,idx,make_arr};
 
-pub fn ij_to_idx(i: usize, j: usize) -> usize {
-    i*N_LEN + j
-}
-
-pub fn init_conds(u: &mut Box<[f64]>, v: &mut Box<[f64]>, p: &mut Box<[f64]>, dx: f64, dy: f64, a: f64) { 
+pub fn init_conds(u: &mut Arr, v: &mut Arr, p: &mut Arr, dx: f64, dy: f64, a: f64) { 
     // init psi
-    let mut psi: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut psi: Arr = make_arr();
 
     // set params
     let el: f64 = N as f64 * dx;
@@ -32,119 +21,106 @@ pub fn init_conds(u: &mut Box<[f64]>, v: &mut Box<[f64]>, p: &mut Box<[f64]>, dx
     // initialize stream function psi and pressure p
     for i in 0..M_LEN {
         for j in 0..N_LEN {
-            let idx: usize = ij_to_idx(i,j); // [i][j]
-            psi[idx] = a * ( ( (i as f64) + 0.5 ) * di ).sin() * ( ( (j as f64) + 0.5 ) * dj ).sin();
-            p[idx] = pcf * ( ( 2.0 * (i as f64) * di ).cos() + ( 2.0 * (j as f64) * dj ).cos() ) + 50000.;
+            psi[idx(i,j)] = a * ( ( (i as f64) + 0.5 ) * di ).sin() * ( ( (j as f64) + 0.5 ) * dj ).sin();
+            p[idx(i,j)] = pcf * ( ( 2.0 * (i as f64) * di ).cos() + ( 2.0 * (j as f64) * dj ).cos() ) + 50000.;
         }
     }
 
     // initialize velocities u and v
     for i in 0..M {
         for j in 0..N {
-            let idx01: usize = ij_to_idx(i,j+1); // [i][j+1]
-            let idx10: usize = ij_to_idx(i+1,j); // [i+1][j]
-            let idx11: usize = ij_to_idx(i+1,j+1); // [i+1][j+1]
-            u[idx10] = -(psi[idx11] - psi[idx10]) / dy;
-            v[idx01] = (psi[idx11] - psi[idx01]) / dx;
+            u[idx(i+1,j)] = -(psi[idx(i+1,j+1)] - psi[idx(i+1,j)]) / dy;
+            v[idx(i,j+1)] = (psi[idx(i+1,j+1)] - psi[idx(i,j+1)]) / dx;
         }
     }
 }
 
-pub fn apply_uv_bcs(u: &mut Box<[f64]>, v: &mut Box<[f64]>) {
+pub fn apply_uv_bcs(u: &mut Arr, v: &mut Arr) {
     for j in 0..N {
-        u[ij_to_idx(0,j)] = u[ij_to_idx(M,j)];
-        v[ij_to_idx(M,j+1)] = v[ij_to_idx(0,j+1)];
+        u[idx(0,j)] = u[idx(M,j)];
+        v[idx(M,j+1)] = v[idx(0,j+1)];
     }
 
     for i in 0..M {
-        u[ij_to_idx(i+1,N)] = u[ij_to_idx(i+1,0)];
-        v[ij_to_idx(i,0)] = v[ij_to_idx(i,N)];
+        u[idx(i+1,N)] = u[idx(i+1,0)];
+        v[idx(i,0)] = v[idx(i,N)];
     }
 
-    u[ij_to_idx(0,N)] = u[ij_to_idx(M,0)];
-    v[ij_to_idx(M,0)] = v[ij_to_idx(0,N)];
+    u[idx(0,N)] = u[idx(M,0)];
+    v[idx(M,0)] = v[idx(0,N)];
 }
 
-pub fn update_intermed_vars(u: &Box<[f64]>, v: &Box<[f64]>, p: &Box<[f64]>, fsdx: f64, fsdy: f64, cu: &mut Box<[f64]>, cv: &mut Box<[f64]>, z: &mut Box<[f64]>, h: &mut Box<[f64]>) {
+pub fn update_intermed_vars(u: &Arr, v: &Arr, p: &Arr, fsdx: f64, fsdy: f64, cu: &mut Arr, cv: &mut Arr, z: &mut Arr, h: &mut Arr) {
     for i in 0..M {
         for j in 0..N {
-            let idx00 = ij_to_idx(i,j);
-            let idx01 = ij_to_idx(i,j+1);
-            let idx10 = ij_to_idx(i+1,j);
-            let idx11 = ij_to_idx(i+1,j+1);
-            cu[idx10] = 0.5 * (p[idx10] + p[idx00]) * u[idx10];
-            cv[idx01] = 0.5 * (p[idx01] + p[idx00]) * v[idx01];
-            z[idx11] = (fsdx * (v[idx11] - v[idx01]) - fsdy * (u[idx11] - u[idx10])) / (p[idx00] + p[idx10] + p[idx11] + p[idx01]);
-            h[idx00] = p[idx00] + 0.25 * (u[idx10] * u[idx10] + u[idx00] * u[idx00] + v[idx01] * v[idx01] + v[idx00] * v[idx00]);
+            cu[idx(i+1,j)] = 0.5 * (p[idx(i+1,j)] + p[idx(i,j)]) * u[idx(i+1,j)];
+            cv[idx(i,j+1)] = 0.5 * (p[idx(i,j+1)] + p[idx(i,j)]) * v[idx(i,j+1)];
+            z[idx(i+1,j+1)] = (fsdx * (v[idx(i+1,j+1)] - v[idx(i,j+1)]) - fsdy * (u[idx(i+1,j+1)] - u[idx(i+1,j)])) / (p[idx(i,j)] + p[idx(i+1,j)] + p[idx(i+1,j+1)] + p[idx(i,j+1)]);
+            h[idx(i,j)] = p[idx(i,j)] + 0.25 * (u[idx(i+1,j)] * u[idx(i+1,j)] + u[idx(i,j)] * u[idx(i,j)] + v[idx(i,j+1)] * v[idx(i,j+1)] + v[idx(i,j)] * v[idx(i,j)]);
         }
     }
 }
 
-pub fn apply_intermed_bcs(cu: &mut Box<[f64]>, cv: &mut Box<[f64]>, z: &mut Box<[f64]>, h: &mut Box<[f64]>) {
+pub fn apply_intermed_bcs(cu: &mut Arr, cv: &mut Arr, z: &mut Arr, h: &mut Arr) {
     for j in 0..N {
-        cu[ij_to_idx(0,j)] = cu[ij_to_idx(M,j)];
-        cv[ij_to_idx(M,j+1)] = cv[ij_to_idx(0,j+1)];
-        z[ij_to_idx(0,j+1)] = z[ij_to_idx(M,j+1)];
-        h[ij_to_idx(M,j)] = h[ij_to_idx(0,j)];
+        cu[idx(0,j)] = cu[idx(M,j)];
+        cv[idx(M,j+1)] = cv[idx(0,j+1)];
+        z[idx(0,j+1)] = z[idx(M,j+1)];
+        h[idx(M,j)] = h[idx(0,j)];
     }
     
     for i in 0..M {
-        cu[ij_to_idx(i+1,N)] = cu[ij_to_idx(i+1,0)];
-        cv[ij_to_idx(i,0)] = cv[ij_to_idx(i,N)];
-        z[ij_to_idx(i+1,0)] = z[ij_to_idx(i+1,N)];
-        h[ij_to_idx(i,N)] = h[ij_to_idx(i,0)];
+        cu[idx(i+1,N)] = cu[idx(i+1,0)];
+        cv[idx(i,0)] = cv[idx(i,N)];
+        z[idx(i+1,0)] = z[idx(i+1,N)];
+        h[idx(i,N)] = h[idx(i,0)];
     }
 
-    cu[N] = cu[M*N_LEN];
-    cv[M*N_LEN] = cv[N];
-    z[0] = z[M*N_LEN+N];
-    h[M*N_LEN+N] = h[0];
+    cu[idx(0,N)] = cu[idx(M,0)];
+    cv[idx(M,0)] = cv[idx(0,N)];
+    z[idx(0,0)] = z[idx(M,N)];
+    h[idx(M,N)] = h[idx(0,0)];
 }
 
-pub fn time_update_new_vars(uold: &Box<[f64]>, vold: &Box<[f64]>, pold: &Box<[f64]>, cu: &Box<[f64]>, cv: &Box<[f64]>, z: &Box<[f64]>, h: &Box<[f64]>, tdts8: f64, tdtsdx: f64, tdtsdy: f64, unew: &mut Box<[f64]>, vnew: &mut Box<[f64]>, pnew: &mut Box<[f64]>) {
+pub fn time_update_new_vars(uold: &Arr, vold: &Arr, pold: &Arr, cu: &Arr, cv: &Arr, z: &Arr, h: &Arr, tdts8: f64, tdtsdx: f64, tdtsdy: f64, unew: &mut Arr, vnew: &mut Arr, pnew: &mut Arr) {
     for i in 0..M {
         for j in 0..N {
-            let idx00 = ij_to_idx(i,j);
-            let idx01 = ij_to_idx(i,j+1);
-            let idx10 = ij_to_idx(i+1,j);
-            let idx11 = ij_to_idx(i+1,j+1);
-            unew[idx10] = uold[idx10] + tdts8 * (z[idx11] + z[idx10]) * (cv[idx11] + cv[idx01] + cv[idx00] + cv[idx10]) - tdtsdx * (h[idx10] - h[idx00]);
-            vnew[idx01] = vold[idx01] - tdts8 * (z[idx11] + z[idx01]) * (cu[idx11] + cu[idx01] + cu[idx00] + cu[idx10]) - tdtsdy * (h[idx01] - h[idx00]);
-            pnew[idx00] = pold[idx00] - tdtsdx * (cu[idx10] - cu[idx00]) - tdtsdy * (cv[idx01] - cv[idx00]);
+            unew[idx(i+1,j)] = uold[idx(i+1,j)] + tdts8 * (z[idx(i+1,j+1)] + z[idx(i+1,j)]) * (cv[idx(i+1,j+1)] + cv[idx(i,j+1)] + cv[idx(i,j)] + cv[idx(i+1,j)]) - tdtsdx * (h[idx(i+1,j)] - h[idx(i,j)]);
+            vnew[idx(i,j+1)] = vold[idx(i,j+1)] - tdts8 * (z[idx(i+1,j+1)] + z[idx(i,j+1)]) * (cu[idx(i+1,j+1)] + cu[idx(i,j+1)] + cu[idx(i,j)] + cu[idx(i+1,j)]) - tdtsdy * (h[idx(i,j+1)] - h[idx(i,j)]);
+            pnew[idx(i,j)] = pold[idx(i,j)] - tdtsdx * (cu[idx(i+1,j)] - cu[idx(i,j)]) - tdtsdy * (cv[idx(i,j+1)] - cv[idx(i,j)]);
         }
     }
 }
 
-pub fn apply_uvp_bcs(u: &mut Box<[f64]>, v: &mut Box<[f64]>, p: &mut Box<[f64]>) {
+pub fn apply_uvp_bcs(u: &mut Arr, v: &mut Arr, p: &mut Arr) {
     for j in 0..N {
-        u[ij_to_idx(0,j)] = u[ij_to_idx(M,j)];
-        v[ij_to_idx(M,j+1)] = v[ij_to_idx(0,j+1)];
-        p[ij_to_idx(M,j)] = p[ij_to_idx(0,j)];
+        u[idx(0,j)] = u[idx(M,j)];
+        v[idx(M,j+1)] = v[idx(0,j+1)];
+        p[idx(M,j)] = p[idx(0,j)];
     }
 
     for i in 0..M {
-        u[ij_to_idx(i+1,N)] = u[ij_to_idx(i+1,0)];
-        v[ij_to_idx(i,0)] = v[ij_to_idx(i,N)];
-        p[ij_to_idx(i,N)] = p[ij_to_idx(i,0)];
+        u[idx(i+1,N)] = u[idx(i+1,0)];
+        v[idx(i,0)] = v[idx(i,N)];
+        p[idx(i,N)] = p[idx(i,0)];
     }
 
-    u[ij_to_idx(0,N)] = u[ij_to_idx(M,0)];
-    v[ij_to_idx(M,0)] = v[ij_to_idx(0,N)];
-    p[ij_to_idx(M,N)] = p[ij_to_idx(0,0)];
+    u[idx(0,N)] = u[idx(M,0)];
+    v[idx(M,0)] = v[idx(0,N)];
+    p[idx(M,N)] = p[idx(0,0)];
 }
 
-pub fn smooth_update_old_vars(u: &Box<[f64]>, v: &Box<[f64]>, p: &Box<[f64]>, unew: &Box<[f64]>, vnew: &Box<[f64]>, pnew: &Box<[f64]>, uold: &mut Box<[f64]>, vold: &mut Box<[f64]>, pold: &mut Box<[f64]>, alpha: f64) {
+pub fn smooth_update_old_vars(u: &Arr, v: &Arr, p: &Arr, unew: &Arr, vnew: &Arr, pnew: &Arr, uold: &mut Arr, vold: &mut Arr, pold: &mut Arr, alpha: f64) {
     for i in 0..M_LEN {
         for j in 0..N_LEN {
-            let idx = ij_to_idx(i,j);
-            uold[idx] = u[idx] + alpha * (unew[idx] - 2. * u[idx] + uold[idx]);
-            vold[idx] = v[idx] + alpha * (vnew[idx] - 2. * v[idx] + vold[idx]);
-            pold[idx] = p[idx] + alpha * (pnew[idx] - 2. * p[idx] + pold[idx]);
+            uold[idx(i,j)] = u[idx(i,j)] + alpha * (unew[idx(i,j)] - 2. * u[idx(i,j)] + uold[idx(i,j)]);
+            vold[idx(i,j)] = v[idx(i,j)] + alpha * (vnew[idx(i,j)] - 2. * v[idx(i,j)] + vold[idx(i,j)]);
+            pold[idx(i,j)] = p[idx(i,j)] + alpha * (pnew[idx(i,j)] - 2. * p[idx(i,j)] + pold[idx(i,j)]);
         }
     }
 }
 
-pub fn print_data_to_file(pathname: &str, data: &Box<[f64]>) {
+pub fn print_data_to_file(pathname: &str, data: &Arr) {
     // define path and display
     let path = Path::new(pathname);
     let display = path.display();
@@ -159,7 +135,7 @@ pub fn print_data_to_file(pathname: &str, data: &Box<[f64]>) {
     let mut s = String::from("");
     for i in 0..M_LEN {
         for j in 0..N_LEN {
-            s += &format!("{:.6} ", data[ij_to_idx(i,j)]);
+            s += &format!("{:.6} ", data[idx(i,j)]);
         }
         s += "\n";
     }

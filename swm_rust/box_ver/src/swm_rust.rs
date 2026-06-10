@@ -5,7 +5,11 @@ use std::time::Instant;
 use std::mem;
 
 // Utils is a helper module that contains some utility functions in src/utils.rs
+mod consts;
+mod types;
 mod utils;
+use consts::*;
+use types::{Arr,idx,make_arr};
 use utils::*;
 
 fn main() {
@@ -30,19 +34,19 @@ fn main() {
     // Define Solution Arrays
     // -----------------------------------------------------------------------
 
-    let mut u: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut v: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut p: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut unew: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut vnew: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut pnew: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut uold: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut vold: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut pold: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut cu: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut cv: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut z: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
-    let mut h: Box<[f64]> = Box::from(vec![0.0; TOT_LEN]);
+    let mut u: Arr = make_arr();
+    let mut v: Arr = make_arr();
+    let mut p: Arr = make_arr();
+    let mut unew: Arr = make_arr();
+    let mut vnew: Arr = make_arr();
+    let mut pnew: Arr = make_arr();
+    let mut uold: Arr = make_arr();
+    let mut vold: Arr = make_arr();
+    let mut pold: Arr = make_arr();
+    let mut cu: Arr = make_arr();
+    let mut cv: Arr = make_arr();
+    let mut z: Arr = make_arr();
+    let mut h: Arr = make_arr();
 
     // -----------------------------------------------------------------------
     // Initialize Data
@@ -57,10 +61,9 @@ fn main() {
     // initialize old arrays
     for i in 0..M_LEN {
         for j in 0..N_LEN {
-            let idx: usize = ij_to_idx(i,j);
-            uold[idx] = u[idx];
-            vold[idx] = v[idx];
-            pold[idx] = p[idx];
+            uold[idx(i,j)] = u[idx(i,j)];
+            vold[idx(i,j)] = v[idx(i,j)];
+            pold[idx(i,j)] = p[idx(i,j)];
         }
     }
 
@@ -76,15 +79,15 @@ fn main() {
         let mnmin = M.min(N);
         println!(" initial diagonal elements of p");
         for i in 0..mnmin {
-          print!("{:.6} ",p[ij_to_idx(i,i)]);
+          print!("{:.6} ",p[idx(i,i)]);
         }
         println!("\n initial diagonal elements of u");
         for i in 0..mnmin {
-          print!("{:.6} ",u[ij_to_idx(i,i)]);
+          print!("{:.6} ",u[idx(i,i)]);
         }
         println!("\n initial diagonal elements of v");
         for i in 0..mnmin {
-          print!("{:.6} ",v[ij_to_idx(i,i)]);
+          print!("{:.6} ",v[idx(i,i)]);
         }
         print!("\n");
     }
@@ -174,15 +177,15 @@ fn main() {
         let mnmin = M.min(N);
         println!(" diagonal elements of p");
         for i in 0..mnmin {
-        print!("{:?} ",pnew[i*N_LEN+i]);
+        print!("{:?} ",pnew[idx(i,i)]);
         }
         println!("\n diagonal elements of u");
         for i in 0..mnmin {
-        print!("{:?} ",unew[i*N_LEN+i]);
+        print!("{:?} ",unew[idx(i,i)]);
         }
         println!("\n diagonal elements of v");
         for i in 0..mnmin {
-        print!("{:?} ",vnew[i*N_LEN+i]);
+        print!("{:?} ",vnew[idx(i,i)]);
         }
         print!("\n");
     }
@@ -204,6 +207,12 @@ fn main() {
         println!(" time and megaflops for loop 100 {:?} {:?}", t100, mfs100);
         println!(" time and megaflops for loop 200 {:?} {:?}", t200, mfs200);
         println!(" time and megaflops for loop 300 {:?} {:?}", t300, mfs300);
+    }
+    // save solutions to txt files
+    if VAL_OUT {
+        print_data_to_file("u_rust.txt", &u);
+        print_data_to_file("v_rust.txt", &v);
+        print_data_to_file("p_rust.txt", &p);
     }
 
     // -----------------------------------------------------------------------
