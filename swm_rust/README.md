@@ -25,7 +25,7 @@ Additional information and troubleshooting installs can be found [here](https://
 
 ### Install on Derecho
 
-Probably the same as locally but need to double check. 
+Same as local installation, no additional modules needed. 
 
 ### Compile and run
 
@@ -34,6 +34,8 @@ Probably the same as locally but need to double check.
 To build only with cargo use : `cargo build`
 
 To build (if files have changed) and run : `cargo run {optional arguments}`
+
+Default is to run debugging, flag for no debugging / best performance : `--release`
 
 To find errors without actually building : `cargo check`
 Cargo also offers a more indepth explaination of errors with either `rustc --explain {CODE}` or `cargo --explain {CODE}` where `CODE` is the error code provided by the compiler (ex. E0308).
@@ -49,6 +51,12 @@ Compile with the Rust compiler:
 and then run the executable with:
 
 `./main {optional arguments}`
+
+### Features
+
+Features version is currently housed in `box_ver`. Use features flags `box`, `vec`, `ndarray`, and `mdarray` to change array type. Default is to run with Box. For example, to run with Vec : 
+
+`cargo run --features vec --release`
 
 ## Crates - packages for Rust
 
