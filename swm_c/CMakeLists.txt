@@ -4,7 +4,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Add optimization flag
 #add_compile_options(-O2)
 # Maybe move this to be set if CMAKE_BUILD_TYPE is Release
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3") # use -O3 for performance evaluation
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 
 # Flags that get used when building  debug flags
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -g")
@@ -15,4 +15,8 @@ endif()
 
 if (SWM_OPENACC)
   add_subdirectory(c_OpenACC)
+endif()
+
+if (SWM_CUDA)
+  add_subdirectory(c_CUDA)
 endif()
