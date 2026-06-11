@@ -4,6 +4,16 @@
 #include <stdlib.h>
 #include <cmath>
 #include <Kokkos_Core.hpp>
+#if defined(__has_include)
+#if __has_include(<nvtx3/nvToolsExt.h>)
+#include <nvtx3/nvToolsExt.h>
+#define SWM_HAVE_NVTX 1
+#endif
+#endif
+#ifndef SWM_HAVE_NVTX
+#define nvtxRangePush(name) ((void)0)
+#define nvtxRangePop() ((void)0)
+#endif
 
 #define MIN(x,y) ((x)>(y)?(y):(x))
 #define MAX(x,y) ((x)>(y)?(x):(y))
@@ -20,7 +30,7 @@
 using Layout = Kokkos::LayoutRight;
 using ExecSpace = Kokkos::DefaultExecutionSpace;
 using MemSpace = ExecSpace::memory_space;
-using ViewMatrixType = Kokkos::View<double**, Layout, MemSpace>;
+using ViewMatrixType = Kokkos::View<double**, Layout, MemSpace, Kokkos::MemoryTraits<Kokkos::Restrict>>;
 using HostViewMatrixType = Kokkos::View<double**, Layout, Kokkos::HostSpace>;
 
 void write_to_file(auto array, int tM, int tN, const char *filename);
@@ -83,10 +93,11 @@ int main(int argc, char **argv) {
     double tpi,di,dj,pcf;
     double tdts8,tdtsdx,tdtsdy,fsdx,fsdy;
 
-    int mnmin,ncycle;
+    int ncycle;
   
     // timer variables
     double ctime,tcyc,time,ptime;
+    double t100 = 0., t200 = 0., t300 = 0.;
 
     // ** Initialisations ** 
 
@@ -157,26 +168,6 @@ int main(int argc, char **argv) {
       printf(" grid spacing in the y direction     %f\n", dy); 
       printf(" time step                           %f\n", dt); 
       printf(" time filter parameter               %f\n", alpha); 
-
-      mnmin = MIN(M,N);
-      if constexpr (!std::is_same_v<MemSpace, Kokkos::HostSpace>) {
-        Kokkos::deep_copy(u_host, u);
-        Kokkos::deep_copy(v_host, v);
-        Kokkos::deep_copy(p_host, p);
-      }
-      // printf(" initial diagonal elements of p\n");
-      // for (int i=0; i<mnmin; i++) {
-      //   printf("%f ",p_host(i,i));
-      // }
-      // printf("\n initial diagonal elements of u\n");
-      // for (int i=0; i<mnmin; i++) {
-      //   printf("%f ",u_host(i,i));
-      // }
-      // printf("\n initial diagonal elements of v\n");
-      // for (int i=0; i<mnmin; i++) {
-      //   printf("%f ",v_host(i,i));
-      // }
-      // printf("\n");
     }
 
     // Start timer
@@ -188,33 +179,27 @@ int main(int argc, char **argv) {
     for (ncycle=1;ncycle<=ITMAX;++ncycle) {
       
       // Compute capital u, capital v, z and h
+      nvtxRangePush("UpdateIntermediateVariables");
+      Kokkos::Timer timer100;
 
-      // Compute cu
-      Kokkos::parallel_for("compute_cu", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
-          int i = idx / N + 1;
-          int j = idx % N;
-          cu(i,j) = 0.5 * (p(i,j) + p(i-1,j)) * u(i,j);
-      });
-
-      // Compute cv
-      Kokkos::parallel_for("compute_cv", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
-          int i = idx / N;
-          int j = idx % N + 1;
-          cv(i,j) = 0.5 * (p(i,j) + p(i,j-1)) * v(i,j);
-      });
-
-      // Compute z
-      Kokkos::parallel_for("compute_z", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
-          int i = idx / N + 1;
-          int j = idx % N + 1;
-          z(i,j) = (fsdx * (v(i,j) - v(i-1,j)) - fsdy * (u(i,j) - u(i,j-1))) / (p(i-1,j-1) + p(i,j-1) + p(i,j) + p(i-1,j));
-      });
-
-      // Compute h
-      Kokkos::parallel_for("compute_h", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
+      // Compute cu, cv, z, h (fused like OpenACC)
+      Kokkos::parallel_for("compute_cu_cv_z_h", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
           int i = idx / N;
           int j = idx % N;
-          h(i,j) = p(i,j) + 0.25 * ( u(i+1,j) * u(i+1,j) + u(i,j) * u(i,j) + v(i,j+1) * v(i,j+1) + v(i,j) * v(i,j) );
+          double p_ij = p(i,j);
+          double p_i1j = p(i+1,j);
+          double p_ij1 = p(i,j+1);
+          double p_i1j1 = p(i+1,j+1);
+          double u_ij = u(i,j);
+          double u_i1j = u(i+1,j);
+          double u_i1j1 = u(i+1,j+1);
+          double v_ij = v(i,j);
+          double v_ij1 = v(i,j+1);
+          double v_i1j1 = v(i+1,j+1);
+          cu(i+1,j) = 0.5 * (p_i1j + p_ij) * u_i1j;
+          cv(i,j+1) = 0.5 * (p_ij1 + p_ij) * v_ij1;
+          z(i+1,j+1) = (fsdx * (v_i1j1 - v_ij1) - fsdy * (u_i1j1 - u_i1j)) / (p_ij + p_i1j + p_i1j1 + p_ij1);
+          h(i,j) = p_ij + 0.25 * (u_i1j * u_i1j + u_ij * u_ij + v_ij1 * v_ij1 + v_ij * v_ij);
       });
   
       // Periodic continuation
@@ -239,30 +224,39 @@ int main(int argc, char **argv) {
         h(M,N) = h(0,0);
       });
       
+      Kokkos::fence();
+      t100 += timer100.seconds();
+      nvtxRangePop();
+
       // Compute new values u,v and p
+      nvtxRangePush("UpdateNewVariables");
+      Kokkos::Timer timer200;
+
       tdts8 = tdt / 8.;
       tdtsdx = tdt / dx;
       tdtsdy = tdt / dy;
 
-      // Compute unew
-      Kokkos::parallel_for("compute_unew", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
-          int i = idx / N + 1;
-          int j = idx % N;
-          unew(i,j) = uold(i,j) + tdts8 * (z(i,j+1) + z(i,j)) * (cv(i,j+1) + cv(i-1,j+1) + cv(i-1,j) + cv(i,j)) - tdtsdx * (h(i,j) - h(i-1,j));
-      });
-
-      // Compute vnew
-      Kokkos::parallel_for("compute_vnew", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
-          int i = idx / N;
-          int j = (idx % N) + 1;
-          vnew(i,j) = vold(i,j) - tdts8 * (z(i+1,j) + z(i,j)) * (cu(i+1,j) + cu(i,j) + cu(i,j-1) + cu(i+1,j-1)) - tdtsdy * (h(i,j) - h(i,j-1));
-      });
-
-      // Compute pnew
-      Kokkos::parallel_for("compute_pnew", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
+      // Compute unew, vnew, pnew (fused like OpenACC)
+      Kokkos::parallel_for("compute_unew_vnew_pnew", Kokkos::RangePolicy<ExecSpace>(0, M * N), KOKKOS_LAMBDA(const int idx) {
           int i = idx / N;
           int j = idx % N;
-          pnew(i,j) = pold(i,j) - tdtsdx * (cu(i+1,j) - cu(i,j)) - tdtsdy * (cv(i,j+1) - cv(i,j));
+          double z_i1j1 = z(i+1,j+1);
+          double z_i1j = z(i+1,j);
+          double z_ij1 = z(i,j+1);
+          double cv_i1j1 = cv(i+1,j+1);
+          double cv_ij1 = cv(i,j+1);
+          double cv_ij = cv(i,j);
+          double cv_i1j = cv(i+1,j);
+          double cu_i1j1 = cu(i+1,j+1);
+          double cu_ij1 = cu(i,j+1);
+          double cu_ij = cu(i,j);
+          double cu_i1j = cu(i+1,j);
+          double h_i1j = h(i+1,j);
+          double h_ij = h(i,j);
+          double h_ij1 = h(i,j+1);
+          unew(i+1,j) = uold(i+1,j) + tdts8 * (z_i1j1 + z_i1j) * (cv_i1j1 + cv_ij1 + cv_ij + cv_i1j) - tdtsdx * (h_i1j - h_ij);
+          vnew(i,j+1) = vold(i,j+1) - tdts8 * (z_i1j1 + z_ij1) * (cu_i1j1 + cu_ij1 + cu_ij + cu_i1j) - tdtsdy * (h_ij1 - h_ij);
+          pnew(i,j) = pold(i,j) - tdtsdx * (cu_i1j - cu_ij) - tdtsdy * (cv_ij1 - cv_ij);
       });
 
       // Periodic continuation
@@ -284,26 +278,29 @@ int main(int argc, char **argv) {
         pnew(M,N) = pnew(0,0);
       });
 
+      Kokkos::fence();
+      t200 += timer200.seconds();
+      nvtxRangePop();
+
       time = time + dt;
 
       // Time smoothing and update for next cycle
+      nvtxRangePush("UpdateOldVariables");
+      Kokkos::Timer timer300;
+
       if ( ncycle > 1 ) {
-        Kokkos::parallel_for("time_smoothing_u", Kokkos::RangePolicy<ExecSpace>(0, M_LEN * N_LEN), KOKKOS_LAMBDA(const int idx) {
+        Kokkos::parallel_for("time_smoothing_uvp", Kokkos::RangePolicy<ExecSpace>(0, M_LEN * N_LEN), KOKKOS_LAMBDA(const int idx) {
           int i = idx / N_LEN;
           int j = idx % N_LEN;
-          uold(i,j) = u(i,j) + alpha * (unew(i,j) - 2. * u(i,j) + uold(i,j));
-        });
-
-        Kokkos::parallel_for("time_smoothing_v", Kokkos::RangePolicy<ExecSpace>(0, M_LEN * N_LEN), KOKKOS_LAMBDA(const int idx) {
-          int i = idx / N_LEN;
-          int j = idx % N_LEN;
-          vold(i,j) = v(i,j) + alpha * (vnew(i,j) - 2. * v(i,j) + vold(i,j));
-        });
-
-        Kokkos::parallel_for("time_smoothing_p", Kokkos::RangePolicy<ExecSpace>(0, M_LEN * N_LEN), KOKKOS_LAMBDA(const int idx) {
-          int i = idx / N_LEN;
-          int j = idx % N_LEN;
-          pold(i,j) = p(i,j) + alpha * (pnew(i,j) - 2. * p(i,j) + pold(i,j));
+          double u_ij = u(i,j);
+          double v_ij = v(i,j);
+          double p_ij = p(i,j);
+          double uold_ij = uold(i,j);
+          double vold_ij = vold(i,j);
+          double pold_ij = pold(i,j);
+          uold(i,j) = u_ij + alpha * (unew(i,j) - 2. * u_ij + uold_ij);
+          vold(i,j) = v_ij + alpha * (vnew(i,j) - 2. * v_ij + vold_ij);
+          pold(i,j) = p_ij + alpha * (pnew(i,j) - 2. * p_ij + pold_ij);
         });
       }
       else {
@@ -316,15 +313,18 @@ int main(int argc, char **argv) {
             pold(i,j) = p(i,j);
         });
       }
-      // My test shows it is better to use fence and then swap for device views, rather than doing a device copy without fence.
-      if constexpr (!std::is_same_v<MemSpace, Kokkos::HostSpace>) {
+
         Kokkos::fence();
-      }      
+      t300 += timer300.seconds();
+      nvtxRangePop();
+
       // Swap the views
       std::swap(u, unew);
       std::swap(v, vnew);
       std::swap(p, pnew);
     } // ** End of time loop ** 
+
+    ctime = timer.seconds();
 
     // Try to use `if constexpr (!std::is_same_v<MemSpace, Kokkos::HostSpace>)` to use swap function
     //   for the host space, but somehow it is not compiled correctly for the device space.
@@ -347,23 +347,15 @@ int main(int argc, char **argv) {
       ptime = time / 3600.;
       printf(" cycle number %d model time in hours %f\n", ITMAX, ptime);
 
-      // printf(" diagonal elements of p\n");
-      // for (int i=0; i<mnmin; i++) {
-      //   printf("%f ",p_host(i,i));
-      // }
-      // printf("\n diagonal elements of u\n");
-      // for (int i=0; i<mnmin; i++) {
-      //   printf("%f ",u_host(i,i));
-      // }
-      // printf("\n diagonal elements of v\n");
-      // for (int i=0; i<mnmin; i++) {
-      //   printf("%f ",v_host(i,i));
-      // }
-      // printf("\n");
-
-      ctime = timer.seconds();
       tcyc = ctime / ITMAX;
       printf(" cycle number %d total computer time %f time per cycle %f\n", ITMAX, ctime, tcyc);
+
+      double mfs100 = double(ITMAX) * double(M) * double(N) * 16.e-6 / t100;
+      double mfs200 = double(ITMAX) * double(M) * double(N) * 26.e-6 / t200;
+      double mfs300 = double(ITMAX-1) * double(M_LEN) * double(N_LEN) * 15.e-6 / t300;
+      printf(" time and megaflops for loop 100 %f %f\n", t100, mfs100);
+      printf(" time and megaflops for loop 200 %f %f\n", t200, mfs200);
+      printf(" time and megaflops for loop 300 %f %f\n", t300, mfs300);
     }
 
   }
