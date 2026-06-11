@@ -31,7 +31,7 @@ find_package(AMReX REQUIRED ${AMREX_COMPONENTS})
 add_subdirectory(swm_AMReX)
 #add_subdirectory(swm_AMReX_Fkernels)
 
-# These version are only for offloading onto the GPU with CUDA backend
-if(SWM_DEVICE STREQUAL "gpu" AND SWM_CUDA)
+# These versions are only for offloading onto the GPU with CUDA backend
+if(SWM_DEVICE STREQUAL "gpu" AND SWM_CUDA AND SWM_FORTRAN)
   add_subdirectory(swm_AMReX_Fsubroutine)
 endif()

@@ -60,6 +60,13 @@ int main (int argc, char* argv[])
 
     amrex::MultiFab p;
     DefineNodalMultiFab(psi, p);
+
+    amrex::Print() << "\nGrid Summary:\n";
+    PrintGridSummary(psi, "psi (cell-centered)");
+    PrintGridSummary(p, "p (nodal)        ");
+    PrintGridSummary(u, "u (y-face)       ");
+    PrintGridSummary(v, "v (x-face)       ");
+    amrex::Print() << std::endl;
     
     // **********************************
     // Initialize Data
@@ -70,6 +77,8 @@ int main (int argc, char* argv[])
     InitializeGeometry(nx, ny, dx, dy, geom);
 
     InitializeVariables(geom, psi, p, u, v);
+
+    WriteDiagonalElements("diagonal_initial.dat", p, u, v, nx);
 
     // **********************************
     // Write initial plot file
@@ -177,6 +186,8 @@ int main (int argc, char* argv[])
     }
 
     BL_PROFILE_VAR_STOP(total);
+
+    WriteDiagonalElements("diagonal_final.dat", p, u, v, nx);
 
     }
 

@@ -1,7 +1,12 @@
 #include <string>
 #include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <limits>
+#include <vector>
 
 #include <AMReX.H>
+#include <AMReX_Gpu.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_MultiFab.H>
@@ -221,7 +226,7 @@ void InitializeVariables(const amrex::Geometry & geom,
             const amrex::Real x_transformed = LinearMapCoordinates(x_node, x_min, x_max, 0.0, 2*pi);
             const amrex::Real y_transformed = LinearMapCoordinates(y_node, y_min, y_max, 0.0, 2*pi);
 
-            p_array(i,j,k) = pcf * (std::cos(2*x_transformed) + std::cos(2*y_transformed)) + 5000;
+            p_array(i,j,k) = pcf * (std::cos(2*x_transformed) + std::cos(2*y_transformed)) + 50000.;
         });
     }
 
@@ -348,4 +353,103 @@ void UpdateVariables(const amrex::Geometry& geom,
     p.FillBoundary(geom.periodicity());
 
     return;
+}
+
+void PrintGridSummary(const amrex::MultiFab& mf, const std::string& name)
+{
+    const amrex::BoxArray& ba = mf.boxArray();
+
+    int numgrid = static_cast<int>(ba.size());
+    amrex::Long ncells = ba.numPts();
+    amrex::Box minbox = ba.minimalBox();
+    double ntot = static_cast<double>(minbox.numPts());
+    amrex::Real frac = amrex::Real(100.0 * double(ncells) / ntot);
+
+    // AMReX-style output format
+    amrex::Print() << "  " << name
+                   << "   "
+                   << numgrid
+                   << " grids  "
+                   << ncells
+                   << " cells  "
+                   << frac
+                   << " % of domain  "
+                   << mf.nGrow()
+                   << " ghost"
+                   << std::endl;
+
+    if (numgrid > 1) {
+        amrex::Long vmin = std::numeric_limits<amrex::Long>::max();
+        amrex::Long vmax = -1;
+        for (int i = 0; i < numgrid; ++i) {
+            amrex::Long v = ba[i].numPts();
+            vmin = std::min(vmin, v);
+            vmax = std::max(vmax, v);
+        }
+        amrex::Print() << "            "
+                       << "smallest grid: " << vmin
+                       << "  largest grid: " << vmax
+                       << std::endl;
+    }
+}
+
+void WriteDiagonalElements(const std::string& filename,
+                           const amrex::MultiFab& p,
+                           const amrex::MultiFab& u,
+                           const amrex::MultiFab& v,
+                           int n_diag)
+{
+    // Get the valid box to determine array bounds
+    const amrex::Box& p_box = p.boxArray().minimalBox();
+    int nx = p_box.length(0);
+    int ny = p_box.length(1);
+    int mnmin = std::min(std::min(nx, ny), n_diag);
+
+    // Create host-readable copies of the MultiFabs.
+    amrex::MultiFab p_host(p.boxArray(), p.DistributionMap(), p.nComp(), 0,
+                           amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
+    amrex::MultiFab u_host(u.boxArray(), u.DistributionMap(), u.nComp(), 0,
+                           amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
+    amrex::MultiFab v_host(v.boxArray(), v.DistributionMap(), v.nComp(), 0,
+                           amrex::MFInfo().SetArena(amrex::The_Pinned_Arena()));
+
+    amrex::MultiFab::Copy(p_host, p, 0, 0, p.nComp(), 0);
+    amrex::MultiFab::Copy(u_host, u, 0, 0, u.nComp(), 0);
+    amrex::MultiFab::Copy(v_host, v, 0, 0, v.nComp(), 0);
+    amrex::Gpu::streamSynchronize();
+
+    // Collect diagonal values
+    std::vector<amrex::Real> p_diag(mnmin), u_diag(mnmin), v_diag(mnmin);
+    for (int i = 0; i < mnmin; i++) {
+        for (amrex::MFIter mfi(p_host); mfi.isValid(); ++mfi) {
+            if (mfi.validbox().contains(amrex::IntVect(i, i))) {
+                p_diag[i] = p_host.const_array(mfi)(i, i, 0);
+            }
+        }
+        for (amrex::MFIter mfi(u_host); mfi.isValid(); ++mfi) {
+            if (mfi.validbox().contains(amrex::IntVect(i, i))) {
+                u_diag[i] = u_host.const_array(mfi)(i, i, 0);
+            }
+        }
+        for (amrex::MFIter mfi(v_host); mfi.isValid(); ++mfi) {
+            if (mfi.validbox().contains(amrex::IntVect(i, i))) {
+                v_diag[i] = v_host.const_array(mfi)(i, i, 0);
+            }
+        }
+    }
+
+    // Write to file
+    std::ofstream ofs(filename);
+    if (ofs) {
+        ofs << std::setprecision(15);
+        ofs << "p:";
+        for (int i = 0; i < mnmin; i++) ofs << " " << p_diag[i];
+        ofs << "\nu:";
+        for (int i = 0; i < mnmin; i++) ofs << " " << u_diag[i];
+        ofs << "\nv:";
+        for (int i = 0; i < mnmin; i++) ofs << " " << v_diag[i];
+        ofs << "\n";
+        ofs.close();
+        amrex::Print() << " diagonal elements written to " << filename << std::endl;
+    }
 }

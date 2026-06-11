@@ -1,6 +1,8 @@
 #ifndef SWM_MINI_APP_UTILS_H_
 #define SWM_MINI_APP_UTILS_H_
 
+#include <string>
+
 #include <AMReX.H>
 #include <AMReX_MultiFab.H>
 
@@ -76,5 +78,13 @@ void UpdateOldVariables(const double alpha, const int time_step, const amrex::Ge
                         const amrex::MultiFab& p, const amrex::MultiFab& u, const amrex::MultiFab& v, 
                         const amrex::MultiFab& p_new, const amrex::MultiFab& u_new, const amrex::MultiFab& v_new, 
                         amrex::MultiFab& p_old, amrex::MultiFab& u_old, amrex::MultiFab& v_old);
+
+void WriteDiagonalElements(const std::string& filename,
+                           const amrex::MultiFab& p,
+                           const amrex::MultiFab& u,
+                           const amrex::MultiFab& v,
+                           int n_diag);
+
+void PrintGridSummary(const amrex::MultiFab& mf, const std::string& name);
 
 #endif // SWM_MINI_APP_UTILS_H_
