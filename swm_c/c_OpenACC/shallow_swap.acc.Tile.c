@@ -27,6 +27,16 @@
 #include <math.h>
 #ifdef _OPENACC
 #include <openacc.h>
+#if defined(__has_include)
+#if __has_include(<nvtx3/nvToolsExt.h>)
+#include <nvtx3/nvToolsExt.h>
+#define SWM_HAVE_NVTX 1
+#endif
+#endif
+#endif
+#ifndef SWM_HAVE_NVTX
+#define nvtxRangePush(name) ((void)0)
+#define nvtxRangePop() ((void)0)
 #endif
 #define MIN(x,y) ((x)>(y)?(y):(x))
 #define MAX(x,y) ((x)>(y)?(x):(y))
@@ -40,7 +50,8 @@
 #define SIZE ((M_LEN)*(N_LEN))
 #define ITMAX 4000
 #define L_OUT TRUE
-#define TILE 32
+#define TILE_I 64
+#define TILE_J 4
 extern double wtime(); 
 extern void dswap(double **a, double **b);
 
@@ -86,7 +97,10 @@ extern void dswap(double **a, double **b);
 
 int main(int argc, char **argv) {
   
-  double *u,*v,*p,*unew,*vnew,*pnew,*uold,*vold,*pold,*cu,*cv,*z,*h,*psi;
+  double * restrict u, * restrict v, * restrict p;
+  double * restrict unew, * restrict vnew, * restrict pnew;
+  double * restrict uold, * restrict vold, * restrict pold;
+  double * restrict cu, * restrict cv, * restrict z, * restrict h, * restrict psi;
 
   u = (double *)malloc(sizeof(double)*M_LEN*N_LEN);
   v = (double *)malloc(sizeof(double)*M_LEN*N_LEN);
@@ -126,10 +140,9 @@ int main(int argc, char **argv) {
   int i,j;
  
   // timer variables 
-  double mfs100,mfs200,mfs300,mfs310;
+  double mfs100,mfs200,mfs300;
   double t100,t200,t300;
-  double tstart,ctime,tcyc,time,ptime;
-  double t100i,t200i,t300i;
+  double tstart,tcyc,time,ptime;
   double c1,c2;
 
   // ** Initialisations ** 
@@ -148,17 +161,16 @@ int main(int argc, char **argv) {
   alpha = .001;
 
   el = N * dx;
-  pi = 4. * atanf(1.);
+  pi = 4. * atan(1.);
   tpi = pi + pi;
   di = tpi / M;
   dj = tpi / N;
   pcf = pi * pi * a * a / (el * el);
 
 
-#pragma acc enter data copyin(dt,tdt,dx,dy,a,alpha,el,pi,tpi,di,dj,pcf,tdts8,tdtsdx,tdtsdy,fsdx,fsdy,p[:SIZE],u[:SIZE], \
-  v[:SIZE],pnew[:SIZE],unew[:SIZE],vnew[:SIZE])
+#pragma acc enter data copyin(p[:SIZE],u[:SIZE],v[:SIZE]) create(pnew[:SIZE],unew[:SIZE],vnew[:SIZE])
   // Initial values of the stream function and p
-#pragma acc parallel loop tile(TILE,TILE) independent present(p[:SIZE]) deviceptr(psi)//private(a,di,dj,pcf)
+#pragma acc parallel loop tile(TILE_I,TILE_J) independent present(p[:SIZE]) deviceptr(psi)//private(a,di,dj,pcf)
   for (i=0;i<M_LEN;i++) {
     for (j=0;j<N_LEN;j++) {
       int idx = (i*N_LEN) + j;
@@ -169,7 +181,7 @@ int main(int argc, char **argv) {
   }
 #pragma acc update host(p[:SIZE]) async(1)   
   // Initialize velocities
-#pragma acc parallel loop tile(TILE,TILE) independent present(u[:SIZE],v[:SIZE]) deviceptr(psi)
+#pragma acc parallel loop tile(TILE_I,TILE_J) independent present(u[:SIZE],v[:SIZE]) deviceptr(psi)
   for (i=0;i<M;i++) {
     for (j=0;j<N;j++) {
       int idx01 = (i*N_LEN) + j+1;
@@ -204,7 +216,7 @@ int main(int argc, char **argv) {
   v[M*N_LEN] = v[N];
 }
 #pragma acc update host(u[:SIZE],v[:SIZE]) async(2)
-#pragma acc parallel loop tile(TILE,TILE) async(3) independent present(u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold) 
+#pragma acc parallel loop tile(TILE_I,TILE_J) async(3) independent present(u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold)
   for (i=0;i<M_LEN;i++) {
     for (j=0;j<N_LEN;j++) {
       int idx = i*N_LEN+j;
@@ -251,8 +263,11 @@ int main(int argc, char **argv) {
   for (ncycle=1;ncycle<=ITMAX;ncycle++) {
     
     // Compute capital u, capital v, z and h
+#ifdef _OPENACC
+    nvtxRangePush("UpdateIntermediateVariables");
+#endif
     c1 = wtime();  
-#pragma acc parallel loop tile(TILE,TILE) independent present(p[:SIZE],u[:SIZE],v[:SIZE]) deviceptr(cu,cv,z,h)
+#pragma acc parallel loop tile(TILE_I,TILE_J) independent present(p[:SIZE],u[:SIZE],v[:SIZE]) deviceptr(cu,cv,z,h)
     for (i=0;i<M;i++) {
       for (j=0;j<N;j++) {
         int idx00 = (i*N_LEN) + j;
@@ -265,9 +280,6 @@ int main(int argc, char **argv) {
         h[idx00] = p[idx00] + .25 * (u[idx10] * u[idx10] + u[idx00] * u[idx00] + v[idx01] * v[idx01] + v[idx00] * v[idx00]);
       }
     }
-
-    c2 = wtime();  
-    t100 = t100 + (c2 - c1); 
 
     // Periodic continuation
 #pragma acc parallel loop independent deviceptr(cu,cv,z,h)
@@ -284,21 +296,30 @@ int main(int argc, char **argv) {
       z[(i + 1)*N_LEN] = z[i*N_LEN + N];
       h[i*N_LEN + N] = h[i*N_LEN];
     }
-#pragma acc serial present(tdts8,tdt,tdtsdx,tdtsdy,dx,dy) deviceptr(cu,cv,z,h)
+#pragma acc serial deviceptr(cu,cv,z,h)
 {
     cu[N] = cu[M*N_LEN];
     cv[M*N_LEN] = cv[N];
     z[0] = z[M*N_LEN+N];
     h[M*N_LEN+N] = h[0];
+}
+#pragma acc wait
+    c2 = wtime();
+    t100 = t100 + (c2 - c1);
+#ifdef _OPENACC
+    nvtxRangePop();
+#endif
      
-    // Compute new values u,v and p
+    // Compute new scalars (on host)
     tdts8 = tdt / 8.;
     tdtsdx = tdt / dx;
     tdtsdy = tdt / dy;
-}
+#ifdef _OPENACC
+    nvtxRangePush("UpdateNewVariables");
+#endif
     c1 = wtime(); 
 
-#pragma acc parallel loop tile(TILE,TILE) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE]) deviceptr(cu,cv,z,h,uold,vold,pold)
+#pragma acc parallel loop tile(TILE_I,TILE_J) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE]) deviceptr(cu,cv,z,h,uold,vold,pold)
     for (i=0;i<M;i++) {
       for (j=0;j<N;j++) {
         int idx00 = (i*N_LEN) + j;
@@ -311,13 +332,9 @@ int main(int argc, char **argv) {
       }
     }
 
-    c2 = wtime();  
-    t200 = t200 + (c2 - c1); 
-
     // Periodic continuation
 #pragma acc parallel loop independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
     for (j=0;j<N;j++) {
-#pragma acc cache(unew[M*N_LEN:N_LEN],vnew[:N_LEN],pnew[:N_LEN])
       //printf("N loop unew %d -> %d, vnew %d -> %d , pnew %d -> %d\n",M*N_LEN+j,j,j+1,M*N_LEN +j + 1,j,M*N_LEN +j);
       unew[j] = unew[M*N_LEN+j];
       vnew[M*N_LEN +j + 1] = vnew[j + 1];
@@ -337,12 +354,21 @@ int main(int argc, char **argv) {
     vnew[M*N_LEN] = vnew[N];
     pnew[M*N_LEN+N] = pnew[0];
 }
+#pragma acc wait
+    c2 = wtime();
+    t200 = t200 + (c2 - c1);
+#ifdef _OPENACC
+    nvtxRangePop();
+#endif
     time = time + dt;
 
     // Time smoothing and update for next cycle
 
     if ( ncycle > 1 ) {
 
+#ifdef _OPENACC
+      nvtxRangePush("UpdateOldVariables");
+#endif
       c1 = wtime(); 
 #pragma acc parallel loop collapse(2) independent present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold)
       for (i=0;i<M_LEN;i++) {
@@ -390,25 +416,30 @@ int main(int argc, char **argv) {
       dswap( (double **)&p, (double **)&pnew);
 #endif
 #endif
-
+#pragma acc wait
       c2 = wtime(); 
       t300 = t300 + (c2 - c1);
+#ifdef _OPENACC
+      nvtxRangePop();
+#endif
      
     } else {
+      tdt = tdt + tdt;
 #pragma acc serial present(unew[:SIZE],vnew[:SIZE],pnew[:SIZE],u[:SIZE],v[:SIZE],p[:SIZE]) deviceptr(uold,vold,pold)
 {
-      tdt = tdt + tdt;
       *uold = *u;
       *vold = *v;
       *pold = *p;
       *u = *unew;
       *v = *vnew;
       *p = *pnew;
-   
 }
 
     }
   }
+#pragma acc wait
+  double tstop = wtime();
+  double loop_time = tstop - tstart;
 
 #ifdef _OPENACC
 #pragma acc exit data copyout(unew[:SIZE],vnew[:SIZE],pnew[:SIZE])
@@ -446,11 +477,9 @@ int main(int argc, char **argv) {
     if ( t200 > 0 ) { mfs200 = ITMAX * 26. * M * N / t200 / 1000000; }
     if ( t300 > 0 ) { mfs300 = ITMAX * 15. * M * N / t300 / 1000000; }
 
-    c2 = wtime(); 
-    ctime = c2 - tstart;
-    tcyc = ctime / ITMAX;
+    tcyc = loop_time / ITMAX;
 
-    printf(" cycle number %d total computer time %f time per cycle %f\n", ITMAX, ctime, tcyc);
+    printf(" cycle number %d total computer time %f time per cycle %f\n", ITMAX, loop_time, tcyc);
     printf(" time and megaflops for loop 100 %.6f %.6f\n", t100, mfs100);
     printf(" time and megaflops for loop 200 %.6f %.6f\n", t200, mfs200);
     printf(" time and megaflops for loop 300 %.6f %.6f\n", t300, mfs300);
@@ -485,6 +514,10 @@ int main(int argc, char **argv) {
   free((void *) z);
   free((void *) h);
   free((void *) psi);
+#endif
+
+#ifdef _OPENACC
+  acc_shutdown(acc_get_device_type());
 #endif
 
   return(0);
