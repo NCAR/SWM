@@ -25,6 +25,16 @@ if(SWM_CUDA AND SWM_HIP)
     message(FATAL_ERROR "SWM_CUDA and SWM_HIP cannot both be ON. Please enable only one.")
 endif()
 
+if(SWM_OPENACC AND SWM_DEVICE STREQUAL "gpu")
+    if(NOT (CMAKE_C_COMPILER_ID STREQUAL "NVHPC" OR CMAKE_C_COMPILER_ID STREQUAL "NVIDIA"))
+        message(FATAL_ERROR
+            "OpenACC GPU build requires NVIDIA HPC SDK compiler (nvc).\n"
+            "Current C compiler: ${CMAKE_C_COMPILER_ID}\n"
+            "Use: cmake -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ ..."
+        )
+    endif()
+endif()
+
 if(SWM_DEVICE STREQUAL "cpu" AND SWM_CUDA)
     message(WARNING "SWM_CUDA is ON but SWM_DEVICE is set to 'cpu'. Disabling SWM_CUDA.")
     set(SWM_CUDA OFF CACHE BOOL "Enable the CUDA versions of the mini-app" FORCE)
