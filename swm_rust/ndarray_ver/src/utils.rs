@@ -25,41 +25,28 @@ pub fn init_conds(u: &mut Array2<f64>, v: &mut Array2<f64>, p: &mut Array2<f64>,
     let di: f64 = tpi / M as f64;
     let dj: f64 = tpi / N as f64;
     let pcf: f64 = pi * pi * a * a / (el * el);
-    
-    // initialize stream function psi and pressure p
-    // for i in 0..M_LEN {
-    //     for j in 0..N_LEN {
-    //         psi[[i,j]] = a * ( ( (i as f64) + 0.5 ) * di ).sin() * ( ( (j as f64) + 0.5 ) * dj ).sin();
-    //         p[[i,j]] = pcf * ( ( 2.0 * (i as f64) * di ).cos() + ( 2.0 * (j as f64) * dj ).cos() ) + 50000.;
-    //     }
-    // }
 
+    // initialize stream function psi and pressure p
+    // psi[[i,j]] = a * ( ( (i as f64) + 0.5 ) * di ).sin() * ( ( (j as f64) + 0.5 ) * dj ).sin()
     Zip::indexed(psi.view_mut())
         .for_each(|(i, j), val| {
             *val = a * ( ( (i as f64) + 0.5 ) * di ).sin() * ( ( (j as f64) + 0.5 ) * dj ).sin();
         });
+    // p[[i,j]] = pcf * ( ( 2.0 * (i as f64) * di ).cos() + ( 2.0 * (j as f64) * dj ).cos() ) + 50000.
     Zip::indexed(p.view_mut())
         .for_each(|(i, j), val| {
             *val = pcf * ( ( 2.0 * (i as f64) * di ).cos() + ( 2.0 * (j as f64) * dj ).cos() ) + 50000.;
         });
 
     // initialize velocities u and v
-    // for i in 0..M {
-    //     for j in 0..N {
-    //         // let idx01: usize = ij_to_idx(i,j+1); // [i][j+1]
-    //         // let idx10: usize = ij_to_idx(i+1,j); // [i+1][j]
-    //         // let idx11: usize = ij_to_idx(i+1,j+1); // [i+1][j+1]
-    //         u[[i+1,j]] = -(psi[[i+1,j+1]] - psi[[i+1,j]]) / dy;
-    //         v[[i,j+1]] = (psi[[i+1,j+1]] - psi[[i,j+1]]) / dx;
-    //     }
-    // }
-    
+    // u[[i+1,j]] = -(psi[[i+1,j+1]] - psi[[i+1,j]]) / dy;
     Zip::from(u.slice_mut(s![1.., ..N]))
         .and(psi.slice(s![1.., 1..]))
         .and(psi.slice(s![1.., ..N]))
         .for_each(|u_val, &psi_up, &psi_down| {
             *u_val = -(psi_up - psi_down) / dy;
         });
+    // v[[i,j+1]] = (psi[[i+1,j+1]] - psi[[i,j+1]]) / dx;
     Zip::from(v.slice_mut(s![..M, 1..]))
         .and(psi.slice(s![1.., 1..]))
         .and(psi.slice(s![..M, 1..]))
@@ -69,31 +56,28 @@ pub fn init_conds(u: &mut Array2<f64>, v: &mut Array2<f64>, p: &mut Array2<f64>,
 }
 
 pub fn apply_uv_bcs(u: &mut Array2<f64>, v: &mut Array2<f64>) {
-    for j in 0..N {
-        u[[0,j]] = u[[M,j]];
-        v[[M,j+1]] = v[[0,j+1]];
-    }
+    // u[[0,j]] = u[[M,j]]  for j in 0..N
+    let (mut row0, rowm) = u.multi_slice_mut((s![0, ..N], s![M, ..N]));
+    row0.assign(&rowm);
 
-    for i in 0..M {
-        u[[i+1,N]] = u[[i+1,0]];
-        v[[i,0]] = v[[i,N]];
-    }
+    // v[[M,j+1]] = v[[0,j+1]]  for j in 0..N
+    let (mut rowm, row0) = v.multi_slice_mut((s![M, 1..], s![0, 1..]));
+    rowm.assign(&row0);
+
+    // u[[i+1,N]] = u[[i+1,0]]  for i in 0..M
+    let (mut coln, col0) = u.multi_slice_mut((s![1.., N], s![1.., 0]));
+    coln.assign(&col0);
+
+    // v[[i,0]] = v[[i,N]]  for i in 0..M
+    let (mut col0, coln) = v.multi_slice_mut((s![..M, 0], s![..M, N]));
+    col0.assign(&coln);
 
     u[[0,N]] = u[[M,0]];
     v[[M,0]] = v[[0,N]];
 }
 
 pub fn update_intermed_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>, fsdx: f64, fsdy: f64, cu: &mut Array2<f64>, cv: &mut Array2<f64>, z: &mut Array2<f64>, h: &mut Array2<f64>, term1: &mut Array2<f64>, term2: &mut Array2<f64>) {
-    // for i in 0..M {
-    //     for j in 0..N {
-            // cu[[i+1,j]] = 0.5 * (p[[i+1,j]] + p[[i,j]]) * u[[i+1,j]];
-            // cv[[i,j+1]] = 0.5 * (p[[i,j+1]] + p[[i,j]]) * v[[i,j+1]];
-            // z[[i+1,j+1]] = (fsdx * (v[[i+1,j+1]] - v[[i,j+1]]) - fsdy * (u[[i+1,j+1]] - u[[i+1,j]])) / (p[[i,j]] + p[[i+1,j]] + p[[i+1,j+1]] + p[[i,j+1]]);
-            // h[[i,j]] = p[[i,j]] + 0.25 * (u[[i+1,j]] * u[[i+1,j]] + u[[i,j]] * u[[i,j]] + v[[i,j+1]] * v[[i,j+1]] + v[[i,j]] * v[[i,j]]);
-    //     }
-    // }
-
-    // cu
+    // cu[[i+1,j]] = 0.5 * (p[[i+1,j]] + p[[i,j]]) * u[[i+1,j]];
     Zip::from(cu.slice_mut(s![1.., ..N]))
         .and(p.slice(s![1.., ..N]))
         .and(p.slice(s![..M, ..N]))
@@ -102,7 +86,7 @@ pub fn update_intermed_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>, f
             *cu10 = 0.5 * (p10 + p00) * u10;
         });
     
-    // cv
+    // cv[[i,j+1]] = 0.5 * (p[[i,j+1]] + p[[i,j]]) * v[[i,j+1]];
     Zip::from(cv.slice_mut(s![..M, 1..]))
         .and(p.slice(s![..M, 1..]))
         .and(p.slice(s![..M, ..N]))
@@ -111,7 +95,7 @@ pub fn update_intermed_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>, f
             *cv01 = 0.5 * (p01 + p00) * v01;
         });
     
-    // z
+    // z[[i+1,j+1]] = (fsdx * (v[[i+1,j+1]] - v[[i,j+1]]) - fsdy * (u[[i+1,j+1]] - u[[i+1,j]])) / (p[[i,j]] + p[[i+1,j]] + p[[i+1,j+1]] + p[[i,j+1]]);
     Zip::from(term1.view_mut())
         .and(v.slice(s![1.., 1..]))
         .and(v.slice(s![..M, 1..]))
@@ -128,7 +112,7 @@ pub fn update_intermed_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>, f
             *z11 = val1 / val2;
         });
     
-    // h
+    // h[[i,j]] = p[[i,j]] + 0.25 * (u[[i+1,j]] * u[[i+1,j]] + u[[i,j]] * u[[i,j]] + v[[i,j+1]] * v[[i,j+1]] + v[[i,j]] * v[[i,j]]);
     Zip::from(h.slice_mut(s![..M, ..N]))
         .and(u.slice(s![1.., ..N]))
         .and(u.slice(s![..M, ..N]))
@@ -141,19 +125,37 @@ pub fn update_intermed_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>, f
 }
 
 pub fn apply_intermed_bcs(cu: &mut Array2<f64>, cv: &mut Array2<f64>, z: &mut Array2<f64>, h: &mut Array2<f64>) {
-    for j in 0..N {
-        cu[[0,j]] = cu[[M,j]];
-        cv[[M,j+1]] = cv[[0,j+1]];
-        z[[0,j+1]] = z[[M,j+1]];
-        h[[M,j]] = h[[0,j]];
-    }
-    
-    for i in 0..M {
-        cu[[i+1,N]] = cu[[i+1,0]];
-        cv[[i,0]] = cv[[i,N]];
-        z[[i+1,0]] = z[[i+1,N]];
-        h[[i,N]] = h[[i,0]];
-    }
+    // cu[[0,j]] = cu[[M,j]]  for j in 0..N
+    let (mut row0, rowm) = cu.multi_slice_mut((s![0, ..N], s![M, ..N]));
+    row0.assign(&rowm);
+
+    // cv[[M,j+1]] = cv[[0,j+1]]  for j in 0..N
+    let (mut rowm, row0) = cv.multi_slice_mut((s![M, 1..], s![0, 1..]));
+    rowm.assign(&row0);
+
+    // z[[0,j+1]] = z[[M,j+1]]  for j in 0..N
+    let (mut row0, rowm) = z.multi_slice_mut((s![0, 1..], s![M, 1..]));
+    row0.assign(&rowm);
+
+    // h[[M,j]] = h[[0,j]]  for j in 0..N
+    let (mut rowm, row0) = h.multi_slice_mut((s![M, ..N], s![0, ..N]));
+    rowm.assign(&row0);
+
+    // cu[[i+1,N]] = cu[[i+1,0]]  for i in 0..M
+    let (mut coln, col0) = cu.multi_slice_mut((s![1.., N], s![1.., 0]));
+    coln.assign(&col0);
+
+    // cv[[i,0]] = cv[[i,N]]  for i in 0..M
+    let (mut col0, coln) = cv.multi_slice_mut((s![..M, 0], s![..M, N]));
+    col0.assign(&coln);
+
+    // z[[i+1,0]] = z[[i+1,N]]  for i in 0..M
+    let (mut coln, col0) = z.multi_slice_mut((s![1.., 0], s![1.., N]));
+    coln.assign(&col0);
+
+    // h[[i,N]] = h[[i,0]]  for i in 0..M
+    let (mut col0, coln) = h.multi_slice_mut((s![..M, N], s![..M, 0]));
+    col0.assign(&coln);
 
     cu[[0,N]] = cu[[M,0]];
     cv[[M,0]] = cv[[0,N]];
@@ -162,15 +164,7 @@ pub fn apply_intermed_bcs(cu: &mut Array2<f64>, cv: &mut Array2<f64>, z: &mut Ar
 }
 
 pub fn time_update_new_vars(uold: &Array2<f64>, vold: &Array2<f64>, pold: &Array2<f64>, cu: &Array2<f64>, cv: &Array2<f64>, z: &Array2<f64>, h: &Array2<f64>, tdts8: f64, tdtsdx: f64, tdtsdy: f64, unew: &mut Array2<f64>, vnew: &mut Array2<f64>, pnew: &mut Array2<f64>, term1: &mut Array2<f64>, term2: &mut Array2<f64>) {
-    // for i in 0..M {
-    //     for j in 0..N {
-            // unew[[i+1,j]] = uold[[i+1,j]] + tdts8 * (z[[i+1,j+1]] + z[[i+1,j]]) * (cv[[i+1,j+1]] + cv[[i,j+1]] + cv[[i,j]] + cv[[i+1,j]]) - tdtsdx * (h[[i+1,j]] - h[[i,j]]);
-            // vnew[[i,j+1]] = vold[[i,j+1]] - tdts8 * (z[[i+1,j+1]] + z[[i,j+1]]) * (cu[[i+1,j+1]] + cu[[i,j+1]] + cu[[i,j]] + cu[[i+1,j]]) - tdtsdy * (h[[i,j+1]] - h[[i,j]]);
-            // pnew[[i,j]] = pold[[i,j]] - tdtsdx * (cu[[i+1,j]] - cu[[i,j]]) - tdtsdy * (cv[[i,j+1]] - cv[[i,j]]);
-    //     }
-    // }
-
-    // unew
+    // unew[[i+1,j]] = uold[[i+1,j]] + tdts8 * (z[[i+1,j+1]] + z[[i+1,j]]) * (cv[[i+1,j+1]] + cv[[i,j+1]] + cv[[i,j]] + cv[[i+1,j]]) - tdtsdx * (h[[i+1,j]] - h[[i,j]]);
     four_node_sum(cv, term1);
     Zip::from(term2.view_mut())
         .and(z.slice(s![1.., 1..]))
@@ -188,7 +182,7 @@ pub fn time_update_new_vars(uold: &Array2<f64>, vold: &Array2<f64>, pold: &Array
             *unew10 = uold10 + val2 - tdtsdx * (h10 - h00);
         });
 
-    // vnew
+    // vnew[[i,j+1]] = vold[[i,j+1]] - tdts8 * (z[[i+1,j+1]] + z[[i,j+1]]) * (cu[[i+1,j+1]] + cu[[i,j+1]] + cu[[i,j]] + cu[[i+1,j]]) - tdtsdy * (h[[i,j+1]] - h[[i,j]]);
     four_node_sum(cu, term1);
     Zip::from(term2.view_mut())
         .and(z.slice(s![1.., 1..]))
@@ -206,7 +200,7 @@ pub fn time_update_new_vars(uold: &Array2<f64>, vold: &Array2<f64>, pold: &Array
             *vnew01 = vold01 + val2 - tdtsdy * (h01 - h00);
         });
 
-    // pnew
+    // pnew[[i,j]] = pold[[i,j]] - tdtsdx * (cu[[i+1,j]] - cu[[i,j]]) - tdtsdy * (cv[[i,j+1]] - cv[[i,j]]);
     Zip::from(pnew.slice_mut(s![..M, ..N]))
         .and(pold.slice(s![..M, ..N]))
         .and(cu.slice(s![1.., ..N]))
@@ -219,17 +213,29 @@ pub fn time_update_new_vars(uold: &Array2<f64>, vold: &Array2<f64>, pold: &Array
 }
 
 pub fn apply_uvp_bcs(u: &mut Array2<f64>, v: &mut Array2<f64>, p: &mut Array2<f64>) {
-    for j in 0..N {
-        u[[0,j]] = u[[M,j]];
-        v[[M,j+1]] = v[[0,j+1]];
-        p[[M,j]] = p[[0,j]];
-    }
+    // u[[0,j]] = u[[M,j]]  for j in 0..N
+    let (mut row0, rowm) = u.multi_slice_mut((s![0, ..N], s![M, ..N]));
+    row0.assign(&rowm);
 
-    for i in 0..M {
-        u[[i+1,N]] = u[[i+1,0]];
-        v[[i,0]] = v[[i,N]];
-        p[[i,N]] = p[[i,0]];
-    }
+    // v[[M,j+1]] = v[[0,j+1]]  for j in 0..N
+    let (mut rowm, row0) = v.multi_slice_mut((s![M, 1..], s![0, 1..]));
+    rowm.assign(&row0);
+
+    // p[[M,j]] = p[[0,j]]  for j in 0..N
+    let (mut row0, rowm) = p.multi_slice_mut((s![M, ..N], s![0, ..N]));
+    row0.assign(&rowm);
+
+    // u[[i+1,N]] = u[[i+1,0]]  for i in 0..M
+    let (mut coln, col0) = u.multi_slice_mut((s![1.., N], s![1.., 0]));
+    coln.assign(&col0);
+
+    // v[[i,0]] = v[[i,N]]  for i in 0..M
+    let (mut col0, coln) = v.multi_slice_mut((s![..M, 0], s![..M, N]));
+    col0.assign(&coln);
+
+    // p[[i,N]] = p[[i,0]]  for i in 0..M
+    let (mut coln, col0) = p.multi_slice_mut((s![..M, N], s![..M, 0]));
+    coln.assign(&col0);
 
     u[[0,N]] = u[[M,0]];
     v[[M,0]] = v[[0,N]];
@@ -237,15 +243,7 @@ pub fn apply_uvp_bcs(u: &mut Array2<f64>, v: &mut Array2<f64>, p: &mut Array2<f6
 }
 
 pub fn smooth_update_old_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>, unew: &Array2<f64>, vnew: &Array2<f64>, pnew: &Array2<f64>, uold: &mut Array2<f64>, vold: &mut Array2<f64>, pold: &mut Array2<f64>, alpha: f64) {
-    // for i in 0..M_LEN {
-    //     for j in 0..N_LEN {
-    //         uold[[i,j]] = u[[i,j]] + alpha * (unew[[i,j]] - 2. * u[[i,j]] + uold[[i,j]]);
-    //         vold[[i,j]] = v[[i,j]] + alpha * (vnew[[i,j]] - 2. * v[[i,j]] + vold[[i,j]]);
-    //         pold[[i,j]] = p[[i,j]] + alpha * (pnew[[i,j]] - 2. * p[[i,j]] + pold[[i,j]]);
-    //     }
-    // }
-
-    // uold
+    // uold[[i,j]] = u[[i,j]] + alpha * (unew[[i,j]] - 2. * u[[i,j]] + uold[[i,j]]);
     Zip::from(uold.view_mut())
         .and(u)
         .and(unew)
@@ -253,7 +251,7 @@ pub fn smooth_update_old_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>,
             *uold00 = u00 + alpha * (unew00 - 2. * u00 + *uold00);
         });
 
-    // vold
+    // vold[[i,j]] = v[[i,j]] + alpha * (vnew[[i,j]] - 2. * v[[i,j]] + vold[[i,j]]);
     Zip::from(vold.view_mut())
         .and(v)
         .and(vnew)
@@ -261,7 +259,7 @@ pub fn smooth_update_old_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>,
             *vold00 = v00 + alpha * (vnew00 - 2. * v00 + *vold00);
         });
 
-    // pold
+    // pold[[i,j]] = p[[i,j]] + alpha * (pnew[[i,j]] - 2. * p[[i,j]] + pold[[i,j]]);
     Zip::from(pold.view_mut())
         .and(p)
         .and(pnew)
@@ -271,6 +269,7 @@ pub fn smooth_update_old_vars(u: &Array2<f64>, v: &Array2<f64>, p: &Array2<f64>,
 }
 
 pub fn four_node_sum(arr: &Array2<f64>, sum: &mut Array2<f64>) {
+    // sum[[i,j]] = arr[[i+1,j+1]] + arr[[i,j+1]] + arr[[i,j]] + arr[[i+1,j]];
     Zip::from(sum.view_mut())
         .and(arr.slice(s![1.., 1..]))
         .and(arr.slice(s![..M, 1..]))
