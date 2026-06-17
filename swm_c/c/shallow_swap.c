@@ -44,6 +44,7 @@ extern double wtime();
 extern void dswap(double **a, double **b);
 extern void write_to_file(double *array, int tM, int tN, const char *filename);
 extern void print_to_file(double *array, int tM, int tN, const char *filename);
+extern void write_int_float_to_csv(const char *filename, int int_val, double float_val);
 
 //! Benchmark weather prediction program for comparing the
 //! preformance of current supercomputers. The model is
@@ -411,6 +412,8 @@ int main(int argc, char **argv) {
     printf(" time and megaflops for loop 300 %.6f %.6f\n", t300, mfs300);
   }
 
+  write_int_float_to_csv("c_times.csv",M,ctime);
+
   free((void *) u);
   free((void *) v);
   free((void *) p);
@@ -462,5 +465,15 @@ void write_to_file(double *array, int tM, int tN, const char *filename) {
           fwrite(&array[(i*(tN))+j], sizeof(double), 1, file);
         }
     }
+    fclose(file);
+}
+
+void write_int_float_to_csv(const char *filename, int int_val, double float_val) {
+    FILE *file = fopen(filename, "a");
+    if (file == NULL) {
+        printf("Error opening file %s\n", filename);
+        return;
+    }
+    fprintf(file, "%d,%f\n", int_val, float_val);
     fclose(file);
 }
