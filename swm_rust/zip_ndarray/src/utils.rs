@@ -5,8 +5,8 @@ use std::f64::consts;
 use ndarray::{Array2,Zip,s};
 
 // declare constants
-pub const M: usize = 256;
-pub const N: usize = 256;
+pub const M: usize = const_env::env_lit!("M", 256);
+pub const N: usize = const_env::env_lit!("N", 256);
 pub const M_LEN: usize = M+1;
 pub const N_LEN: usize = N+1;
 pub const ITMAX: usize = 4000;

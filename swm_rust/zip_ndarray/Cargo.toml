@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-clap = "4.6.1"
+# clap = "4.6.1"
+const_env = "0.1.5"
 ndarray = "0.17.2"
 
 [[bin]]
