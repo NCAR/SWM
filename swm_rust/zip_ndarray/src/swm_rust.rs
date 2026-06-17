@@ -220,6 +220,15 @@ fn main() {
         print_data_to_file("p_rust.txt", &p);
     }
 
+    if CSV_OUT {
+        let _ = write_int_float_to_csv("rust_zipndarray_times.csv",M,ctime);
+    }
+
+    if SUCCINCT {
+        println!("Version: zip ndarray");
+        println!("Grid Size: {:?}x{:?}, Number of iterations: {:?}, Total computer time: {:.2}", M, N, ITMAX, ctime);
+    }
+
     // -----------------------------------------------------------------------
     // End
     // -----------------------------------------------------------------------

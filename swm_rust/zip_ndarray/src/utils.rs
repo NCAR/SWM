@@ -4,6 +4,10 @@ use std::io::prelude::*;
 use std::f64::consts;
 use ndarray::{Array2,Zip,s};
 
+use csv::WriterBuilder;
+use std::error::Error;
+use std::fs::OpenOptions;
+
 // declare constants
 pub const M: usize = const_env::env_lit!("M", 256);
 pub const N: usize = const_env::env_lit!("N", 256);
@@ -11,8 +15,10 @@ pub const M_LEN: usize = M+1;
 pub const N_LEN: usize = N+1;
 pub const ITMAX: usize = 4000;
 pub const VERBOSE: bool = false;  // print out initial and final values
-pub const TIMING: bool = true;    // print out timings
+pub const TIMING: bool = false;   // print out timings
 pub const VAL_OUT: bool = false;  // save final solutions to txt files
+pub const SUCCINCT: bool = true;  // print out grid size, itmax, and final time
+pub const CSV_OUT: bool = true;  // save time to csv file
 
 pub fn init_conds(u: &mut Array2<f64>, v: &mut Array2<f64>, p: &mut Array2<f64>, dx: f64, dy: f64, a: f64) { 
     // init psi
@@ -305,4 +311,24 @@ pub fn print_data_to_file(pathname: &str, data: &Array2<f64>) {
         Err(why) => panic!("couldn't write to {}: {}", display, why),
         Ok(_) => println!("successfully wrote to {}", display),
     }
+}
+
+pub fn write_int_float_to_csv(
+    filename: &str,
+    int_val: usize,
+    float_val: f64,
+) -> Result<(), Box<dyn Error>> {
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(filename)?;
+
+    let mut wtr = WriterBuilder::new()
+        .has_headers(false)
+        .from_writer(file);
+
+    wtr.write_record(&[int_val.to_string(), float_val.to_string()])?;
+    wtr.flush()?;
+
+    Ok(())
 }

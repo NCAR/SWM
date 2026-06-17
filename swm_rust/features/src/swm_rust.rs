@@ -215,6 +215,38 @@ fn main() {
         print_data_to_file("p_rust.txt", &p);
     }
 
+    if CSV_OUT {
+        #[cfg(feature = "box")]
+        let filename = "rust_box_times.csv";
+
+        #[cfg(feature = "vec")]
+        let filename = "rust_vec_times.csv";
+
+        #[cfg(feature = "ndarray")]
+        let filename = "rust_ndarray_times.csv";
+
+        #[cfg(feature = "mdarray")]
+        let filename = "rust_mdarray_times.csv";
+
+        let _ = write_int_float_to_csv(filename,M,ctime);
+    }
+
+    if SUCCINCT {
+        #[cfg(feature = "box")]
+        println!("Version: box");
+
+        #[cfg(feature = "vec")]
+        println!("Version: vec");
+
+        #[cfg(feature = "ndarray")]
+        println!("Version: ndarray");
+
+        #[cfg(feature = "mdarray")]
+        println!("Version: mdarray");
+
+        println!("Grid Size: {:?}x{:?}, Number of iterations: {:?}, Total computer time: {:.2}", M, N, ITMAX, ctime);
+    }
+
     // -----------------------------------------------------------------------
     // End
     // -----------------------------------------------------------------------

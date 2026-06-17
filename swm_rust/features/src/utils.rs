@@ -3,6 +3,10 @@ use std::path::Path;
 use std::io::prelude::*;
 use std::f64::consts;
 
+use csv::WriterBuilder;
+use std::error::Error;
+use std::fs::OpenOptions;
+
 use crate::consts::*;
 use crate::types::{Arr,idx,make_arr};
 
@@ -145,4 +149,24 @@ pub fn print_data_to_file(pathname: &str, data: &Arr) {
         Err(why) => panic!("couldn't write to {}: {}", display, why),
         Ok(_) => println!("successfully wrote to {}", display),
     }
+}
+
+pub fn write_int_float_to_csv(
+    filename: &str,
+    int_val: usize,
+    float_val: f64,
+) -> Result<(), Box<dyn Error>> {
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(filename)?;
+
+    let mut wtr = WriterBuilder::new()
+        .has_headers(false)
+        .from_writer(file);
+
+    wtr.write_record(&[int_val.to_string(), float_val.to_string()])?;
+    wtr.flush()?;
+
+    Ok(())
 }

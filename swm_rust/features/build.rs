@@ -1,5 +1,5 @@
 fn main() {
-    // Enforce exactly one feature is active
+    // Read in array type
     let box_on     = cfg!(feature = "box");
     let vec_on     = cfg!(feature = "vec");
     let ndarray_on = cfg!(feature = "ndarray");
