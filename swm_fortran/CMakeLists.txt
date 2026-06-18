@@ -14,7 +14,7 @@ endif()
 
 if (SWM_DEVICE STREQUAL "cpu")
     add_subdirectory(fortran)
-    add_subdirectory(fortran_AMReX_proxy)
+    # add_subdirectory(fortran_AMReX_proxy)
 endif()
 
 if (SWM_OPENACC)
