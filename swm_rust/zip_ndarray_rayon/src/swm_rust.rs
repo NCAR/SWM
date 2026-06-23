@@ -221,7 +221,7 @@ fn main() {
     }
 
     if CSV_OUT {
-        let _ = write_int_float_to_csv("rust_zipndarray_times.csv",M,ctime);
+        let _ = write_int_float_to_csv("rust_zipndarrayrayon_times.csv",M,ctime);
     }
 
     if SUCCINCT {

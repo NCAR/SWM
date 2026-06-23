@@ -18,7 +18,7 @@ pub const VERBOSE: bool = false;  // print out initial and final values
 pub const TIMING: bool = false;   // print out timings
 pub const VAL_OUT: bool = false;  // save final solutions to txt files
 pub const SUCCINCT: bool = true;  // print out grid size, itmax, and final time
-pub const CSV_OUT: bool = false;  // save time to csv file
+pub const CSV_OUT: bool = true;  // save time to csv file
 
 pub fn init_conds(u: &mut Array2<f64>, v: &mut Array2<f64>, p: &mut Array2<f64>, dx: f64, dy: f64, a: f64) { 
     // init psi
