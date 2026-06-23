@@ -1,0 +1,14 @@
+[package]
+name = "swm_rust"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# clap = "4.6.1"
+const_env = "0.1.5"
+csv = "1.4.0"
+ndarray = { version = "0.15", features = ["rayon"] }
+
+[[bin]]
+name = "swm_rust"
+path = "src/swm_rust.rs"
