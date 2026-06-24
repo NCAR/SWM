@@ -9,6 +9,9 @@ const_env = "0.1.5"
 csv = "1.4.0"
 ndarray = { version = "0.15", features = ["rayon"] }
 
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
 [[bin]]
 name = "swm_rust"
 path = "src/swm_rust.rs"
