@@ -9,9 +9,6 @@ const_env = "0.1.5"
 csv = "1.4.0"
 ndarray = "0.17.2"
 
-[build]
-rustflags = ["-C", "target-cpu=native"]
-
 [[bin]]
 name = "swm_rust"
 path = "src/swm_rust.rs"

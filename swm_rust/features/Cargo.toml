@@ -10,9 +10,6 @@ csv = "1.4.0"
 ndarray = { version = "0.17.2", optional = true }
 mdarray = { version = "0.8.0", optional = true }
 
-[build]
-rustflags = ["-C", "target-cpu=native"]
-
 [features]
 box    = []
 vec    = []
