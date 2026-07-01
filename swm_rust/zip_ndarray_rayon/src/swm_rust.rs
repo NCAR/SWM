@@ -8,8 +8,8 @@ use ndarray::{Array2};
 // Utils is a helper module that contains some utility functions in src/utils.rs
 mod utils;
 use utils::*;
-mod threads;
-use threads::*;
+// mod threads;
+// use threads::*;
 
 fn main() {
 
@@ -17,7 +17,7 @@ fn main() {
     // CPU/Threads Configuration
     // -----------------------------------------------------------------------
 
-    threads();
+    // threads();
 
     // -----------------------------------------------------------------------
     // Simulation Parameters and Constants Setup
