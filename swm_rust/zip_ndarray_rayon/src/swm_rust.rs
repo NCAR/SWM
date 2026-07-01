@@ -4,13 +4,20 @@ use std::time::Instant;
 
 use std::mem;
 use ndarray::{Array2};
-use rayon::*;
 
 // Utils is a helper module that contains some utility functions in src/utils.rs
 mod utils;
 use utils::*;
+mod threads;
+use threads::*;
 
 fn main() {
+
+    // -----------------------------------------------------------------------
+    // CPU/Threads Configuration
+    // -----------------------------------------------------------------------
+
+    threads();
 
     // -----------------------------------------------------------------------
     // Simulation Parameters and Constants Setup
@@ -27,25 +34,6 @@ fn main() {
 
     let a: f64 = 1000000.;
     let alpha: f64 = 0.001;
-
-    let num : usize = current_num_threads();
-    println!("current number of threads: {:?}", num);
-
-    println!(
-    "Available CPUs: {}",
-    std::thread::available_parallelism().unwrap()
-    );
-
-    let physical_cores = num_cpus::get_physical(); 
-    
-    // Set up your thread pool
-    ThreadPoolBuilder::new()
-        .num_threads(physical_cores)
-        .build_global()
-        .unwrap_or_else(|_| { /* pool already initialized */ });
-
-    let num : usize = current_num_threads();
-    println!("current number of threads: {:?}", num);
 
     // -----------------------------------------------------------------------
     // Define Solution Arrays
