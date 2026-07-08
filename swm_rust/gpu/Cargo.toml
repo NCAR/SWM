@@ -1,11 +1,12 @@
 [package]
-name = "rust-cuda-basic"
+name = "vecadd"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cust = "0.3.0"
-kernels = { path = "kernels" }
+cust = "0.3.2"
+cust_raw = "0.11.3"
+nanorand = "0.7"
 
 [build-dependencies]
-cuda_builder = { git = "https://github.com/rust-gpu/rust-cuda", rev = "7fa76f3d717038a92c90bf4a482b0b8dd3259344", features = ["rustc_codegen_nvvm"] }
+cuda_builder = { workspace = true, default-features = false }
