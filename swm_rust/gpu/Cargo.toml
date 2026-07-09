@@ -5,4 +5,6 @@ edition = "2024"
 
 [dependencies]
 cust = "0.3.2"
+
+[build-dependencies]
 cuda_builder = "0.3.0"
