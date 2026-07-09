@@ -1,5 +1,5 @@
 [package]
-name = "vecadd-kernels"
+name = "i128-demo-kernels"
 version = "0.1.0"
 edition = "2024"
 

@@ -1,12 +1,10 @@
 [package]
-name = "vecadd"
+name = "i128_demo"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 cust = "0.3.2"
-cust_raw = "0.11.3"
-nanorand = "0.7"
 
 [build-dependencies]
 cuda_builder = { workspace = true, default-features = false }
