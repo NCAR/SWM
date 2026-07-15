@@ -49,3 +49,59 @@ extern "C" __global__ void init_conds(
     }
 
 }
+
+extern "C" __global__ void apply_uv_bcs(
+    double *u,
+    double *v,
+    int M,
+    int N,
+    int N_LEN
+)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Apply left/right periodic boundaries
+    if (idx < N)
+    {
+        int j = idx;
+
+        u[j] = u[M * N_LEN + j];
+        v[M * N_LEN + (j + 1)] = v[j + 1];
+    }
+
+    // Apply top/bottom periodic boundaries
+    if (idx < M)
+    {
+        int i = idx;
+
+        u[(i + 1) * N_LEN + N] = u[(i + 1) * N_LEN];
+        v[i * N_LEN] = v[i * N_LEN + N];
+    }
+
+    // Corner values
+    if (idx == 0)
+    {
+        u[N] = u[M * N_LEN];
+        v[M * N_LEN] = v[N];
+    }
+}
+
+extern "C" __global__ void init_olds(
+    double *u_old,
+    double *v_old,
+    double *p_old,
+    const double *u,
+    const double *v,
+    const double *p,
+    int TOT_LEN
+)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < TOT_LEN)
+    {
+        uold[idx] = u[idx];
+        vold[idx] = v[idx];
+        pold[idx] = p[idx];
+    }
+}
