@@ -43,6 +43,8 @@ fn main() -> Result<(), DriverError> {
     let my_module = ctx.load_module(Ptx::from_src(CUDA_KERNEL_MY_STRUCT))?;
     let my_function = my_module.load_function("my_struct_kernel")?;
     let init_conds = my_module.load_function("init_conds")?;
+    let apply_uv_bcs = my_module.load_function("apply_uv_bcs")?;
+    let init_olds = my_module.load_function("init_olds")?;
 
     println!("Time taken to compile and load PTX: {:.2?}", now.elapsed());
 
@@ -137,16 +139,27 @@ fn main() -> Result<(), DriverError> {
     unsafe { launch_kern.launch(cfg) }?;
 
     // periodic boundary conditions
-    // apply_uv_bcs(&mut u, &mut v);
+    let mut launch_kern = stream.launch_builder(&apply_uv_bcs);
+    args.arg(&mut gpu_u);
+    args.arg(&mut gpu_v);
+    args.arg(&M);
+    args.arg(&N);
+    args.arg(&N_LEN);
+    let mnmin = M.min(N);
+    let cfg = LaunchConfig::for_num_elems(mnmin as u32);
+    unsafe { launch_kern.launch(cfg) }?;
 
     // initialize old arrays
-    // for i in 0..M_LEN {
-    //     for j in 0..N_LEN {
-    //         uold[idx(i,j)] = u[idx(i,j)];
-    //         vold[idx(i,j)] = v[idx(i,j)];
-    //         pold[idx(i,j)] = p[idx(i,j)];
-    //     }
-    // }
+    let mut launch_kern = stream.launch_builder(&init_olds);
+    args.arg(&mut gpu_uold);
+    args.arg(&mut gpu_vold);
+    args.arg(&mut gpu_pold);
+    args.arg(&gpu_u);
+    args.arg(&gpu_v);
+    args.arg(&gpu_p);
+    args.arg(&TOT_LEN);
+    let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
+    unsafe { launch_kern.launch(cfg) }?;
 
     Ok(())
 }
