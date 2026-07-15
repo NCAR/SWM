@@ -222,9 +222,9 @@ fn main() -> Result<(), DriverError> {
         launch_kern.arg(&tdts8);
         launch_kern.arg(&tdtsdx);
         launch_kern.arg(&tdtsdy);
-        launch_kern.arg(&mut unew);
-        launch_kern.arg(&mut vnew);
-        launch_kern.arg(&mut pnew);
+        launch_kern.arg(&mut gpu_unew);
+        launch_kern.arg(&mut gpu_vnew);
+        launch_kern.arg(&mut gpu_pnew);
         launch_kern.arg(&N_LEN);
         launch_kern.arg(&TOT_LEN);
         let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
