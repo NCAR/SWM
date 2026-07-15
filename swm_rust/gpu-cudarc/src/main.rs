@@ -16,6 +16,9 @@ use std::time::Instant;
 use cudarc::driver::*;
 use cudarc::nvrtc::Ptx;
 
+mod consts;
+use consts::*;
+
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 unsafe impl DeviceRepr for MyStruct {}
@@ -49,7 +52,8 @@ fn main() -> Result<(), DriverError> {
     let now = Instant::now();
 
     let n = 10_usize;
-    let my_structs = vec![MyStruct { data: [1.0; 4] }; n];
+    // let my_structs = vec![MyStruct { data: [1.0; 4] }; n];
+    let my_structs: Vec<f64> = vec![1.0; TOT_LEN];
 
     // copy to GPU
     let mut gpu_my_structs = stream.clone_htod(&my_structs)?;

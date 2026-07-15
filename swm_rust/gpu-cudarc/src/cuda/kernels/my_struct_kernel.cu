@@ -1,5 +1,3 @@
-#include "../includes/my_struct.h"
-
 extern "C" __global__ void my_struct_kernel(MyStruct *my_structs, const size_t n)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
