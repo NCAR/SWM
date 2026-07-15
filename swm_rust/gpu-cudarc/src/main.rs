@@ -163,6 +163,8 @@ fn main() -> Result<(), DriverError> {
     let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
     unsafe { launch_kern.launch(cfg) }?;
 
+    let mut time = 0.;
+
     // -----------------------------------------------------------------------
     // Time Marching Loop
     // -----------------------------------------------------------------------
@@ -173,15 +175,15 @@ fn main() -> Result<(), DriverError> {
 
         // compute intermediate variables cu, cv, z, and h using u, v, and p
         let mut launch_kern = stream.launch_builder(&update_intermed_vars);
-        launch_kern.arg(&u);
-        launch_kern.arg(&v);
-        launch_kern.arg(&p);
+        launch_kern.arg(&gpu_u);
+        launch_kern.arg(&gpu_v);
+        launch_kern.arg(&gpu_p);
         launch_kern.arg(&fsdx);
         launch_kern.arg(&fsdy);
-        launch_kern.arg(&mut cu);
-        launch_kern.arg(&mut cv);
-        launch_kern.arg(&mut z);
-        launch_kern.arg(&mut h);
+        launch_kern.arg(&mut gpu_cu);
+        launch_kern.arg(&mut gpu_cv);
+        launch_kern.arg(&mut gpu_z);
+        launch_kern.arg(&mut gpu_h);
         launch_kern.arg(&TOT_LEN);
         let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
         unsafe { launch_kern.launch(cfg) }?;
@@ -191,10 +193,10 @@ fn main() -> Result<(), DriverError> {
 
         // apply periodic boundary conditions to intermediate variables
         let mut launch_kern = stream.launch_builder(&apply_intermed_bcs);
-        launch_kern.arg(&mut cu);
-        launch_kern.arg(&mut cv);
-        launch_kern.arg(&mut z);
-        launch_kern.arg(&mut h);
+        launch_kern.arg(&mut gpu_cu);
+        launch_kern.arg(&mut gpu_cv);
+        launch_kern.arg(&mut gpu_z);
+        launch_kern.arg(&mut gpu_h);
         launch_kern.arg(&M);
         launch_kern.arg(&N);
         launch_kern.arg(&N_LEN);
