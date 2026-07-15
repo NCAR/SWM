@@ -140,24 +140,24 @@ fn main() -> Result<(), DriverError> {
 
     // periodic boundary conditions
     let mut launch_kern = stream.launch_builder(&apply_uv_bcs);
-    args.arg(&mut gpu_u);
-    args.arg(&mut gpu_v);
-    args.arg(&M);
-    args.arg(&N);
-    args.arg(&N_LEN);
+    launch_kern.arg(&mut gpu_u);
+    launch_kern.arg(&mut gpu_v);
+    launch_kern.arg(&M);
+    launch_kern.arg(&N);
+    launch_kern.arg(&N_LEN);
     let mnmin = M.min(N);
     let cfg = LaunchConfig::for_num_elems(mnmin as u32);
     unsafe { launch_kern.launch(cfg) }?;
 
     // initialize old arrays
     let mut launch_kern = stream.launch_builder(&init_olds);
-    args.arg(&mut gpu_uold);
-    args.arg(&mut gpu_vold);
-    args.arg(&mut gpu_pold);
-    args.arg(&gpu_u);
-    args.arg(&gpu_v);
-    args.arg(&gpu_p);
-    args.arg(&TOT_LEN);
+    launch_kern.arg(&mut gpu_uold);
+    launch_kern.arg(&mut gpu_vold);
+    launch_kern.arg(&mut gpu_pold);
+    launch_kern.arg(&gpu_u);
+    launch_kern.arg(&gpu_v);
+    launch_kern.arg(&gpu_p);
+    launch_kern.arg(&TOT_LEN);
     let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
     unsafe { launch_kern.launch(cfg) }?;
 

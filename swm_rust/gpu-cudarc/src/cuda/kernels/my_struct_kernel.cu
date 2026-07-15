@@ -87,9 +87,9 @@ extern "C" __global__ void apply_uv_bcs(
 }
 
 extern "C" __global__ void init_olds(
-    double *u_old,
-    double *v_old,
-    double *p_old,
+    double *uold,
+    double *vold,
+    double *pold,
     const double *u,
     const double *v,
     const double *p,
