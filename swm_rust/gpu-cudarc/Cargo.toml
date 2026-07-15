@@ -11,4 +11,4 @@ cc = "1.0.82"
 regex = "1.9.3"
 
 [dependencies]
-cudarc = { path = "../.." }
+cudarc = { version = "0.19.8", features = ["cuda-version-from-build-system"] }
