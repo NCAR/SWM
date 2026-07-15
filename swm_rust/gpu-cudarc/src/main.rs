@@ -69,7 +69,7 @@ fn main() -> Result<(), DriverError> {
 
     let my_structs = stream.clone_dtoh(&gpu_my_structs)?;
 
-    assert!(my_structs.iter().all(|i| i.data == [2.0; 4]));
+    assert!(my_structs.iter().all(|&x| x == 2.0));
 
     Ok(())
 }
