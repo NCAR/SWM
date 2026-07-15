@@ -49,7 +49,7 @@ fn main() -> Result<(), DriverError> {
     // create data
     let now = Instant::now();
 
-    let n = 10_usize;
+    let n = TOT_LEN;
     // let my_structs = vec![MyStruct { data: [1.0; 4] }; n];
     let my_structs: Vec<f64> = vec![1.0; TOT_LEN];
 
