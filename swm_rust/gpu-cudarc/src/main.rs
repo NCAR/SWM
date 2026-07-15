@@ -42,7 +42,7 @@ fn main() -> Result<(), DriverError> {
     // loads kernels
     let my_module = ctx.load_module(Ptx::from_src(CUDA_KERNEL_MY_STRUCT))?;
     let my_function = my_module.load_function("my_struct_kernel")?;
-    let init_conds = my_module.load_function("init_conds");
+    let init_conds = my_module.load_function("init_conds")?;
 
     println!("Time taken to compile and load PTX: {:.2?}", now.elapsed());
 
@@ -112,7 +112,7 @@ fn main() -> Result<(), DriverError> {
 
     // set params
     let el: f64 = N as f64 * dx;
-    let pi = PI;
+    let pi = consts::PI;
     let tpi: f64 = pi + pi;
     let di: f64 = tpi / M as f64;
     let dj: f64 = tpi / N as f64;
@@ -129,6 +129,7 @@ fn main() -> Result<(), DriverError> {
     launch_kern.arg(&a);
     launch_kern.arg(&M_LEN);
     launch_kern.arg(&N_LEN);
+    launch_kern.arg(&TOT_LEN);
     launch_kern.arg(&di);
     launch_kern.arg(&dj);
     launch_kern.arg(&pcf);
