@@ -1,6 +1,3 @@
-extern crate bindgen;
-extern crate cc;
-
 use std::{env, path::PathBuf, process::Command};
 
 use regex::Regex;
