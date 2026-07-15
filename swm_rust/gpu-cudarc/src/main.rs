@@ -47,6 +47,7 @@ fn main() -> Result<(), DriverError> {
     let init_olds = my_module.load_function("init_olds")?;
     let update_intermed_vars = my_module.load_function("update_intermed_vars")?;
     let apply_intermed_bcs = my_module.load_function("apply_intermed_bcs")?;
+    let time_update_new_vars = my_module.load_function("time_update_new_vars")?;
 
     println!("Time taken to compile and load PTX: {:.2?}", now.elapsed());
 
@@ -210,7 +211,24 @@ fn main() -> Result<(), DriverError> {
 
         // c1 = tstart.elapsed().as_secs_f64();
 
-        // time_update_new_vars(&uold, &vold, &pold, &cu, &cv, &z, &h, tdts8, tdtsdx, tdtsdy, &mut unew, &mut vnew, &mut pnew);
+        let mut launch_kern = stream.launch_builder(&time_update_new_vars);
+        launch_kern.arg(&gpu_uold);
+        launch_kern.arg(&gpu_vold);
+        launch_kern.arg(&gpu_pold);
+        launch_kern.arg(&gpu_cu);
+        launch_kern.arg(&gpu_cv);
+        launch_kern.arg(&gpu_z);
+        launch_kern.arg(&gpu_h);
+        launch_kern.arg(&tdts8);
+        launch_kern.arg(&tdtsdx);
+        launch_kern.arg(&tdtsdy);
+        launch_kern.arg(&mut unew);
+        launch_kern.arg(&mut vnew);
+        launch_kern.arg(&mut pnew);
+        launch_kern.arg(&N_LEN);
+        launch_kern.arg(&TOT_LEN);
+        let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
+        unsafe { launch_kern.launch(cfg) }?;
 
         // c2 = tstart.elapsed().as_secs_f64();
         // t200 = t200 + (c2 - c1);

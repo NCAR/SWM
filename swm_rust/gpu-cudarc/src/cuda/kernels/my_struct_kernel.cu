@@ -41,9 +41,9 @@ extern "C" __global__ void init_conds(
         p[idx] = pcf * ( cos(2.0 * ii * di) + cos(2.0 * jj * dj) ) + 50000.0;
 
         // initialize velocities u and v
-        int idx01 = (i*N_LEN) + j+1; //[i][j+1]
-        int idx10 = ((i+1)*N_LEN) + j; //[i+1][j]
-        int idx11 = ((i+1)*N_LEN) + j+1; //[i+1][j+1]
+        int idx01 = idx + 1; //[i][j+1]
+        int idx10 = idx + N_LEN; //[i+1][j]
+        int idx11 = idx + N_LEN + 1; //[i+1][j+1]
         u[idx10] = -(psi[idx11] - psi[idx10]) / dy;
         v[idx01] = (psi[idx11] - psi[idx01]) / dx;
     }
@@ -125,12 +125,9 @@ extern "C" __global__ void update_intermed_vars(
 
     if (idx < TOT_LEN)
     {
-        int i = idx / N_LEN;
-        int j = idx % N_LEN;
-
-        int idx01 = (i*N_LEN) + j+1; //[i][j+1]
-        int idx10 = ((i+1)*N_LEN) + j; //[i+1][j]
-        int idx11 = ((i+1)*N_LEN) + j+1; //[i+1][j+1]
+        int idx01 = idx + 1; //[i][j+1]
+        int idx10 = idx + N_LEN; //[i+1][j]
+        int idx11 = idx + N_LEN + 1; //[i+1][j+1]
         cu[idx10] = 0.5 * (p[idx10] + p[idx]) * u[idx10];
         cv[idx01] = 0.5 * (p[idx01] + p[idx]) * v[idx01];
         z[idx11] = (fsdx * (v[idx11] - v[idx01]) - fsdy * (u[idx11] - u[idx10])) / (p[idx] + p[idx10] + p[idx11] + p[idx01]);
@@ -181,4 +178,37 @@ extern "C" __global__ void apply_intermed_bcs(
         z[0] = z[M * N_LEN + N];
         h[M * N_LEN + N] = h[0];
     }
+}
+
+extern "C" __global__ void time_update_new_vars(
+    const double *uold,
+    const double *vold,
+    const double *pold,
+    const double *cu,
+    const double *cv,
+    const double *z,
+    const double *h,
+    double tdts8,
+    double tdtsdx,
+    double tdtsdy,
+    double *unew,
+    double *vnew,
+    double *pnew,
+    int N_LEN,
+    int TOT_LEN
+)
+{
+    // index
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < TOT_LEN)
+    {
+        int idx01 = idx + 1; //[i][j+1]
+        int idx10 = idx + N_LEN; //[i+1][j]
+        int idx11 = idx + N_LEN + 1; //[i+1][j+1]
+        unew[idx10] = uold[idx10] + tdts8 * (z[idx11] + z[idx10]) * (cv[idx11] + cv[idx01] + cv[idx] + cv[idx10]) - tdtsdx * (h[idx10] - h[idx]);
+        vnew[idx01] = vold[idx01] - tdts8 * (z[idx11] + z[idx01]) * (cu[idx11] + cu[idx01] + cu[idx] + cu[idx10]) - tdtsdy * (h[idx01] - h[idx]);
+        pnew[idx] = pold[idx] - tdtsdx * (cu[idx10] - cu[idx]) - tdtsdy * (cv[idx01] - cv[idx]);
+    }
+
 }
