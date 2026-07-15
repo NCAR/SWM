@@ -19,17 +19,14 @@ use cudarc::nvrtc::Ptx;
 mod consts;
 use consts::*;
 
-// unsafe impl DeviceRepr for MyStruct {}
-// impl Default for MyStruct {
-//     fn default() -> Self{
-//         Self{ data: [0.0; 4]}
-//     }
-// }
-
 // include the compiled PTX code as string
 const CUDA_KERNEL_MY_STRUCT: &str = include_str!(concat!(env!("OUT_DIR"), "/my_struct_kernel.ptx"));
 
 fn main() -> Result<(), DriverError> {
+    // -----------------------------------------------------------------------
+    // GPU Setup
+    // -----------------------------------------------------------------------
+    
     // setup GPU device
     let now = Instant::now();
 
@@ -41,8 +38,10 @@ fn main() -> Result<(), DriverError> {
     // compile ptx
     let now = Instant::now();
 
+    // loads kernels
     let my_module = ctx.load_module(Ptx::from_src(CUDA_KERNEL_MY_STRUCT))?;
     let my_function = my_module.load_function("my_struct_kernel")?;
+    let init_conds = my_module.load_function("init_conds");
 
     println!("Time taken to compile and load PTX: {:.2?}", now.elapsed());
 
@@ -70,6 +69,74 @@ fn main() -> Result<(), DriverError> {
     let my_structs = stream.clone_dtoh(&gpu_my_structs)?;
 
     assert!(my_structs.iter().all(|&x| x == 2.0));
+
+    // -----------------------------------------------------------------------
+    // Simulation Parameters and Constants Setup
+    // -----------------------------------------------------------------------
+
+    // parameters
+    let dt: f64 = 90.;
+    let mut tdt: f64 = dt;
+
+    let dx: f64 = 100000.;
+    let dy: f64 = 100000.;
+    let fsdx: f64 = 4. / dx;
+    let fsdy: f64 = 4. / dy;
+
+    let a: f64 = 1000000.;
+    let alpha: f64 = 0.001;
+
+    // -----------------------------------------------------------------------
+    // Define Solution Arrays directly to GPU
+    // -----------------------------------------------------------------------
+
+    let mut gpu_u = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_v = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_p = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_psi = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_unew = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_vnew = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_pnew = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_uold = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_vold = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_pold = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_cu = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_cv = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_z = stream.alloc_zeros::<f64>(TOT_LEN)?;
+    let mut gpu_h = stream.alloc_zeros::<f64>(TOT_LEN)?;
+
+    // -----------------------------------------------------------------------
+    // Initialize Data
+    // -----------------------------------------------------------------------
+
+    // initialize velocities u and v, pressure p
+    let mut launch_kern = stream.launch_builder(&init_conds);
+    args.arg(&mut gpu_u);
+    args.arg(&mut gpu_v);
+    args.arg(&mut gpu_p);
+    args.arg(&mut gpu_psi);
+    args.arg(&dx);
+    args.arg(&dy);
+    args.arg(&a);
+    args.arg(&M_LEN);
+    args.arg(&N_LEN);
+    args.arg(&di);
+    args.arg(&dj);
+    args.arg(&pcf);
+    let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
+    unsafe { launch_kern.launch(cfg) }?;
+
+    // periodic boundary conditions
+    // apply_uv_bcs(&mut u, &mut v);
+
+    // initialize old arrays
+    // for i in 0..M_LEN {
+    //     for j in 0..N_LEN {
+    //         uold[idx(i,j)] = u[idx(i,j)];
+    //         vold[idx(i,j)] = v[idx(i,j)];
+    //         pold[idx(i,j)] = p[idx(i,j)];
+    //     }
+    // }
 
     Ok(())
 }
