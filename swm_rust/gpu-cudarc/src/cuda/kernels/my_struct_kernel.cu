@@ -4,9 +4,11 @@ extern "C" __global__ void my_struct_kernel(double *my_structs, const size_t n)
 
     if (i < n)
     {
-        my_structs[i].data[0] += 1;
-        my_structs[i].data[1] += 1;
-        my_structs[i].data[2] += 1;
-        my_structs[i].data[3] += 1;
+        int idx = 4 * i;
+
+        data[idx + 0] += 1.0;
+        data[idx + 1] += 1.0;
+        data[idx + 2] += 1.0;
+        data[idx + 3] += 1.0;
     }
 }
