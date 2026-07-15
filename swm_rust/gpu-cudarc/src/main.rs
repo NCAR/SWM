@@ -45,6 +45,8 @@ fn main() -> Result<(), DriverError> {
     let init_conds = my_module.load_function("init_conds")?;
     let apply_uv_bcs = my_module.load_function("apply_uv_bcs")?;
     let init_olds = my_module.load_function("init_olds")?;
+    let update_intermed_vars = my_module.load_function("update_intermed_vars")?;
+    let apply_intermed_bcs = my_module.load_function("apply_intermed_bcs")?;
 
     println!("Time taken to compile and load PTX: {:.2?}", now.elapsed());
 
@@ -160,6 +162,95 @@ fn main() -> Result<(), DriverError> {
     launch_kern.arg(&TOT_LEN);
     let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
     unsafe { launch_kern.launch(cfg) }?;
+
+    // -----------------------------------------------------------------------
+    // Time Marching Loop
+    // -----------------------------------------------------------------------
+    
+    for ncycle in 1..=ITMAX {
+
+        // let mut c1 = tstart.elapsed().as_secs_f64();
+
+        // compute intermediate variables cu, cv, z, and h using u, v, and p
+        let mut launch_kern = stream.launch_builder(&update_intermed_vars);
+        launch_kern.arg(&u);
+        launch_kern.arg(&v);
+        launch_kern.arg(&p);
+        launch_kern.arg(&fsdx);
+        launch_kern.arg(&fsdy);
+        launch_kern.arg(&mut cu);
+        launch_kern.arg(&mut cv);
+        launch_kern.arg(&mut z);
+        launch_kern.arg(&mut h);
+        launch_kern.arg(&TOT_LEN);
+        let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
+        unsafe { launch_kern.launch(cfg) }?;
+
+        // let mut c2 = tstart.elapsed().as_secs_f64();
+        // t100 = t100 + (c2 - c1);
+
+        // apply periodic boundary conditions to intermediate variables
+        let mut launch_kern = stream.launch_builder(&apply_intermed_bcs);
+        launch_kern.arg(&mut cu);
+        launch_kern.arg(&mut cv);
+        launch_kern.arg(&mut z);
+        launch_kern.arg(&mut h);
+        launch_kern.arg(&M);
+        launch_kern.arg(&N);
+        launch_kern.arg(&N_LEN);
+        let cfg = LaunchConfig::for_num_elems(mnmin as u32);
+        unsafe { launch_kern.launch(cfg) }?;
+
+        // time update to new variables
+        let tdts8 = tdt / 8.0;
+        let tdtsdx = tdt / dx;
+        let tdtsdy = tdt / dy;
+
+        // c1 = tstart.elapsed().as_secs_f64();
+
+        time_update_new_vars(&uold, &vold, &pold, &cu, &cv, &z, &h, tdts8, tdtsdx, tdtsdy, &mut unew, &mut vnew, &mut pnew);
+
+        // c2 = tstart.elapsed().as_secs_f64();
+        // t200 = t200 + (c2 - c1);
+        
+        // apply periodic boundary conitions to new variables
+        apply_uvp_bcs(&mut unew, &mut vnew, &mut pnew);
+
+        // update time
+        time = time + dt;
+
+        // update update old vars and solution
+        if ncycle > 1 {
+
+            // c1 = tstart.elapsed().as_secs_f64();
+
+            // smooth old vars using time filter
+            smooth_update_old_vars(&u, &v, &p, &unew, &vnew, &pnew, &mut uold, &mut vold, &mut pold, alpha);
+
+            // update u, v, and p to new solution
+            mem::swap(&mut u, &mut unew);
+            mem::swap(&mut v, &mut vnew);
+            mem::swap(&mut p, &mut pnew);
+
+            // c2 = tstart.elapsed().as_secs_f64(); 
+            // t300 = t300 + (c2 - c1);
+        } else {
+            // update tdt for subsequent timesteps
+            tdt = tdt + tdt;
+
+            // no smoothing for first timestep
+            // this might be redundant
+            mem::swap(&mut uold, &mut u);
+            mem::swap(&mut vold, &mut v);
+            mem::swap(&mut pold, &mut p);
+
+            // update u, v, and p to new solution
+            // might be able to take out of if statement
+            mem::swap(&mut u, &mut unew);
+            mem::swap(&mut v, &mut vnew);
+            mem::swap(&mut p, &mut pnew);
+        }
+    }
 
     Ok(())
 }
