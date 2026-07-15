@@ -15,9 +15,10 @@
 use std::time::Instant;
 use cudarc::driver::*;
 use cudarc::nvrtc::Ptx;
+use std::f64::consts;
 
-mod consts;
-use consts::*;
+mod constants;
+use constants::*;
 
 // include the compiled PTX code as string
 const CUDA_KERNEL_MY_STRUCT: &str = include_str!(concat!(env!("OUT_DIR"), "/my_struct_kernel.ptx"));
@@ -111,12 +112,12 @@ fn main() -> Result<(), DriverError> {
 
     // set params
     let el: f64 = N as f64 * dx;
-    let pi = consts::PI;
+    let pi = PI;
     let tpi: f64 = pi + pi;
     let di: f64 = tpi / M as f64;
     let dj: f64 = tpi / N as f64;
     let pcf: f64 = pi * pi * a * a / (el * el);
-    
+
     // initialize velocities u and v, pressure p
     let mut launch_kern = stream.launch_builder(&init_conds);
     launch_kern.arg(&mut gpu_u);
