@@ -1,7 +1,5 @@
 use std::{env, path::PathBuf, process::Command};
 
-use regex::Regex;
-
 fn main() {
     // Tell cargo to invalidate the built crate whenever files of interest changes.
     println!("cargo:rerun-if-changed={}", "cuda");
@@ -30,17 +28,4 @@ fn main() {
         nvcc_status.success(),
         "Failed to compile CUDA source to PTX."
     );
-
-    // we need to make modifications to the generated code
-    let generated_bindings = bindings.to_string();
-
-    // Regex to find raw pointers to float and replace them with CudaSlice<f32>
-    // You can copy this regex to add/modify other types of pointers, for example "*mut i32"
-    let pointer_regex = Regex::new(r"\*mut f32").unwrap();
-    let modified_bindings = pointer_regex.replace_all(&generated_bindings, "CudaSlice<f32>");
-
-    // Write the bindings to the $OUT_DIR/bindings.rs file.
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    std::fs::write(out_path.join("bindings.rs"), modified_bindings.as_bytes())
-        .expect("Failed to write bindings");
 }
