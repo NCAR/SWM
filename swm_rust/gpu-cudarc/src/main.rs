@@ -111,18 +111,18 @@ fn main() -> Result<(), DriverError> {
 
     // initialize velocities u and v, pressure p
     let mut launch_kern = stream.launch_builder(&init_conds);
-    args.arg(&mut gpu_u);
-    args.arg(&mut gpu_v);
-    args.arg(&mut gpu_p);
-    args.arg(&mut gpu_psi);
-    args.arg(&dx);
-    args.arg(&dy);
-    args.arg(&a);
-    args.arg(&M_LEN);
-    args.arg(&N_LEN);
-    args.arg(&di);
-    args.arg(&dj);
-    args.arg(&pcf);
+    launch_kern.arg(&mut gpu_u);
+    launch_kern.arg(&mut gpu_v);
+    launch_kern.arg(&mut gpu_p);
+    launch_kern.arg(&mut gpu_psi);
+    launch_kern.arg(&dx);
+    launch_kern.arg(&dy);
+    launch_kern.arg(&a);
+    launch_kern.arg(&M_LEN);
+    launch_kern.arg(&N_LEN);
+    launch_kern.arg(&di);
+    launch_kern.arg(&dj);
+    launch_kern.arg(&pcf);
     let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
     unsafe { launch_kern.launch(cfg) }?;
 
