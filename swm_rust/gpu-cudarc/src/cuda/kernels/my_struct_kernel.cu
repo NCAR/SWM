@@ -116,6 +116,7 @@ extern "C" __global__ void update_intermed_vars(
     double *cv,
     double *z,
     double *h,
+    int N_LEN
     int TOT_LEN
 )
 {
@@ -124,6 +125,9 @@ extern "C" __global__ void update_intermed_vars(
 
     if (idx < TOT_LEN)
     {
+        int i = idx / N_LEN;
+        int j = idx % N_LEN;
+        
         int idx01 = (i*N_LEN) + j+1; //[i][j+1]
         int idx10 = ((i+1)*N_LEN) + j; //[i+1][j]
         int idx11 = ((i+1)*N_LEN) + j+1; //[i+1][j+1]
