@@ -19,14 +19,12 @@ use cudarc::nvrtc::Ptx;
 mod consts;
 use consts::*;
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
-unsafe impl DeviceRepr for MyStruct {}
-impl Default for MyStruct {
-    fn default() -> Self{
-        Self{ data: [0.0; 4]}
-    }
-}
+// unsafe impl DeviceRepr for MyStruct {}
+// impl Default for MyStruct {
+//     fn default() -> Self{
+//         Self{ data: [0.0; 4]}
+//     }
+// }
 
 // include the compiled PTX code as string
 const CUDA_KERNEL_MY_STRUCT: &str = include_str!(concat!(env!("OUT_DIR"), "/my_struct_kernel.ptx"));

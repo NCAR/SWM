@@ -7,8 +7,8 @@ fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     // Specify the desired architecture version.
-    let arch = "compute_86"; // For example, using SM 8.6 (Ampere architecture).
-    let code = "sm_86"; // For the same SM 8.6 (Ampere architecture).
+    let arch = "compute_80"; // For example, using SM 8.6 (Ampere architecture).
+    let code = "sm_80"; // For the same SM 8.6 (Ampere architecture).
 
     // build the cuda kernels
     let cuda_src = PathBuf::from("src/cuda/kernels/my_struct_kernel.cu");
