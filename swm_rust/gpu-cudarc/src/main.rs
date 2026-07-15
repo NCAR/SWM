@@ -208,13 +208,13 @@ fn main() -> Result<(), DriverError> {
 
         // c1 = tstart.elapsed().as_secs_f64();
 
-        time_update_new_vars(&uold, &vold, &pold, &cu, &cv, &z, &h, tdts8, tdtsdx, tdtsdy, &mut unew, &mut vnew, &mut pnew);
+        // time_update_new_vars(&uold, &vold, &pold, &cu, &cv, &z, &h, tdts8, tdtsdx, tdtsdy, &mut unew, &mut vnew, &mut pnew);
 
         // c2 = tstart.elapsed().as_secs_f64();
         // t200 = t200 + (c2 - c1);
         
         // apply periodic boundary conitions to new variables
-        apply_uvp_bcs(&mut unew, &mut vnew, &mut pnew);
+        // apply_uvp_bcs(&mut unew, &mut vnew, &mut pnew);
 
         // update time
         time = time + dt;
@@ -225,12 +225,12 @@ fn main() -> Result<(), DriverError> {
             // c1 = tstart.elapsed().as_secs_f64();
 
             // smooth old vars using time filter
-            smooth_update_old_vars(&u, &v, &p, &unew, &vnew, &pnew, &mut uold, &mut vold, &mut pold, alpha);
+            // smooth_update_old_vars(&u, &v, &p, &unew, &vnew, &pnew, &mut uold, &mut vold, &mut pold, alpha);
 
             // update u, v, and p to new solution
-            mem::swap(&mut u, &mut unew);
-            mem::swap(&mut v, &mut vnew);
-            mem::swap(&mut p, &mut pnew);
+            // mem::swap(&mut u, &mut unew);
+            // mem::swap(&mut v, &mut vnew);
+            // mem::swap(&mut p, &mut pnew);
 
             // c2 = tstart.elapsed().as_secs_f64(); 
             // t300 = t300 + (c2 - c1);
@@ -240,15 +240,15 @@ fn main() -> Result<(), DriverError> {
 
             // no smoothing for first timestep
             // this might be redundant
-            mem::swap(&mut uold, &mut u);
-            mem::swap(&mut vold, &mut v);
-            mem::swap(&mut pold, &mut p);
+            // mem::swap(&mut uold, &mut u);
+            // mem::swap(&mut vold, &mut v);
+            // mem::swap(&mut pold, &mut p);
 
             // update u, v, and p to new solution
             // might be able to take out of if statement
-            mem::swap(&mut u, &mut unew);
-            mem::swap(&mut v, &mut vnew);
-            mem::swap(&mut p, &mut pnew);
+            // mem::swap(&mut u, &mut unew);
+            // mem::swap(&mut v, &mut vnew);
+            // mem::swap(&mut p, &mut pnew);
         }
     }
 
