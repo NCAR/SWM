@@ -98,6 +98,10 @@ fn main() -> Result<(), DriverError> {
     // Define Solution Arrays directly to GPU
     // -----------------------------------------------------------------------
 
+    let mut u: Vec<f64> = vec![0.0; TOT_LEN];
+    let mut v: Vec<f64> = vec![0.0; TOT_LEN];
+    let mut p: Vec<f64> = vec![0.0; TOT_LEN];
+
     let mut gpu_u = stream.alloc_zeros::<f64>(TOT_LEN)?;
     let mut gpu_v = stream.alloc_zeros::<f64>(TOT_LEN)?;
     let mut gpu_p = stream.alloc_zeros::<f64>(TOT_LEN)?;
@@ -294,6 +298,17 @@ fn main() -> Result<(), DriverError> {
             mem::swap(&mut gpu_v, &mut gpu_vnew);
             mem::swap(&mut gpu_p, &mut gpu_pnew);
         }
+    }
+
+    let u = stream.clone_dtoh(&gpu_u)?;
+    let v = stream.clone_dtoh(&gpu_v)?;
+    let p = stream.clone_dtoh(&gpu_p)?;
+
+    // save solutions to txt files
+    if VAL_OUT {
+        print_data_to_file("u_rust.txt", &u);
+        print_data_to_file("v_rust.txt", &v);
+        print_data_to_file("p_rust.txt", &p);
     }
 
     Ok(())
