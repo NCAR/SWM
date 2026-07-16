@@ -284,6 +284,11 @@ fn main() -> Result<(), DriverError> {
     let v = stream.clone_dtoh(&gpu_v)?;
     let p = stream.clone_dtoh(&gpu_p)?;
 
+    let cu = stream.clone_dtoh(&gpu_cu)?;
+    let cv = stream.clone_dtoh(&gpu_cv)?;
+    let z = stream.clone_dtoh(&gpu_z)?;
+    let h = stream.clone_dtoh(&gpu_h)?;
+
     // save solutions to txt files
     if VAL_OUT {
         print_data_to_file("u_rust.txt", &u);
