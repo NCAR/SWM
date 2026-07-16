@@ -50,3 +50,6 @@ add_executable(${SWM_C_ACC_TILE_TARGET} ${SWM_C_ACC_TILE_SOURCES})
 target_link_libraries(${SWM_C_ACC_TILE_TARGET} m)
 target_compile_options(${SWM_C_ACC_TILE_TARGET} PRIVATE ${OPENACC_COMPILE_FLAGS})
 target_link_options(${SWM_C_ACC_TILE_TARGET} PRIVATE ${OPENACC_LINK_FLAGS})
+
+target_compile_definitions(swm_c_acc PRIVATE M=${M})
+target_compile_definitions(swm_c_acc PRIVATE N=${N})
