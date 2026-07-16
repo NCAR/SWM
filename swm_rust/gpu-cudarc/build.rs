@@ -15,6 +15,7 @@ fn main() {
     let ptx_file = out_dir.join("kernels.ptx");
 
     let nvcc_status = Command::new("nvcc")
+        .arg("-O3")
         .arg("-ptx")
         .arg("-o")
         .arg(&ptx_file)
