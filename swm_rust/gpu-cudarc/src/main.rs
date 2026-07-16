@@ -151,10 +151,6 @@ fn main() -> Result<(), DriverError> {
     let vi = stream.clone_dtoh(&gpu_v)?;
     let pi = stream.clone_dtoh(&gpu_p)?;
 
-    print_data_to_file("uinit.txt", &ui);
-    print_data_to_file("vinit.txt", &vi);
-    print_data_to_file("pinit.txt", &pi);
-
     // -----------------------------------------------------------------------
     // Time Marching Loop
     // -----------------------------------------------------------------------
@@ -293,6 +289,11 @@ fn main() -> Result<(), DriverError> {
         print_data_to_file("u_rust.txt", &u);
         print_data_to_file("v_rust.txt", &v);
         print_data_to_file("p_rust.txt", &p);
+
+        print_data_to_file("cu_rust.txt", &cu);
+        print_data_to_file("cv_rust.txt", &cv);
+        print_data_to_file("z_rust.txt", &z);
+        print_data_to_file("h_rust.txt", &h);
     }
 
     Ok(())
