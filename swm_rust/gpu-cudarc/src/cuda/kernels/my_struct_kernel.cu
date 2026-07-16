@@ -107,9 +107,9 @@ extern "C" __global__ void init_olds(
 }
 
 extern "C" __global__ void update_intermed_vars(
-    double *u,
-    double *v,
-    double *p,
+    const double *u,
+    const double *v,
+    const double *p,
     double fsdx,
     double fsdy,
     double *cu,
