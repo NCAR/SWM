@@ -145,11 +145,12 @@ fn main() -> Result<(), DriverError> {
     let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
     unsafe { launch_kern.launch(cfg) }?;
 
+    // Start timer
+    let tstart = Instant::now(); 
     let mut time = 0.;
-
-    let ui = stream.clone_dtoh(&gpu_u)?;
-    let vi = stream.clone_dtoh(&gpu_v)?;
-    let pi = stream.clone_dtoh(&gpu_p)?;
+    let mut t100 = 0.;
+    let mut t200 = 0.;
+    let mut t300 = 0.;
 
     // -----------------------------------------------------------------------
     // Time Marching Loop
@@ -157,7 +158,7 @@ fn main() -> Result<(), DriverError> {
     
     for ncycle in 1..=ITMAX {
 
-        // let mut c1 = tstart.elapsed().as_secs_f64();
+        let mut c1 = tstart.elapsed().as_secs_f64();
 
         // compute intermediate variables cu, cv, z, and h using u, v, and p
         let mut launch_kern = stream.launch_builder(&update_intermed_vars);
@@ -175,8 +176,8 @@ fn main() -> Result<(), DriverError> {
         let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
         unsafe { launch_kern.launch(cfg) }?;
 
-        // let mut c2 = tstart.elapsed().as_secs_f64();
-        // t100 = t100 + (c2 - c1);
+        let mut c2 = tstart.elapsed().as_secs_f64();
+        t100 = t100 + (c2 - c1);
 
         // apply periodic boundary conditions to intermediate variables
         let mut launch_kern = stream.launch_builder(&apply_intermed_bcs);
@@ -195,7 +196,7 @@ fn main() -> Result<(), DriverError> {
         let tdtsdx = tdt / dx;
         let tdtsdy = tdt / dy;
 
-        // c1 = tstart.elapsed().as_secs_f64();
+        c1 = tstart.elapsed().as_secs_f64();
 
         let mut launch_kern = stream.launch_builder(&time_update_new_vars);
         launch_kern.arg(&gpu_uold);
@@ -216,8 +217,8 @@ fn main() -> Result<(), DriverError> {
         let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
         unsafe { launch_kern.launch(cfg) }?;
 
-        // c2 = tstart.elapsed().as_secs_f64();
-        // t200 = t200 + (c2 - c1);
+        c2 = tstart.elapsed().as_secs_f64();
+        t200 = t200 + (c2 - c1);
         
         // apply periodic boundary conitions to new variables
         let mut launch_kern = stream.launch_builder(&apply_uvp_bcs);
@@ -236,7 +237,7 @@ fn main() -> Result<(), DriverError> {
         // update update old vars and solution
         if ncycle > 1 {
 
-            // c1 = tstart.elapsed().as_secs_f64();
+            c1 = tstart.elapsed().as_secs_f64();
 
             // smooth old vars using time filter
             let mut launch_kern = stream.launch_builder(&smooth_update_old_vars);
@@ -260,8 +261,8 @@ fn main() -> Result<(), DriverError> {
             mem::swap(&mut gpu_v, &mut gpu_vnew);
             mem::swap(&mut gpu_p, &mut gpu_pnew);
 
-            // c2 = tstart.elapsed().as_secs_f64(); 
-            // t300 = t300 + (c2 - c1);
+            c2 = tstart.elapsed().as_secs_f64(); 
+            t300 = t300 + (c2 - c1);
         } else {
             // update tdt for subsequent timesteps
             tdt = tdt + tdt;
@@ -280,25 +281,46 @@ fn main() -> Result<(), DriverError> {
         }
     }
 
+    // End time
+    let ctime = tstart.elapsed().as_secs_f64();
+
+    let ptime = time / 3600.;
+
+    // print out timings
+    if TIMING {
+        println!(" cycle number {:?} model time in hours {:?}\n", ITMAX, ptime);
+
+        let mut mfs100 = 0.0;
+        let mut mfs200 = 0.0;
+        let mut mfs300 = 0.0;
+        // gdr t100 etc. now an accumulation of all l100 time
+        if t100 > 0. { mfs100 = ITMAX as f64 * 24. * M as f64 * N as f64 / t100 / 1000000.; }
+        if t200 > 0. { mfs200 = ITMAX as f64 * 26. * M as f64 * N as f64 / t200 / 1000000.; }
+        if t300 > 0. { mfs300 = ITMAX as f64 * 15. * M as f64 * N as f64 / t300 / 1000000.; }
+
+        let tcyc = ctime / ITMAX as f64;
+
+        println!(" cycle number {:?} total computer time {:?} time per cycle {:?}", ITMAX, ctime, tcyc);
+        println!(" time and megaflops for loop 100 {:?} {:?}", t100, mfs100);
+        println!(" time and megaflops for loop 200 {:?} {:?}", t200, mfs200);
+        println!(" time and megaflops for loop 300 {:?} {:?}", t300, mfs300);
+    }
+
+    // copy solutions over to CPU
     let u = stream.clone_dtoh(&gpu_u)?;
     let v = stream.clone_dtoh(&gpu_v)?;
     let p = stream.clone_dtoh(&gpu_p)?;
-
-    let cu = stream.clone_dtoh(&gpu_cu)?;
-    let cv = stream.clone_dtoh(&gpu_cv)?;
-    let z = stream.clone_dtoh(&gpu_z)?;
-    let h = stream.clone_dtoh(&gpu_h)?;
 
     // save solutions to txt files
     if VAL_OUT {
         print_data_to_file("u_rust.txt", &u);
         print_data_to_file("v_rust.txt", &v);
         print_data_to_file("p_rust.txt", &p);
+    }
 
-        print_data_to_file("cu_rust.txt", &cu);
-        print_data_to_file("cv_rust.txt", &cv);
-        print_data_to_file("z_rust.txt", &z);
-        print_data_to_file("h_rust.txt", &h);
+    if SUCCINCT {
+        println!("Version: GPU cudarc");
+        println!("Grid Size: {:?}x{:?}, Number of iterations: {:?}, Total computer time: {:.2}", M, N, ITMAX, ctime);
     }
 
     Ok(())
