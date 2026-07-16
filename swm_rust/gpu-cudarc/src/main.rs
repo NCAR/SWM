@@ -20,6 +20,8 @@ use std::f64::consts;
 use std::mem;
 use std::fs::File;
 use std::path::Path;
+use std::error::Error;
+use std::fs::OpenOptions;
 
 mod constants;
 use constants::*;
@@ -101,10 +103,6 @@ fn main() -> Result<(), DriverError> {
     // -----------------------------------------------------------------------
     // Define Solution Arrays directly to GPU
     // -----------------------------------------------------------------------
-
-    let mut u: Vec<f64> = vec![0.0; TOT_LEN];
-    let mut v: Vec<f64> = vec![0.0; TOT_LEN];
-    let mut p: Vec<f64> = vec![0.0; TOT_LEN];
 
     let mut gpu_u = stream.alloc_zeros::<f64>(TOT_LEN)?;
     let mut gpu_v = stream.alloc_zeros::<f64>(TOT_LEN)?;
