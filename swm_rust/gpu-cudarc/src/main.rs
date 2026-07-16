@@ -17,6 +17,8 @@ use cudarc::driver::*;
 use cudarc::nvrtc::Ptx;
 use std::f64::consts;
 
+use std::mem;
+
 mod constants;
 use constants::*;
 
@@ -312,4 +314,31 @@ fn main() -> Result<(), DriverError> {
     }
 
     Ok(())
+}
+
+fn print_data_to_file(pathname: &str, data: &Arr) {
+    // define path and display
+    let path = Path::new(pathname);
+    let display = path.display();
+
+    // Open a file in write-only mode, returns `io::Result<File>`
+    let mut file = match File::create(&path) {
+        Err(why) => panic!("couldn't create {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    // Create string from data
+    let mut s = String::from("");
+    for i in 0..M_LEN {
+        for j in 0..N_LEN {
+            s += &format!("{:.6} ", data[idx(i,j)]);
+        }
+        s += "\n";
+    }
+
+    // Write string to `file`, returns `io::Result<()>`
+    match file.write_all(s.as_bytes()) {
+        Err(why) => panic!("couldn't write to {}: {}", display, why),
+        Ok(_) => println!("successfully wrote to {}", display),
+    }
 }
