@@ -26,7 +26,7 @@ mod constants;
 use constants::*;
 
 // include the compiled PTX code as string
-const CUDA_KERNEL_MY_STRUCT: &str = include_str!(concat!(env!("OUT_DIR"), "/my_struct_kernel.ptx"));
+const CUDA_KERNEL: &str = include_str!(concat!(env!("OUT_DIR"), "/kernels.ptx"));
 
 fn main() -> Result<(), DriverError> {
     // -----------------------------------------------------------------------
@@ -39,13 +39,11 @@ fn main() -> Result<(), DriverError> {
     let ctx = CudaContext::new(0)?;
     let stream = ctx.default_stream();
 
-    println!("Time taken to initialise CUDA: {:.2?}", now.elapsed());
-
     // compile ptx
     let now = Instant::now();
 
     // loads kernels
-    let my_module = ctx.load_module(Ptx::from_src(CUDA_KERNEL_MY_STRUCT))?;
+    let my_module = ctx.load_module(Ptx::from_src(CUDA_KERNEL))?;
     let init_conds = my_module.load_function("init_conds")?;
     let apply_uv_bcs = my_module.load_function("apply_uv_bcs")?;
     let init_olds = my_module.load_function("init_olds")?;
@@ -54,8 +52,6 @@ fn main() -> Result<(), DriverError> {
     let time_update_new_vars = my_module.load_function("time_update_new_vars")?;
     let apply_uvp_bcs = my_module.load_function("apply_uvp_bcs")?;
     let smooth_update_old_vars = my_module.load_function("smooth_update_old_vars")?;
-
-    println!("Time taken to compile and load PTX: {:.2?}", now.elapsed());
 
     // -----------------------------------------------------------------------
     // Simulation Parameters and Constants Setup

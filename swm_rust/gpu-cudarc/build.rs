@@ -7,12 +7,12 @@ fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     // Specify the desired architecture version.
-    let arch = "compute_80"; // For example, using SM 8.6 (Ampere architecture).
-    let code = "sm_80"; // For the same SM 8.6 (Ampere architecture).
+    let arch = "compute_80";
+    let code = "sm_80";
 
     // build the cuda kernels
-    let cuda_src = PathBuf::from("src/cuda/kernels/my_struct_kernel.cu");
-    let ptx_file = out_dir.join("my_struct_kernel.ptx");
+    let cuda_src = PathBuf::from("src/cuda/kernels/kernels.cu");
+    let ptx_file = out_dir.join("kernels.ptx");
 
     let nvcc_status = Command::new("nvcc")
         .arg("-ptx")
