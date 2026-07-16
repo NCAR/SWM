@@ -21,8 +21,6 @@ use std::mem;
 use std::fs::File;
 use std::path::Path;
 use std::io::prelude::*;
-use std::error::Error;
-use std::fs::OpenOptions;
 
 mod constants;
 use constants::*;
@@ -149,6 +147,7 @@ fn main() -> Result<(), DriverError> {
     launch_kern.arg(&pcf);
     let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
     unsafe { launch_kern.launch(cfg) }?;
+    println!("init_conds");
 
     // periodic boundary conditions
     let mut launch_kern = stream.launch_builder(&apply_uv_bcs);
@@ -160,6 +159,7 @@ fn main() -> Result<(), DriverError> {
     let mnmin = M.min(N);
     let cfg = LaunchConfig::for_num_elems(mnmin as u32);
     unsafe { launch_kern.launch(cfg) }?;
+    println!("apply_uv_bcs");
 
     // initialize old arrays
     let mut launch_kern = stream.launch_builder(&init_olds);
@@ -172,6 +172,7 @@ fn main() -> Result<(), DriverError> {
     launch_kern.arg(&TOT_LEN);
     let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
     unsafe { launch_kern.launch(cfg) }?;
+    println!("init_olds");
 
     let mut time = 0.;
 
@@ -197,6 +198,7 @@ fn main() -> Result<(), DriverError> {
         launch_kern.arg(&TOT_LEN);
         let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
         unsafe { launch_kern.launch(cfg) }?;
+        println!("update_intermed_vars");
 
         // let mut c2 = tstart.elapsed().as_secs_f64();
         // t100 = t100 + (c2 - c1);
@@ -212,6 +214,7 @@ fn main() -> Result<(), DriverError> {
         launch_kern.arg(&N_LEN);
         let cfg = LaunchConfig::for_num_elems(mnmin as u32);
         unsafe { launch_kern.launch(cfg) }?;
+        println!("apply_intermed_bcs");
 
         // time update to new variables
         let tdts8 = tdt / 8.0;
@@ -238,6 +241,7 @@ fn main() -> Result<(), DriverError> {
         launch_kern.arg(&TOT_LEN);
         let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
         unsafe { launch_kern.launch(cfg) }?;
+        println!("time_update_new_vars");
 
         // c2 = tstart.elapsed().as_secs_f64();
         // t200 = t200 + (c2 - c1);
@@ -252,6 +256,7 @@ fn main() -> Result<(), DriverError> {
         launch_kern.arg(&N_LEN);
         let cfg = LaunchConfig::for_num_elems(mnmin as u32);
         unsafe { launch_kern.launch(cfg) }?;
+        println!("apply_uvp_bcs")
 
         // update time
         time = time + dt;
@@ -277,6 +282,7 @@ fn main() -> Result<(), DriverError> {
             launch_kern.arg(&TOT_LEN);
             let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
             unsafe { launch_kern.launch(cfg) }?;
+            println!("smooth_update_old_vars")
 
             // update u, v, and p to new solution
             mem::swap(&mut gpu_u, &mut gpu_unew);
