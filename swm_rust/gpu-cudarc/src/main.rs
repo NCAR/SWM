@@ -129,8 +129,8 @@ fn main() -> Result<(), DriverError> {
     launch_kern.arg(&M);
     launch_kern.arg(&N);
     launch_kern.arg(&N_LEN);
-    let mnmin = M.min(N);
-    let cfg = LaunchConfig::for_num_elems(mnmin as u32);
+    let mnmax = M.max(N);
+    let cfg = LaunchConfig::for_num_elems(mnmax as u32);
     unsafe { launch_kern.launch(cfg) }?;
 
     // initialize old arrays
@@ -187,7 +187,7 @@ fn main() -> Result<(), DriverError> {
         launch_kern.arg(&M);
         launch_kern.arg(&N);
         launch_kern.arg(&N_LEN);
-        let cfg = LaunchConfig::for_num_elems(mnmin as u32);
+        let cfg = LaunchConfig::for_num_elems(mnmax as u32);
         unsafe { launch_kern.launch(cfg) }?;
 
         // time update to new variables
@@ -221,13 +221,13 @@ fn main() -> Result<(), DriverError> {
         
         // apply periodic boundary conitions to new variables
         let mut launch_kern = stream.launch_builder(&apply_uvp_bcs);
-        launch_kern.arg(&mut gpu_u);
-        launch_kern.arg(&mut gpu_v);
-        launch_kern.arg(&mut gpu_p);
+        launch_kern.arg(&mut gpu_unew);
+        launch_kern.arg(&mut gpu_vnew);
+        launch_kern.arg(&mut gpu_pnew);
         launch_kern.arg(&M);
         launch_kern.arg(&N);
         launch_kern.arg(&N_LEN);
-        let cfg = LaunchConfig::for_num_elems(mnmin as u32);
+        let cfg = LaunchConfig::for_num_elems(mnmax as u32);
         unsafe { launch_kern.launch(cfg) }?;
 
         // update time
