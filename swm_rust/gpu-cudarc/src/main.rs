@@ -18,6 +18,8 @@ use cudarc::nvrtc::Ptx;
 use std::f64::consts;
 
 use std::mem;
+use std::fs::File;
+use std::path::Path;
 
 mod constants;
 use constants::*;
@@ -316,7 +318,7 @@ fn main() -> Result<(), DriverError> {
     Ok(())
 }
 
-fn print_data_to_file(pathname: &str, data: &Arr) {
+fn print_data_to_file(pathname: &str, data: &Vec<f64>) {
     // define path and display
     let path = Path::new(pathname);
     let display = path.display();
@@ -331,7 +333,7 @@ fn print_data_to_file(pathname: &str, data: &Arr) {
     let mut s = String::from("");
     for i in 0..M_LEN {
         for j in 0..N_LEN {
-            s += &format!("{:.6} ", data[idx(i,j)]);
+            s += &format!("{:.6} ", data[i * N_LEN + j]);
         }
         s += "\n";
     }
