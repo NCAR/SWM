@@ -147,6 +147,14 @@ fn main() -> Result<(), DriverError> {
 
     let mut time = 0.;
 
+    let ui = stream.clone_dtoh(&gpu_u)?;
+    let vi = stream.clone_dtoh(&gpu_v)?;
+    let pi = stream.clone_dtoh(&gpu_p)?;
+
+    print_data_to_file("uinit.txt", &ui);
+    print_data_to_file("vinit.txt", &vi);
+    print_data_to_file("pinit.txt", &pi);
+
     // -----------------------------------------------------------------------
     // Time Marching Loop
     // -----------------------------------------------------------------------
