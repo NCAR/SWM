@@ -195,6 +195,7 @@ fn main() -> Result<(), DriverError> {
         launch_kern.arg(&mut gpu_cv);
         launch_kern.arg(&mut gpu_z);
         launch_kern.arg(&mut gpu_h);
+        launch_kern.arg(&N_LEN);
         launch_kern.arg(&TOT_LEN);
         let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
         unsafe { launch_kern.launch(cfg) }?;
@@ -256,7 +257,7 @@ fn main() -> Result<(), DriverError> {
         launch_kern.arg(&N_LEN);
         let cfg = LaunchConfig::for_num_elems(mnmin as u32);
         unsafe { launch_kern.launch(cfg) }?;
-        println!("apply_uvp_bcs")
+        println!("apply_uvp_bcs");
 
         // update time
         time = time + dt;
@@ -282,7 +283,7 @@ fn main() -> Result<(), DriverError> {
             launch_kern.arg(&TOT_LEN);
             let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
             unsafe { launch_kern.launch(cfg) }?;
-            println!("smooth_update_old_vars")
+            println!("smooth_update_old_vars");
 
             // update u, v, and p to new solution
             mem::swap(&mut gpu_u, &mut gpu_unew);
