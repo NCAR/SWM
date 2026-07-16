@@ -1,14 +1,3 @@
-extern "C" __global__ void my_struct_kernel(double *data, const size_t TOT_LEN)
-{
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (i < TOT_LEN)
-    {
-
-        data[i] += 1.0;
-    }
-}
-
 extern "C" __global__ void init_conds(
     double *u,
     double *v,
