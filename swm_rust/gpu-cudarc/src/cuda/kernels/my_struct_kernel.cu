@@ -258,7 +258,10 @@ extern "C" __global__ void smooth_update_old_vars(
     const double *unew,
     const double *vnew,
     const double *pnew,
-    double *alpha,
+    double *uold,
+    double *vold,
+    double *pold,
+    double alpha,
     int N_LEN,
     int TOT_LEN
 )
