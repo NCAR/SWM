@@ -133,7 +133,6 @@ extern "C" __global__ void update_intermed_vars(
         z[idx11] = (fsdx * (v[idx11] - v[idx01]) - fsdy * (u[idx11] - u[idx10])) / (p[idx] + p[idx10] + p[idx11] + p[idx01]);
         h[idx] = p[idx] + 0.25 * (u[idx10] * u[idx10] + u[idx] * u[idx] + v[idx01] * v[idx01] + v[idx] * v[idx]);
     }
-
 }
 
 extern "C" __global__ void apply_intermed_bcs(
@@ -210,5 +209,67 @@ extern "C" __global__ void time_update_new_vars(
         vnew[idx01] = vold[idx01] - tdts8 * (z[idx11] + z[idx01]) * (cu[idx11] + cu[idx01] + cu[idx] + cu[idx10]) - tdtsdy * (h[idx01] - h[idx]);
         pnew[idx] = pold[idx] - tdtsdx * (cu[idx10] - cu[idx]) - tdtsdy * (cv[idx01] - cv[idx]);
     }
+}
 
+extern "C" __global__ void apply_uvp_bcs(
+    double *u,
+    double *v,
+    double *p,
+    int M,
+    int N,
+    int N_LEN
+)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Apply left/right periodic boundaries
+    if (idx < N)
+    {
+        int j = idx;
+
+        u[j] = u[M * N_LEN + j];
+        v[M * N_LEN + (j + 1)] = v[j + 1];
+        p[M * N_LEN + j] = p[j];
+    }
+
+    // Apply top/bottom periodic boundaries
+    if (idx < M)
+    {
+        int i = idx;
+
+        u[(i + 1) * N_LEN + N] = u[(i + 1) * N_LEN];
+        v[i * N_LEN] = v[i * N_LEN + N];
+        p[i * N_LEN + N] = p[i * N_LEN];
+    }
+
+    // Corner values
+    if (idx == 0)
+    {
+        u[N] = u[M * N_LEN];
+        v[M * N_LEN] = v[N];
+        p[M * N_LEN + N] = p[0];
+    }
+}
+
+extern "C" __global__ void smooth_update_old_vars(
+    const double *u,
+    const double *v,
+    const double *p,
+    const double *unew,
+    const double *vnew,
+    const double *pnew,
+    double *alpha,
+    int N_LEN,
+    int TOT_LEN
+)
+{
+    // index
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < TOT_LEN)
+    {
+        uold[idx] = u[idx] + alpha * (unew[idx] - 2. * u[idx] + uold[idx]);
+        vold[idx] = v[idx] + alpha * (vnew[idx] - 2. * v[idx] + vold[idx]);
+        pold[idx] = p[idx] + alpha * (pnew[idx] - 2. * p[idx] + pold[idx]);
+    }
 }

@@ -48,6 +48,8 @@ fn main() -> Result<(), DriverError> {
     let update_intermed_vars = my_module.load_function("update_intermed_vars")?;
     let apply_intermed_bcs = my_module.load_function("apply_intermed_bcs")?;
     let time_update_new_vars = my_module.load_function("time_update_new_vars")?;
+    let apply_uvp_bcs = my_module.load_function("apply_uvp_bcs")?;
+    let smooth_update_old_vars = my_module.load_function("smooth_update_old_vars")?;
 
     println!("Time taken to compile and load PTX: {:.2?}", now.elapsed());
 
@@ -234,7 +236,15 @@ fn main() -> Result<(), DriverError> {
         // t200 = t200 + (c2 - c1);
         
         // apply periodic boundary conitions to new variables
-        // apply_uvp_bcs(&mut unew, &mut vnew, &mut pnew);
+        let mut launch_kern = stream.launch_builder(&apply_uvp_bcs);
+        launch_kern.arg(&mut gpu_u);
+        launch_kern.arg(&mut gpu_v);
+        launch_kern.arg(&mut gpu_p);
+        launch_kern.arg(&M);
+        launch_kern.arg(&N);
+        launch_kern.arg(&N_LEN);
+        let cfg = LaunchConfig::for_num_elems(mnmin as u32);
+        unsafe { launch_kern.launch(cfg) }?;
 
         // update time
         time = time + dt;
@@ -245,12 +255,26 @@ fn main() -> Result<(), DriverError> {
             // c1 = tstart.elapsed().as_secs_f64();
 
             // smooth old vars using time filter
-            // smooth_update_old_vars(&u, &v, &p, &unew, &vnew, &pnew, &mut uold, &mut vold, &mut pold, alpha);
+            let mut launch_kern = stream.launch_builder(&smooth_update_old_vars);
+            launch_kern.arg(&gpu_u);
+            launch_kern.arg(&gpu_v);
+            launch_kern.arg(&gpu_p);
+            launch_kern.arg(&gpu_unew);
+            launch_kern.arg(&gpu_vnew);
+            launch_kern.arg(&gpu_pnew);
+            launch_kern.arg(&mut gpu_uold);
+            launch_kern.arg(&mut gpu_vold);
+            launch_kern.arg(&mut gpu_pold);
+            launch_kern.arg(&alpha);
+            launch_kern.arg(&N_LEN);
+            launch_kern.arg(&TOT_LEN);
+            let cfg = LaunchConfig::for_num_elems(TOT_LEN as u32);
+            unsafe { launch_kern.launch(cfg) }?;
 
             // update u, v, and p to new solution
-            // mem::swap(&mut u, &mut unew);
-            // mem::swap(&mut v, &mut vnew);
-            // mem::swap(&mut p, &mut pnew);
+            mem::swap(&mut gpu_u, &mut gpu_unew);
+            mem::swap(&mut gpu_v, &mut gpu_vnew);
+            mem::swap(&mut gpu_p, &mut gpu_pnew);
 
             // c2 = tstart.elapsed().as_secs_f64(); 
             // t300 = t300 + (c2 - c1);
@@ -260,15 +284,15 @@ fn main() -> Result<(), DriverError> {
 
             // no smoothing for first timestep
             // this might be redundant
-            // mem::swap(&mut uold, &mut u);
-            // mem::swap(&mut vold, &mut v);
-            // mem::swap(&mut pold, &mut p);
+            mem::swap(&mut gpu_uold, &mut gpu_u);
+            mem::swap(&mut gpu_vold, &mut gpu_v);
+            mem::swap(&mut gpu_pold, &mut gpu_p);
 
             // update u, v, and p to new solution
             // might be able to take out of if statement
-            // mem::swap(&mut u, &mut unew);
-            // mem::swap(&mut v, &mut vnew);
-            // mem::swap(&mut p, &mut pnew);
+            mem::swap(&mut gpu_u, &mut gpu_unew);
+            mem::swap(&mut gpu_v, &mut gpu_vnew);
+            mem::swap(&mut gpu_p, &mut gpu_pnew);
         }
     }
 
