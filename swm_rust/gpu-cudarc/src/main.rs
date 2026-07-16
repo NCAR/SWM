@@ -20,6 +20,7 @@ use std::f64::consts;
 use std::mem;
 use std::fs::File;
 use std::path::Path;
+use std::io::prelude::*;
 use std::error::Error;
 use std::fs::OpenOptions;
 
