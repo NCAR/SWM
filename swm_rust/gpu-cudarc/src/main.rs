@@ -278,12 +278,21 @@ fn main() -> Result<(), DriverError> {
     }
 
     // copy solutions over to CPU
-    // let u = stream.clone_dtoh(&gpu_u)?;
-    // let v = stream.clone_dtoh(&gpu_v)?;
-    // let p = stream.clone_dtoh(&gpu_p)?;
+    c1 = tstart.elapsed().as_secs_f64();
     stream.memcpy_dtoh(&gpu_u, &mut u)?;
     stream.memcpy_dtoh(&gpu_v, &mut v)?;
     stream.memcpy_dtoh(&gpu_p, &mut p)?;
+    c2 = tstart.elapsed().as_secs_f64();
+    cpy_time = c2 - c1;
+    println!("memcpy time: {:?}",cpy_time);
+
+    c1 = tstart.elapsed().as_secs_f64();
+    let u = stream.clone_dtoh(&gpu_u)?;
+    let v = stream.clone_dtoh(&gpu_v)?;
+    let p = stream.clone_dtoh(&gpu_p)?;
+    c2 = tstart.elapsed().as_secs_f64();
+    clone_time = c2 - c1;
+    println!("clone time: {:?}",clone_time);
 
     // End time
     let ctime = tstart.elapsed().as_secs_f64();
