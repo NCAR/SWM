@@ -64,7 +64,7 @@ fn main() -> Result<(), DriverError> {
     let alpha: f64 = 0.001;
 
     // -----------------------------------------------------------------------
-    // Define Solution Arrays directly to GPU
+    // Define Arrays directly to GPU
     // -----------------------------------------------------------------------
 
     let mut gpu_u = stream.alloc_zeros::<f64>(TOT_LEN)?;
@@ -81,6 +81,12 @@ fn main() -> Result<(), DriverError> {
     let mut gpu_cv = stream.alloc_zeros::<f64>(TOT_LEN)?;
     let mut gpu_z = stream.alloc_zeros::<f64>(TOT_LEN)?;
     let mut gpu_h = stream.alloc_zeros::<f64>(TOT_LEN)?;
+
+    // solution arrays on CPU
+    let mut u: Vec<f64> = vec![0.0; TOT_LEN];
+    let mut v: Vec<f64> = vec![0.0; TOT_LEN];
+    let mut p: Vec<f64> = vec![0.0; TOT_LEN];
+
 
     // -----------------------------------------------------------------------
     // Initialize Data
@@ -272,9 +278,12 @@ fn main() -> Result<(), DriverError> {
     }
 
     // copy solutions over to CPU
-    let u = stream.clone_dtoh(&gpu_u)?;
-    let v = stream.clone_dtoh(&gpu_v)?;
-    let p = stream.clone_dtoh(&gpu_p)?;
+    // let u = stream.clone_dtoh(&gpu_u)?;
+    // let v = stream.clone_dtoh(&gpu_v)?;
+    // let p = stream.clone_dtoh(&gpu_p)?;
+    stream.memcpy_dtoh(&gpu_u, &mut u)?;
+    stream.memcpy_dtoh(&gpu_v, &mut v)?;
+    stream.memcpy_dtoh(&gpu_p, &mut p)?;
 
     // End time
     let ctime = tstart.elapsed().as_secs_f64();
