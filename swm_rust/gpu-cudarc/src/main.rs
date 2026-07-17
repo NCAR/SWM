@@ -32,15 +32,9 @@ fn main() -> Result<(), DriverError> {
     // -----------------------------------------------------------------------
     // GPU Setup
     // -----------------------------------------------------------------------
-    
-    // setup GPU device
-    let now = Instant::now();
 
     let ctx = CudaContext::new(0)?;
     let stream = ctx.default_stream();
-
-    // compile ptx
-    let now = Instant::now();
 
     // loads kernels
     let my_module = ctx.load_module(Ptx::from_src(CUDA_KERNEL))?;
@@ -277,6 +271,11 @@ fn main() -> Result<(), DriverError> {
         }
     }
 
+    // copy solutions over to CPU
+    let u = stream.clone_dtoh(&gpu_u)?;
+    let v = stream.clone_dtoh(&gpu_v)?;
+    let p = stream.clone_dtoh(&gpu_p)?;
+
     // End time
     let ctime = tstart.elapsed().as_secs_f64();
 
@@ -301,11 +300,6 @@ fn main() -> Result<(), DriverError> {
         println!(" time and megaflops for loop 200 {:?} {:?}", t200, mfs200);
         println!(" time and megaflops for loop 300 {:?} {:?}", t300, mfs300);
     }
-
-    // copy solutions over to CPU
-    let u = stream.clone_dtoh(&gpu_u)?;
-    let v = stream.clone_dtoh(&gpu_v)?;
-    let p = stream.clone_dtoh(&gpu_p)?;
 
     // save solutions to txt files
     if VAL_OUT {
