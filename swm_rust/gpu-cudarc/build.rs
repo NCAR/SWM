@@ -3,6 +3,8 @@ use std::{env, path::PathBuf, process::Command};
 fn main() {
     // Tell cargo to invalidate the built crate whenever files of interest changes.
     println!("cargo:rerun-if-changed={}", "cuda");
+    println!("cargo:rerun-if-env-changed=M");
+    println!("cargo:rerun-if-env-changed=N");
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
