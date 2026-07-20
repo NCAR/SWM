@@ -37,7 +37,7 @@
 #define N_LEN (N + 1)
 #define SIZE ((M_LEN)*(N_LEN))
 #define ITMAX 4000
-#define L_OUT TRUE
+#define L_OUT FALSE
 #define VAL_OUT FALSE
 
 extern double wtime(); 
@@ -357,6 +357,11 @@ int main(int argc, char **argv) {
       dswap(&pnew, &p);
     }
   } // ** End of time loop ** 
+
+  // print total time
+  c2 = wtime(); 
+  ctime = c2 - tstart;
+  printf("Grid Size: %dx%d, Number of iterations: %d, Total computer time: %f\n", M, N, ITMAX, ctime);
 
   // have to swap values back for printing
 

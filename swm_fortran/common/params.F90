@@ -7,7 +7,7 @@ module params
   integer, parameter :: M_LEN = M + 1
   integer, parameter :: N_LEN = N + 1
   integer, parameter :: ITMAX = 4000
-  logical, parameter :: L_OUT = .true.
+  logical, parameter :: L_OUT = .false.
   logical, parameter :: COPY = .false.
   logical, parameter :: VAL_OUT = .false.
 

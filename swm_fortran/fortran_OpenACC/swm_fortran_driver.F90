@@ -263,6 +263,11 @@ Program SWM_Fortran_Driver
   tcyc = ctime / real(ITMAX)
   !$acc exit data copyout(cu,cv,h,z,pnew,unew,vnew,p,u,v,uold,vold,pold)
 
+  ! print total time
+  call cpu_time(c2)
+  ctime = c2 - tstart
+  print '(A,I0,A,I0,A,I0,A,F0.6)', 'Grid Size: ', M, 'x', N, ', Number of iterations: ', ITMAX, ', Total computer time: ', ctime
+
 
   if ( VAL_OUT ) then
     call write_to_file(p, 'p.bin')

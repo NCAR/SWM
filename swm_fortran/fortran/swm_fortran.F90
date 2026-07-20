@@ -255,6 +255,11 @@ Program SWM_Fortran
     end if
   end do ! End of time loop
 
+  ! print total time
+  call cpu_time(c2)
+  ctime = c2 - tstart
+  print '(A,I0,A,I0,A,I0,A,F0.6)', 'Grid Size: ', M, 'x', N, ', Number of iterations: ', ITMAX, ', Total computer time: ', ctime
+
   call dswap(u, unew)
   call dswap(v, vnew)
   call dswap(p, pnew)
