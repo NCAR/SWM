@@ -51,6 +51,9 @@ for num in 64 128 256 512 1024; do
     cmake --build $SWM_BUILD_DIR
 
     # Run the C code. 
+    echo
+    echo "C"
+    echo
     $SWM_BUILD_DIR/swm_c/c/swm_c
     $SWM_BUILD_DIR/swm_c/c/swm_c
     $SWM_BUILD_DIR/swm_c/c/swm_c
@@ -58,6 +61,9 @@ for num in 64 128 256 512 1024; do
     $SWM_BUILD_DIR/swm_c/c/swm_c
 
     # Run the Fortran code. 
+    echo
+    echo "Fortran"
+    echo
     $SWM_BUILD_DIR/swm_fortran/fortran/swm_fortran
     $SWM_BUILD_DIR/swm_fortran/fortran/swm_fortran
     $SWM_BUILD_DIR/swm_fortran/fortran/swm_fortran
