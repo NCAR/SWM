@@ -89,7 +89,7 @@ to the top of our `.rs` file and then use as we would any other Rust function.
 
 ## Cargo - Rust's build system and package manager
 
-Package dependencies are managed by Cargo. You simply list the packages with the version you want in a `Cargo.toml`. You can also manage paths to the source code, features (conditional compilation), and much more. A custom build script can be used for more complicated compile setups. An example is shown in `features/build.rs`. More information can be found in the [Cargo book](https://doc.rust-lang.org/cargo/).
+Package dependencies are managed by Cargo. You simply list the packages with the version you want in a `Cargo.toml` file. You can also manage paths to the source code, features (conditional compilation), and much more. A custom build script can be used for more complicated compile setups. An example is shown in `features/build.rs`. More information can be found in the [Cargo book](https://doc.rust-lang.org/cargo/).
 
 ## Versions
 
@@ -190,10 +190,6 @@ func(&mut x)  // x is a mutable reference, can be changed
 
 The Array type in Rust is a bit misleading. This is not what we commonly think of as an array in scientific computing. `array` is a fixed size, one-dimensional, list of elements that is stored on the stack. This means overflow can occur at modest sizes, >~256 on a standard laptop. Use `vec` or `box` to create one-dimensional "arrays" that can be stored on the heap.
 
-## Performance related notes
+### Test suite
 
-Cargo does support a test suite if needed, however I don't envision using that for performance testing work. 
-
-`swm_rust.rs` currently contains an example for timing. This should be comparable to how walltime is computed in the C examples.
-
-We will want to look for CUDA/GPU support crates eventually. See [NERSC docs](https://docs.nersc.gov/development/languages/rust/) for additional information on how to setup Rust to run efficiently on an HPC system. 
+Although not employed here, Cargo has support for a built-in test suite. More information can be found [here](https://doc.rust-lang.org/cargo/commands/cargo-test.html).
