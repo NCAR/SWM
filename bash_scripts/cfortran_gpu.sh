@@ -1,10 +1,10 @@
 #!/bin/bash
 #PBS -A NTDD0005
-#PBS -N cf_gpu
+#PBS -N cfortran_gpu
 #PBS -q develop@desched1
 #PBS -l walltime=01:00:00
 #PBS -l select=1:ncpus=64:ngpus=1:gpu_type=a100
-#PBS -o swm_cf_gpu.log
+#PBS -o cfortran_gpu.log
 
 # Load modules to match compile-time environment
 module --force purge
