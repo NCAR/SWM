@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -A NTDD0005
 #PBS -N rust_serial
-#PBS -q main@desched1
+#PBS -q develop@desched1
 #PBS -l walltime=01:00:00
 #PBS -l select=1:ncpus=128
 #PBS -o rust_serial.log
