@@ -10,7 +10,7 @@
 module --force purge
 
 # Set the rust directory 
-export SWM_RUST="~/SWM/swm_rust/zip_ndarray_rayon"
+export SWM_RUST=~/SWM/swm_rust/zip_ndarray_rayon
 cd $SWM_RUST
 
 # Build and run the code.

@@ -13,7 +13,7 @@ module load conda
 conda activate npl
 
 # Set python directory
-export SWM_PYTHON="~/SWM/swm_python"
+export SWM_PYTHON=~/SWM/swm_python
 cd $SWM_PYTHON
 
 # Build and run the code.
