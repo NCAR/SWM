@@ -273,9 +273,9 @@ fn main() -> Result<(), DriverError> {
 
     // copy solutions over to CPU
     stream.synchronize()?;
-    let mut u: Vec<f64> = stream.clone_dtoh(&gpu_u)?;
-    let mut v: Vec<f64> = stream.clone_dtoh(&gpu_v)?;
-    let mut p: Vec<f64> = stream.clone_dtoh(&gpu_p)?;
+    let u: Vec<f64> = stream.clone_dtoh(&gpu_u)?;
+    let v: Vec<f64> = stream.clone_dtoh(&gpu_v)?;
+    let p: Vec<f64> = stream.clone_dtoh(&gpu_p)?;
 
     // End time
     let ctime = tstart.elapsed().as_secs_f64();
