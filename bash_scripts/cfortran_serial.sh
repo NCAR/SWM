@@ -11,7 +11,7 @@ module --force purge
 module load ncarenv/25.10 intel/2025.2.1 cray-mpich/8.1.32
 
 # Set the SWM root and build directory 
-export SWM_ROOT=$USER/SWM
+export SWM_ROOT="~/SWM"
 export SWM_BUILD_DIR=$SWM_ROOT/../SWM_build
 
 # Set which compilers to use.
