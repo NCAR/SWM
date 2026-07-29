@@ -93,7 +93,7 @@ Package dependencies are managed by Cargo. You simply list the packages with the
 
 ## Versions
 
-This folders houses four versions of SWM in Rust. `features` and `zip_ndarray` house serial versions of the code. `zip_ndarray_rayon` houses a shared memory version. `gpu-cudarc` houses a GPU version.
+This folders houses four versions of SWM in Rust. `features` and `zip_ndarray` house serial versions of the code. `zip_ndarray_rayon` houses a shared memory version. `gpu_cudarc` houses a GPU version.
 
 ### Features
 
@@ -127,7 +127,7 @@ More general information on Rust threading using the standard library can be fou
 
 ### GPU cudarc
 
-In `gpu-cudarc`, the crate `cudarc` is used to run code on an NVIDIA GPU. Rust code is called from the CPU to run CUDA kernels on the GPU. More info on the crate can be found [here](https://github.com/chelsea0x3b/cudarc). Example 07 is used as a base for this implementation.
+In `gpu_cudarc`, the crate `cudarc` is used to run code on an NVIDIA GPU. Rust code is called from the CPU to run CUDA kernels on the GPU. More info on the crate can be found [here](https://github.com/chelsea0x3b/cudarc). Example 07 is used as a base for this implementation.
 
 ### Grid size
 
