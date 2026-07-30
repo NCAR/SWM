@@ -255,11 +255,6 @@ Program SWM_Fortran
     end if
   end do ! End of time loop
 
-  ! print total time
-  call cpu_time(c2)
-  ctime = c2 - tstart
-  print '(A,I0,A,I0,A,I0,A,F0.6)', 'Grid Size: ', M, 'x', N, ', Number of iterations: ', ITMAX, ', Total computer time: ', ctime
-
   call dswap(u, unew)
   call dswap(v, vnew)
   call dswap(p, pnew)
@@ -306,8 +301,6 @@ Program SWM_Fortran
     write(*, "(A,F0.6,1X,F0.6)") " time and megaflops for loop 300 ", t300, mfs300
   end if
 
-  call write_int_float_to_csv('fortan_times.csv', M, ctime)
-
 contains
 
   ! This is a copy, not a pointer shuffle
@@ -339,19 +332,5 @@ contains
     close(id)
 
   end subroutine write_to_file
-
-  subroutine write_int_float_to_csv(filename, int_val, float_val)
-    character(len=*), intent(in) :: filename
-    integer,          intent(in) :: int_val
-    real(8),          intent(in) :: float_val
-
-    integer :: id
-
-    open(newunit=id, file=filename, status='unknown', &
-         action='write', position='append')
-    write(id, '(I0, ",", F0.6)') int_val, float_val
-    close(id)
-
-  end subroutine write_int_float_to_csv
 
 End Program SWM_Fortran

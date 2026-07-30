@@ -27,6 +27,3 @@ set(SWM_FORTRAN_ACC_TARGET swm_fortran_acc)
 add_executable(${SWM_FORTRAN_ACC_TARGET} swm_fortran_driver.F90 swm_fortran_kernels.F90 ../common/params.F90)
 target_compile_options(${SWM_FORTRAN_ACC_TARGET} PRIVATE ${DEFAULT_REAL_FLAG} ${OPENACC_COMPILE_FLAGS})
 target_link_options(${SWM_FORTRAN_ACC_TARGET} PRIVATE ${OPENACC_LINK_FLAGS})
-
-target_compile_definitions(swm_fortran_acc PRIVATE MNUM=${M})
-target_compile_definitions(swm_fortran_acc PRIVATE NNUM=${N})

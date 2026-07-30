@@ -2,8 +2,8 @@ module params
   implicit none
 
   ! Define parameters that correspond to the macros in params.h
-  integer, parameter :: M = MNUM
-  integer, parameter :: N = NNUM
+  integer, parameter :: M = 256
+  integer, parameter :: N = 256
   integer, parameter :: M_LEN = M + 1
   integer, parameter :: N_LEN = N + 1
   integer, parameter :: ITMAX = 4000
