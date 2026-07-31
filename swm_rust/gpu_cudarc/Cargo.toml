@@ -1,0 +1,8 @@
+[package]
+name = "swm_rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cudarc = { version = "0.19.8", features = ["cuda-version-from-build-system"] }
+const_env = "0.1.5"
