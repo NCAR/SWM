@@ -38,6 +38,7 @@ swm_fortran/swm_fortran_amrex_driver
 *.out
 *.bin
 *.txt
+!CMakeLists.txt
 results_*
 
 
