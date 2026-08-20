@@ -14,10 +14,20 @@ void UpdateIntermediateVariablesKernel( const int i, const int j, const int k,
                                         const amrex::Array4<amrex::Real>& h,
                                         const amrex::Array4<amrex::Real>& z)
 {
-    cu(i,j,k) = 0.5*(p(i,j,k) + p(i+1,j,k))*u(i,j,k);
-    cv(i,j,k) = 0.5*(p(i,j,k) + p(i,j+1,k))*v(i,j,k);
-    z(i,j,k) = (fsdx*(v(i+1,j,k)-v(i,j,k)) - fsdy*(u(i,j+1,k)-u(i,j,k)))/(p(i,j,k)+p(i+1,j,k)+p(i,j+1,k)+p(i+1,j+1,k));
-    h(i,j,k) = p(i,j,k) + 0.25*(u(i-1,j,k)*u(i-1,j,k) + u(i,j,k)*u(i,j,k) + v(i,j-1,k)*v(i,j-1,k) + v(i,j,k)*v(i,j,k));
+    amrex::Real p_ijk = p(i,j,k);
+    amrex::Real p_i1jk = p(i+1,j,k);
+    amrex::Real p_ij1k = p(i,j+1,k);
+    amrex::Real p_i1j1k = p(i+1,j+1,k);
+    amrex::Real u_ijk = u(i,j,k);
+    amrex::Real u_im1jk = u(i-1,j,k);
+    amrex::Real u_ij1k = u(i,j+1,k);
+    amrex::Real v_ijk = v(i,j,k);
+    amrex::Real v_i1jk = v(i+1,j,k);
+    amrex::Real v_ijm1k = v(i,j-1,k);
+    cu(i,j,k) = 0.5*(p_ijk + p_i1jk)*u_ijk;
+    cv(i,j,k) = 0.5*(p_ijk + p_ij1k)*v_ijk;
+    z(i,j,k) = (fsdx*(v_i1jk - v_ijk) - fsdy*(u_ij1k - u_ijk))/(p_ijk + p_i1jk + p_ij1k + p_i1j1k);
+    h(i,j,k) = p_ijk + 0.25*(u_im1jk*u_im1jk + u_ijk*u_ijk + v_ijm1k*v_ijm1k + v_ijk*v_ijk);
 }
 
 
@@ -35,9 +45,23 @@ void UpdateNewVariablesKernel( const int i, const int j, const int k,
                                const amrex::Array4<amrex::Real>& u_new,
                                const amrex::Array4<amrex::Real>& v_new)
 {
-    u_new(i,j,k) = u_old(i,j,k) + tdts8 * (z(i,j-1,k)+z(i,j,k)) * (cv(i,j-1,k) + cv(i,j,k) + cv(i+1,j-1,k) + cv(i+1,j,k)) - tdtsdx * (h(i+1,j,k) - h(i,j,k));
-    v_new(i,j,k) = v_old(i,j,k) - tdts8 * (z(i-1,j,k)+z(i,j,k)) * (cu(i-1,j,k) + cu(i-1,j+1,k) + cu(i,j,k) + cu(i,j+1,k)) - tdtsdy * (h(i,j+1,k) - h(i,j,k));
-    p_new(i,j,k) = p_old(i,j,k) - tdtsdx * (cu(i,j,k) - cu(i-1,j,k)) - tdtsdy * (cv(i,j,k) - cv(i,j-1,k));
+    amrex::Real z_ijk = z(i,j,k);
+    amrex::Real z_ijm1k = z(i,j-1,k);
+    amrex::Real z_im1jk = z(i-1,j,k);
+    amrex::Real cv_ijk = cv(i,j,k);
+    amrex::Real cv_ijm1k = cv(i,j-1,k);
+    amrex::Real cv_i1jk = cv(i+1,j,k);
+    amrex::Real cv_i1jm1k = cv(i+1,j-1,k);
+    amrex::Real cu_ijk = cu(i,j,k);
+    amrex::Real cu_im1jk = cu(i-1,j,k);
+    amrex::Real cu_ij1k = cu(i,j+1,k);
+    amrex::Real cu_im1j1k = cu(i-1,j+1,k);
+    amrex::Real h_ijk = h(i,j,k);
+    amrex::Real h_i1jk = h(i+1,j,k);
+    amrex::Real h_ij1k = h(i,j+1,k);
+    u_new(i,j,k) = u_old(i,j,k) + tdts8 * (z_ijm1k + z_ijk) * (cv_ijm1k + cv_ijk + cv_i1jm1k + cv_i1jk) - tdtsdx * (h_i1jk - h_ijk);
+    v_new(i,j,k) = v_old(i,j,k) - tdts8 * (z_im1jk + z_ijk) * (cu_im1jk + cu_im1j1k + cu_ijk + cu_ij1k) - tdtsdy * (h_ij1k - h_ijk);
+    p_new(i,j,k) = p_old(i,j,k) - tdtsdx * (cu_ijk - cu_im1jk) - tdtsdy * (cv_ijk - cv_ijm1k);
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
