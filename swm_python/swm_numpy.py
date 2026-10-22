@@ -54,8 +54,8 @@ def main():
         if config.VAL_DEEP and ncycle <= 3:
             utils.validate_uvp(u, v, p, M, N, ncycle, 'init')
 
-        if ncycle % 100 == 0:
-            print("cycle number ", ncycle)
+        # if ncycle % 100 == 0:
+        #     print("cycle number ", ncycle)
                 
         t1_start = perf_counter()
         
@@ -152,6 +152,8 @@ def main():
     print("t200: ",dt2)
     print("t300: ",dt3)
 
+    print("Version: python numpy")
+    print("Grid Size:",M,"x",N,", Number of iterations: ",ITMAX,", Total computer time: ",f"{dt0:.2f}")
 
     if config.VAL:
         utils.final_validation(u, v, p, ITMAX=ITMAX, M=M, N=N)

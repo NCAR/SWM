@@ -39,3 +39,9 @@ swm_fortran/swm_fortran_amrex_driver
 *.bin
 *.txt
 results_*
+
+
+# Rust
+*/target/
+Cargo.lock
+rust.lcov

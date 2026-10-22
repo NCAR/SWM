@@ -13,6 +13,10 @@ if(SWM_CUDA)
   set(SWM_AMREX_TARGET "${SWM_AMREX_TARGET}_CUDA")
 endif()
 
+if(SWM_HIP)
+  set(SWM_AMREX_TARGET "${SWM_AMREX_TARGET}_HIP")
+endif()
+
 set(SWM_AMREX_SOURCES
     ${PROJECT_SOURCE_DIR}/swm_amrex/common/main.cpp
     ${PROJECT_SOURCE_DIR}/swm_amrex/common/swm_mini_app_utils.cpp
